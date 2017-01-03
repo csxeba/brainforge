@@ -1,9 +1,8 @@
 from csxdata import Sequence, roots
 from csxdata.utilities.helpers import speak_to_me
 
-from csxnet import Network
-from layers.core import LSTM, DenseLayer
-from layers.recurrent import RLayer, LSTM
+from brainforge import Network
+from brainforge.layers import LSTM, DenseLayer, RLayer
 
 
 def pull_petofi_data():

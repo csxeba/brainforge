@@ -7,3 +7,7 @@ TODO: write a predictor wrapper, which extracts weights from a model
 TODO: work more on the output strings
 TODO: implement better logging and maybe callbacks!
 TODO: implement Autoencoding by somehow reversing the architecture string
+TODO: implement weight regularization
+TODO: rethink optimizers!
+TODO: remove util/shame!!!
+TODO: implement the ops in numba! (or theano?)

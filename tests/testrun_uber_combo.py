@@ -1,10 +1,8 @@
 from csxdata import CData
 from csxdata import Sequence, roots
-from csxnet import Network
-from layers.core import *
-from layers.fancy import HighwayLayer
-from layers.recurrent import RLayer, LSTM, EchoLayer
-from layers.tensor import PoolLayer, ConvLayer
+
+from brainforge import Network
+from brainforge.layers import *
 
 
 def pull_petofi_data():

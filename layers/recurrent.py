@@ -1,15 +1,16 @@
 import abc
 
 import numpy as np
-from layers.core import _FFLayer
-from ops import sigmoid
-from util import white, white_like
+
+from brainforge.layers import FFBase
+from brainforge.ops import sigmoid
+from brainforge.util import white, white_like
 
 
-class _Recurrent(_FFLayer):
+class _Recurrent(FFBase):
 
     def __init__(self, neurons, activation, return_seq=False):
-        _FFLayer.__init__(self, neurons, activation)
+        FFBase.__init__(self, neurons, activation)
         self.Z = 0
         self.Zs = []
         self.cache = []
@@ -37,8 +38,8 @@ class _Recurrent(_FFLayer):
             return error_tensor
 
     def capsule(self):
-        return _FFLayer.capsule(self) + [self.neurons, self.activation, self.return_seq,
-                                         self.get_weights(unfold=False)]
+        return FFBase.capsule(self) + [self.neurons, self.activation, self.return_seq,
+                                       self.get_weights(unfold=False)]
 
     @classmethod
     def from_capsule(cls, capsule):

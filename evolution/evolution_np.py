@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import numpy as np
 
+# TODO: remove this dependency
 from csxdata.utilities.vectorops import featscale, upscale
 
 

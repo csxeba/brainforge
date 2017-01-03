@@ -22,7 +22,7 @@ class SGD:
 class Momentum(SGD):
 
     def __init__(self, layer, eta=0.1, mu=0.9, nesterov=False, *args):
-        SGD.__init__(layer, eta)
+        SGD.__init__(self, layer, eta)
         self.mu = mu
         self.nesterov = nesterov
         if not args:

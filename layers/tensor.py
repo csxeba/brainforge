@@ -1,23 +1,13 @@
-import abc
-
 import numpy as np
-from layers.core import Layer
-from util import white
+
+from brainforge.layers import LayerBase
+from brainforge.util import white
 
 
-class _VecLayer(Layer):
-    """Base class for layer types, which operate on tensors
-     and are sparsely connected"""
-
-    @abc.abstractmethod
-    def connect(self, to, inshape):
-        Layer.connect(self, to, inshape)
-
-
-class PoolLayer(_VecLayer):
+class PoolLayer(LayerBase):
 
     def __init__(self, fdim):
-        _VecLayer.__init__(self, activation="linear", trainable=False)
+        LayerBase.__init__(self, activation="linear", trainable=False)
         from ..ops import MaxPool
         self.fdim = fdim
         self.filter = None
@@ -25,7 +15,7 @@ class PoolLayer(_VecLayer):
 
     def connect(self, to, inshape):
         ic, iy, ix = inshape
-        _VecLayer.connect(self, to, inshape)
+        LayerBase.connect(self, to, inshape)
         self.output = np.zeros((ic, iy // self.fdim, ix // self.fdim))
 
     def feedforward(self, questions):
@@ -51,7 +41,7 @@ class PoolLayer(_VecLayer):
         return self.output.shape[-3:]
 
     def capsule(self):
-        return _VecLayer.capsule(self) + [self.fdim]
+        return LayerBase.capsule(self) + [self.fdim]
 
     @classmethod
     def from_capsule(cls, capsule):
@@ -61,11 +51,11 @@ class PoolLayer(_VecLayer):
         return "MaxPool-{}x{}".format(self.fdim, self.fdim)
 
 
-class ConvLayer(_VecLayer):
+class ConvLayer(LayerBase):
 
     def __init__(self, nfilters, filterx, filtery, activation="linear", mode="valid", **kw):
 
-        _VecLayer.__init__(self, activation=activation, **kw)
+        LayerBase.__init__(self, activation=activation, **kw)
 
         self.nfilters = nfilters
         self.fx = filterx
@@ -81,7 +71,7 @@ class ConvLayer(_VecLayer):
     def connect(self, to, inshape):
         from ..ops import Convolution
 
-        _VecLayer.connect(self, to, inshape)
+        LayerBase.connect(self, to, inshape)
         depth, iy, ix = inshape
         self.op = Convolution()
         self.inshape = inshape
@@ -118,7 +108,7 @@ class ConvLayer(_VecLayer):
         return self.nfilters, ox, oy
 
     def capsule(self):
-        return _VecLayer.capsule(self) + [self.mode, self.activation, self.get_weights(unfold=False)]
+        return LayerBase.capsule(self) + [self.mode, self.activation, self.get_weights(unfold=False)]
 
     @classmethod
     def from_capsule(cls, capsule):

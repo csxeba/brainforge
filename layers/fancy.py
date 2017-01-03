@@ -1,11 +1,11 @@
 import numpy as np
-from layers import Layer
-from layers.core import _FFLayer
-from ops import sigmoid
-from util import white, rtm
+
+from brainforge.layers import LayerBase, FFBase
+from brainforge.ops import sigmoid
+from brainforge.util import white, rtm
 
 
-class HighwayLayer(_FFLayer):
+class HighwayLayer(FFBase):
     """
     Neural Highway Layer
 
@@ -18,14 +18,14 @@ class HighwayLayer(_FFLayer):
     """
 
     def __init__(self, activation="tanh", **kw):
-        _FFLayer.__init__(self, 1, activation, **kw)
+        FFBase.__init__(self, 1, activation, **kw)
         self.gates = None
 
     def connect(self, to, inshape):
         self.neurons = int(np.prod(inshape))
         self.weights = white(self.neurons, self.neurons*3)
         self.biases = np.zeros((self.neurons*3,))
-        _FFLayer.connect(self, to, inshape)
+        FFBase.connect(self, to, inshape)
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.inputs = rtm(stimuli)
@@ -54,7 +54,7 @@ class HighwayLayer(_FFLayer):
         return (dgates.dot(self.weights.T) + dx).reshape(shape)
 
     def capsule(self):
-        return _FFLayer.capsule(self) + [self.activation, self.get_weights(unfold=False)]
+        return FFBase.capsule(self) + [self.activation, self.get_weights(unfold=False)]
 
     @classmethod
     def from_capsule(cls, capsule):
@@ -68,10 +68,10 @@ class HighwayLayer(_FFLayer):
         return "Highway-{}".format(str(self.activation))
 
 
-class DropOut(Layer):
+class DropOut(LayerBase):
 
     def __init__(self, dropchance):
-        Layer.__init__(self, activation="linear", trainable=False)
+        LayerBase.__init__(self, activation="linear", trainable=False)
         self.dropchance = 1. - dropchance
         self.mask = None
         self.neurons = None
@@ -101,7 +101,7 @@ class DropOut(Layer):
         return self.neurons
 
     def capsule(self):
-        return Layer.capsule(self) + [self.dropchance]
+        return LayerBase.capsule(self) + [self.dropchance]
 
     @classmethod
     def from_capsule(cls, capsule):
@@ -113,9 +113,9 @@ class DropOut(Layer):
 
 class Experimental:
 
-    class AboLayer(Layer):
+    class AboLayer(LayerBase):
         def __init__(self, brain, position, activation):
-            Layer.__init__(self, brain, position, activation)
+            LayerBase.__init__(self, brain, position, activation)
             self.brain = brain
             self.fanin = brain.layers[-1].fanout
             self.neurons = []

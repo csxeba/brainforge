@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from csxnet.ops import act_fns
+from brainforge.ops import act_fns
 from csxdata import etalon, roots, CData
 
 

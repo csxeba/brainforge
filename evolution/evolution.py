@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 import time
 import random
 
+# TODO: remove this dependency!
 from csxdata.utilities.misc import avg, feature_scale, chooseN
 
 

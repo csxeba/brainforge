@@ -5,7 +5,7 @@ import time
 import numba
 import numpy as np
 
-from csxnet.util import white
+from brainforge.util import white
 
 
 @numba.jit
@@ -48,7 +48,7 @@ def epoch(Xs, Ys, Ws, bs, ETA):
         As.append(forward(As[-1], w, b))
 
     cost = mse(As[-1], Ys)
-    grads = [[np.array([])], [np.array()]]
+    grads = [[np.array([])], [np.array([])]]
     e = mse_p(As[-1], Ys)
     for w, x, a in zip(Ws[-1::-1], As[-2::-1], As[-1:0:-1]):
         e, nw, nb = backward(e, w, x, a)
@@ -68,7 +68,7 @@ def epoch(Xs, Ys, Ws, bs, ETA):
 def century(Xs: np.ndarray, Ys: np.ndarray, Ws: list, bs: list, ETA: float):
     costs = [0.0]
     for e in range(1000):
-        costs.append(epoch(Xs, Ys, Ws, bs, ETA))
+        costs.append(float(epoch(Xs, Ys, Ws, bs, ETA)))
     return np.mean(costs[1:])
 
 

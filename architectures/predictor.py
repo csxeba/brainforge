@@ -1,9 +1,3 @@
-import csxnet
-import keras
-
-from csxdata import roots
-
-
 def save_model(network):
     if isinstance(network, keras.models.Sequential):
         _save_keras_model(network)

@@ -237,11 +237,7 @@ class _SoftMax(_ActivationFunctionBase):
     def __str__(self): return "softmax"
 
     def derivative(self, A: np.ndarray):
-        # This is the negative of the outer product of the last axis with itself
-        J = A[..., None] * A[:, None, :]  # given by -a_i*a_j, where i =/= j
-        iy, ix = np.diag_indices_from(J[0])
-        J[:, iy, ix] = A * (1. - A)  # given by a_i(1 - a_j), where i = j
-        return J.sum(axis=1)  # sum for each sample
+        return 1.
 
 
 sigmoid = _Sigmoid()

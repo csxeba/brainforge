@@ -1,12 +1,14 @@
 import unittest
 
-from architectures.architectures import Network
+from numpy.linalg import norm
+
 from csxdata import CData
 from csxdata import roots
 from csxdata.utilities.parsers import mnist_tolearningtable
-from csxnet.util import numerical_gradients, analytical_gradients
-from layers.core import DenseLayer
-from numpy.linalg import norm
+
+from brainforge.util import numerical_gradients, analytical_gradients
+from brainforge.architectures import Network
+from brainforge.layers import DenseLayer
 
 
 class TestNetwork(unittest.TestCase):
@@ -35,7 +37,7 @@ class TestNetwork(unittest.TestCase):
         self.run_numerical_gradient_test()
 
     def run_numerical_gradient_test(self):
-        self.net.fit(*self.data.table("learning"), epochs=1, verbose=0)
+        self.net.fit(*self.data.table("learning", m=20), batch_size=20, epochs=1, verbose=0)
 
         numerical = numerical_gradients(self.net, self.X, self.Y)
         analytical = analytical_gradients(self.net, self.X, self.Y)

@@ -1,7 +1,6 @@
 from csxdata import CData, roots
-from csxnet import Network
-from layers.core import ConvLayer, DenseLayer, Flatten, Activation
-from layers.tensor import PoolLayer, ConvLayer
+from brainforge import Network
+from brainforge.layers import ConvLayer, DenseLayer, Flatten, Activation, PoolLayer
 
 
 def pull_mnist_data():

@@ -1,14 +1,15 @@
 import abc
 
 import numpy as np
-from util import white, white_like
+
+from brainforge.util import white, white_like
 
 
-class Layer(abc.ABC):
+class LayerBase(abc.ABC):
     """Abstract base class for all layer type classes"""
     def __init__(self, activation, **kw):
 
-        from ..ops import act_fns
+        from brainforge.ops import act_fns
 
         self.brain = None
         self.inputs = None
@@ -85,15 +86,15 @@ class Layer(abc.ABC):
     def __str__(self): raise NotImplementedError
 
 
-class _FFLayer(Layer):
+class FFBase(LayerBase):
     """Base class for the fully connected layer types"""
     def __init__(self, neurons: int, activation, **kw):
-        Layer.__init__(self, activation, **kw)
+        LayerBase.__init__(self, activation, **kw)
         self.neurons = neurons
 
     @abc.abstractmethod
     def connect(self, to, inshape):
-        Layer.connect(self, to, inshape)
+        LayerBase.connect(self, to, inshape)
         self.nabla_w = np.zeros_like(self.weights)
         self.nabla_b = np.zeros_like(self.biases)
 
@@ -102,15 +103,15 @@ class _FFLayer(Layer):
         return self.neurons if isinstance(self.neurons, tuple) else (self.neurons,)
 
 
-class _Op(Layer):
+class _Op(LayerBase):
 
     def __init__(self):
-        Layer.__init__(self, activation="linear", trainable=False)
+        LayerBase.__init__(self, activation="linear", trainable=False)
         self.opf = None
         self.opb = None
 
     def connect(self, to, inshape):
-        Layer.connect(self, to, inshape)
+        LayerBase.connect(self, to, inshape)
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.output = self.opf(stimuli)
@@ -143,10 +144,10 @@ class _Op(Layer):
         return str(self.opf)
 
 
-class Activation(Layer):
+class Activation(LayerBase):
 
     def __init__(self, activation):
-        Layer.__init__(self, activation, trainable=False)
+        LayerBase.__init__(self, activation, trainable=False)
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.output = self.activation(stimuli)
@@ -160,7 +161,7 @@ class Activation(Layer):
         return self.inshape
 
     def capsule(self):
-        return Layer.capsule(self) + [self.activation]
+        return LayerBase.capsule(self) + [self.activation]
 
     @classmethod
     def from_capsule(cls, capsule):
@@ -170,14 +171,14 @@ class Activation(Layer):
         return "Activation-{}".format(str(self.activation))
 
 
-class InputLayer(Layer):
+class InputLayer(LayerBase):
 
     def __init__(self, shape):
-        Layer.__init__(self, activation="linear", trainable=False)
+        LayerBase.__init__(self, activation="linear", trainable=False)
         self.neurons = shape
 
     def connect(self, to, inshape):
-        Layer.connect(self, to, inshape)
+        LayerBase.connect(self, to, inshape)
         assert inshape == self.neurons
 
     def feedforward(self, questions):
@@ -215,7 +216,7 @@ class InputLayer(Layer):
         return "Input-{}".format(self.neurons)
 
 
-class DenseLayer(_FFLayer):
+class DenseLayer(FFBase):
     """Just your regular Densely Connected Layer
 
     Aka Dense (Keras), Fully Connected, Feedforward, etc.
@@ -225,7 +226,7 @@ class DenseLayer(_FFLayer):
     def __init__(self, neurons, activation="linear", **kw):
         if isinstance(neurons, tuple):
             neurons = neurons[0]
-        _FFLayer.__init__(self,  neurons=neurons, activation=activation, **kw)
+        FFBase.__init__(self, neurons=neurons, activation=activation, **kw)
 
     def connect(self, to, inshape):
         if len(inshape) != 1:
@@ -234,7 +235,7 @@ class DenseLayer(_FFLayer):
             raise RuntimeError(err)
         self.weights = white(inshape[0], self.neurons)
         self.biases = np.zeros((self.neurons,))
-        _FFLayer.connect(self, to, inshape)
+        FFBase.connect(self, to, inshape)
 
     def feedforward(self, questions):
         """
@@ -262,7 +263,7 @@ class DenseLayer(_FFLayer):
         return np.dot(error, self.weights.T)
 
     def capsule(self):
-        return _FFLayer.capsule(self) + [self.activation, self.get_weights(unfold=False)]
+        return FFBase.capsule(self) + [self.activation, self.get_weights(unfold=False)]
 
     @classmethod
     def from_capsule(cls, capsule):
@@ -275,7 +276,7 @@ class DenseLayer(_FFLayer):
 class Flatten(_Op):
 
     def connect(self, to, inshape):
-        from ..ops import Flatten as Flat, Reshape as Resh
+        from brainforge.ops import Flatten as Flat, Reshape as Resh
         _Op.connect(self, to, inshape)
         self.opf = Flat()
         self.opb = Resh(inshape)
@@ -284,9 +285,7 @@ class Flatten(_Op):
 class Reshape(_Op):
 
     def connect(self, to, inshape):
-        from ..ops import Flatten as Flat, Reshape as Resh
+        from brainforge.ops import Flatten as Flat, Reshape as Resh
         _Op.connect(self, to, inshape)
         self.opf = Resh(inshape)
         self.opb = Flat()
-
-

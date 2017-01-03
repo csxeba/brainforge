@@ -24,7 +24,7 @@ import numpy as np
 
 class Network:
 
-    def __init__(self, input_shape=(), name=""):
+    def __init__(self, input_shape=(), layers=(), name=""):
         # Referencing the data wrapper on which we do the learning
         self.name = name
         # Containers and self-describing variables
@@ -39,6 +39,12 @@ class Network:
         self._finalized = False
 
         self._add_input_layer(input_shape)
+        if layers:
+            from ..layers import LayerBase
+            for layer in layers:
+                if not isinstance(layer, LayerBase):
+                    raise RuntimeError("Supplied layer is not an instance of LayerBase!\n"+str(layer))
+                self.add(layer)
 
     def encapsulate(self, dumppath=None):
         capsule = {
@@ -67,8 +73,8 @@ class Network:
                 infl.close()
             return caps
 
-        from .util.shame import translate_architecture as trsl
-        from optimizers._optimizers import optimizer as opts
+        from brainforge.util.shame import translate_architecture as trsl
+        from brainforge.optimizers import optimizer as opts
 
         c = prepare_capsule(capsule)
 
@@ -99,7 +105,7 @@ class Network:
             raise RuntimeError("Parameter input_shape must be supplied for the first layer!")
         if isinstance(input_shape, int):
             input_shape = (input_shape,)
-        from layers.core import InputLayer
+        from ..layers import InputLayer
         inl = InputLayer(input_shape)
         inl.connect(to=self, inshape=input_shape)
         inl.connected = True
@@ -117,8 +123,12 @@ class Network:
         layer.connected = True
 
     def finalize(self, cost, optimizer="sgd"):
-        from .util import cost_fns as costs
-        from optimizers._optimizers import optimizer as opt
+        from ..costs import cost_fns as costs
+        from ..optimizers import optimizer as opt
+
+        if str(self.layers[-1].activation) == "softmax":
+            if cost != "xent":
+                raise RuntimeError("Sorry, xent only supported with softmax output activation!")
 
         for layer in self.layers:
             if layer.trainable:
@@ -139,8 +149,6 @@ class Network:
 
         if not self._finalized:
             raise RuntimeError("Architecture not finalized!")
-
-        self.N = X.shape[0]
 
         for epoch in range(1, epochs+1):
             if shuffle:
@@ -165,6 +173,8 @@ class Network:
         self.fit(X, Y, batch_size, epochs, monitor, validation, verbose, shuffle)
 
     def epoch(self, X, Y, batch_size, monitor, validation, verbose):
+
+        self.N = X.shape[0]
 
         def print_progress():
             classificaton = "acc" in monitor
@@ -191,6 +201,8 @@ class Network:
 
         if verbose and validation and None not in validation:
             print_progress()
+            print()
+        elif verbose:
             print()
         self.age += 1
         return costs
@@ -282,7 +294,7 @@ class Network:
                 layer.set_weights(w)
 
     def gradient_check(self, X, y, verbose=1, epsilon=1e-5):
-        from .util import gradient_check
+        from ..util import gradient_check
         if self.age == 0:
             warnings.warn("Performing gradient check on an untrained Neural Network!",
                           RuntimeWarning)
@@ -316,10 +328,8 @@ class Autoencoder(Network):
         self.decoder = []
 
     def add(self, layer, input_dim=()):
-        from layers.core import DenseLayer
-        from layers.fancy import HighwayLayer
-        from layers.recurrent import LSTM
-        from layers.recurrent import RLayer
+        from ..layers import DenseLayer, HighwayLayer, LSTM, RLayer
+
         if type(layer) not in (DenseLayer, HighwayLayer, RLayer, LSTM):
             raise NotImplementedError(str(layer), "not yet implemented in autoencoder!")
         Network.add(self, layer, input_dim)
@@ -335,9 +345,9 @@ class Autoencoder(Network):
         self._finalized = False
 
     def finalize(self, cost, optimizer="sgd"):
-        from .util import cost_fns as costs
-        from optimizers._optimizers import optimizer as opt
-        from layers.core import DenseLayer
+        from costs._costs import cost_fns as costs
+        from ..optimizers import optimizer as opt
+        from ..layers import DenseLayer
 
         for layer in reversed(self.layers[1:]):
             decoder_layer = type(layer)
