@@ -1,0 +1,53 @@
+import unittest
+
+from architectures.architectures import Network
+from csxdata import CData
+from csxdata import roots
+from csxdata.utilities.parsers import mnist_tolearningtable
+from csxnet.util import numerical_gradients, analytical_gradients
+from layers.core import DenseLayer
+from numpy.linalg import norm
+
+
+class TestNetwork(unittest.TestCase):
+
+    def setUp(self):
+        self.data = CData(mnist_tolearningtable(roots["misc"] + "mnist.pkl.gz", fold=False), headers=None)
+        self.data.transformation = "std"
+        self.X, self.Y = self.data.table("testing", m=5, shuff=False)
+
+        self.net = Network(self.data.neurons_required[0], name="NumGradTestNetwork")
+        self.net.add(DenseLayer(30, activation="sigmoid"))
+        self.net.add(DenseLayer(self.data.neurons_required[1]))
+
+    def test_mse_with_sigmoid_output(self):
+        self.net.finalize(cost="mse", optimizer="sgd")
+        self.run_numerical_gradient_test()
+
+    def test_xent_with_sigmoid_output(self):
+        self.net.finalize(cost="xent", optimizer="sgd")
+        self.run_numerical_gradient_test()
+
+    def test_xent_with_softmax_output(self):
+        self.net.pop()
+        self.net.add(DenseLayer(self.data.neurons_required[1], activation="softmax"))
+        self.net.finalize(cost="xent", optimizer="sgd")
+        self.run_numerical_gradient_test()
+
+    def run_numerical_gradient_test(self):
+        self.net.fit(*self.data.table("learning"), epochs=1, verbose=0)
+
+        numerical = numerical_gradients(self.net, self.X, self.Y)
+        analytical = analytical_gradients(self.net, self.X, self.Y)
+        diff = analytical - numerical
+        error = norm(diff) / max(norm(numerical), norm(analytical))
+
+        dfstr = "{0: .4f}".format(error)
+
+        self.assertLess(error, 1e-2, "FATAL ERROR, {} (relerr) >= 1e-2".format(dfstr))
+        self.assertLess(error, 1e-4, "ERROR, 1e-2 > {} (relerr) >= 1e-4".format(dfstr))
+        self.assertLess(error, 1e-7, "SUSPICIOUS, 1e-4 > {} (relerr) >= 1e-7".format(dfstr))
+
+
+if __name__ == '__main__':
+    unittest.main()
