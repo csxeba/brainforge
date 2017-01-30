@@ -28,17 +28,16 @@ def forge_net():
 
 def forge_ae():
     ae = Network(input_shape=(2,), layers=[
-        DenseLayer(12, activation="sigmoid"),
+        DenseLayer(20, activation="sigmoid"),
         DenseLayer(2)
     ])
-    ae.finalize(cost="mse", optimizer="momentum")
+    ae.finalize(cost="mse", optimizer="adam")
     return ae
 
 if __name__ == '__main__':
     net = forge_net()
 
-    obj = plt.imshow(net.layers[1].weights, interpolation="none",
-                     vmin=-2.0, vmax=2.0)
+    obj = plt.matshow(net.layers[1].output)
 
     datagen = learnme(1000)
     epoch = 0
@@ -46,6 +45,6 @@ if __name__ == '__main__':
         print("Epoch", epoch+1)
         X, Y = next(datagen)
         net.epoch(X, Y, batch_size=20, monitor=["acc"], validation=next(learnme(100)), verbose=1)
-        obj.set_data = net.layers[1].weights
-        plt.pause(1)
+        obj.set_data = net.layers[1].output
+        plt.pause(0.5)
         epoch += 1
