@@ -1,6 +1,6 @@
 import time
 
-from evolution.evolution_np import Population
+from brainforge.evolution import Population
 
 
 def fn(genome):

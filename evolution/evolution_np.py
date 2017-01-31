@@ -51,16 +51,20 @@ class Population:
         self.update()
         print("EVOLUTION: initial grade:", self.grade())
 
+    def _geno_to_pheno(self):
+        phenotype = np.copy(self.individuals)
+        for locus in range(len(self.ranges)):
+            mini, maxi = self.ranges[locus]
+            phenotype[:, locus] = upscale(phenotype[:, locus], mini, maxi)
+        return phenotype
+
     def update(self, inds=None):
         if inds is None:
             inds = np.arange(self.individuals.shape[0])
         else:
             inds = inds.ravel()
         lim = self.limit
-        phenotype = np.copy(self.individuals[inds])
-        for locus in range(len(self.ranges)):
-            mini, maxi = self.ranges[locus]
-            phenotype[:, locus] = upscale(phenotype[:, locus], mini, maxi)
+        phenotype = self._geno_to_pheno()
         for ind, phen in zip(inds, phenotype):
             print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=len(str(lim))), end="")
             self.fitnesses[ind] = self.fitness(phen)
@@ -83,6 +87,7 @@ class Population:
                          if epoch % 5 != 0 else None))
             self.age += 1
             self.describe(3)
+        return self
 
     def get_candidates(self):
         candidates = np.zeros_like(self.individuals)
@@ -117,6 +122,11 @@ class Population:
         chain += "Size : {}\n".format(self.limit)
         chain += "Avg F: {}".format(self.grade())
         print(chain)
+
+    @property
+    def best(self):
+        arg = np.argmin(self.fitnesses)
+        return self._geno_to_pheno()[arg]
 
 
 def mate(ind1, ind2):

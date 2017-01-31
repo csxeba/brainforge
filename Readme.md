@@ -137,4 +137,48 @@ valid = seq.table("testing", shuff=True)
 model.fit(X, Y, batch_size=32, epochs=100,
           monitor=["acc"], validation=valid)
 ```
+###Evolution example code
+```python
+from brainforge import Network
+from brainforge.layers import DenseLayer, DropOut
+from brainforge.evolution import Population
 
+from csxdata import CData
+
+dataroot = "path/to/file.csv"
+frame = CData(dataroot, headers=1, indeps=3, feature="FeatureName")
+
+inshape, outshape = frame.neurons_required
+
+# Genome will be the number of hidden neurons and the drop rate
+# at each network layer.
+ranges = ((10, 100), (0.2, 0.8), (10, 60), (0.2, 0.8))
+
+def phenotype_to_ann(phenotype):
+    net = Network(inshape, layers=[
+        DenseLayer(int(phenotype[0]), activation="tanh"),
+        DropOut(phenotype[1]),
+        DenseLayer(int(phenotype[2]), activation="tanh"),
+        DropOut(phenotype[2]),
+        DenseLayer(outshape, activation="softmax")
+    ])
+    net.finalize(cost="xent", optimizer="adagrad")
+    return net
+    
+# Define the fitness function -> evaluate the neural network
+def fitness(phenotype):
+    net = phenotype_to_ann(phenotype)
+    net.fit_csxdata(frame, batch_size=20, epochs=30, verbose=0)
+    score = net.evaluate(*frame.table("testing", m=10))
+    return 1. - score  # fitness is minimized, so we need error rate
+
+pop = Population(limit=12,
+                 survivors_rate=0.5,
+                 crossing_over_rate=0.01,
+                 mutation_rate=0.05,
+                 mutation_delta=0.1,
+                 fitness_function=fitness,
+                 max_offsprings=3,
+                 ranges=ranges).run(epochs=30)
+best = phenotype_to_ann(pop.best)
+```
