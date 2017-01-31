@@ -21,6 +21,9 @@ which corresponds to *batch_size*
 - Activation: applies a (possibly) nonlinear activation function elementwise on the
 input tensor. Currently available activation funcions:
 **sigmoid, tanh, relu, softmax**
+Softmax is only available with categorycal crossentropy (xent), because the derivatives
+I worked out won't pass the numerical gradient test, so it's implemented the xent-softmax
+simplified form of (a - y).
 
 ###Fancy layers
 Some fancy feedforward layers from various scientific articles
@@ -42,6 +45,22 @@ Feedforward layers working with multidimensional data
 - PoolLayer: untrainable layer performing the max-pooling operation
 - ConvLayer: performs convolution on a batch of images by learnable kernels
 of a given shape.
+
+##Optimizers
+Currently the following optimizers are implemented:
+
+- SGD
+- Momentum (also Nesterov)
+- Adagrad
+- RMSprop
+- Adam
+
+##Costs
+The following cost functions are supported:
+
+- Mean Squared Error (MSE)
+- Categorical crossentropy (Xent)
+- Negative Log Likelyhood (NLL, untested!)
 
 ##Evolution
 Experimental support is available for the optimization of hyperparameters
@@ -66,9 +85,10 @@ brain = Network(input_shape=X.shape[1:], layers=(
     DenseLayer(Y.shape[1:], activation="sigmoid")
 ))
 brain.finalize(cost="xent", optimizer="adam")
-brain.fit(X, Y, verbose=1)
+brain.fit(X, Y, verbose=1, shuffle=True)
 ```
 For more complicated tasks, the use of the library csxdata is suggested.
+
 ###Fit LeNet-like ConvNet to images
 ```python
 from csxdata import CData
