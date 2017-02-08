@@ -2,8 +2,7 @@ import unittest
 
 from numpy.linalg import norm
 
-from csxdata import CData
-from csxdata import roots
+from csxdata import CData, roots
 from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge.util import numerical_gradients, analytical_gradients

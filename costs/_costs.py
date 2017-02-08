@@ -41,6 +41,8 @@ class _Xent(_CostFnBase):
 
     @staticmethod
     def derivative(outputs, targets):
+        # Simplified form, only useable with SoftMax
+        # and Sigmoid output activations.
         return np.subtract(outputs, targets)
 
     def __str__(self):

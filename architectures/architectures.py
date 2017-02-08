@@ -126,9 +126,10 @@ class Network:
         from ..costs import cost_fns as costs
         from ..optimizers import optimizer as opt
 
-        if str(self.layers[-1].activation) == "softmax":
-            if cost != "xent":
-                raise RuntimeError("Sorry, xent only supported with softmax output activation!")
+        if cost == "xent":
+            if str(self.layers[-1].activation) not in ("softmax", "sigmoid"):
+                errmsg = "Sorry, xent only supported with softmax or sigmoid output activation!"
+                raise RuntimeError(errmsg)
 
         for layer in self.layers:
             if layer.trainable:
