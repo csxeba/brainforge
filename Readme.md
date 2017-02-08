@@ -1,49 +1,48 @@
 #Brainforge documentation
-Brainforge is an Artificial Neural Networking library implemented in Python,
-which only depends on NumPy.
-
-The interface is intended to look like Keras' interface, but no compilation
-is done in the background.
+Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on
+**NumPy**. The interface is intended to look like Keras' interface, but no compilation is done in the
+background.
 
 ##Layers
-Neural networking operations are implemented as Layer subclasses and an
-ANN can be thought of a stack of Layer instances.
+Neural networking operations are implemented as *Layer* subclasses and an ANN can be thought of a stack of
+*Layer* instances.
 
 ###Core layers
 These layers are the ones used most regularily when working with ANNs.
 
-- InputLayer: passes the input tensor forward, unmodified.
-- Flatten: performs flattening on a *dims* dimensional tensor. Returns a matrix of shape
+- **InputLayer**: passes the input tensor forward, unmodified.
+- **Flatten**: performs flattening on a *dims* dimensional tensor. Returns a matrix of shape
 (*batch_size*, prod(*dims*))
-- Reshape: reshapes the input tensor to a given shape. Keeps the leading dimension,
+- **Reshape**: reshapes the input tensor to a given shape. Keeps the leading dimension,
 which corresponds to *batch_size*
-- DenseLayer: just your regular densely connected layer.
-- Activation: applies a (possibly) nonlinear activation function elementwise on the
+- **DenseLayer**: just your regular densely connected layer.
+- **Activation**: applies a (possibly) nonlinear activation function elementwise on the
 input tensor. Currently available activation funcions:
-**sigmoid, tanh, relu, softmax**
-Softmax is only available with categorycal crossentropy (xent), because the derivatives
-I worked out won't pass the numerical gradient test, so it's implemented the xent-softmax
-simplified form of (a - y).
+*sigmoid, tanh, relu, softmax*.
+
+*Softmax* is only available with *categorycal crossentropy (xent)*, because the derivatives
+I worked out won't pass the numerical gradient test, so it's implemented the *xent-softmax*
+simplified form of *(a - y)*.
 
 ###Fancy layers
 Some fancy feedforward layers from various scientific articles
 
-- HighwayLayer: used in the constriction of a Highway Network, see Srivastava et al., 2015
-- DropOut: performs dropout with given dropchance (p). See Srivastava et al., 2014
+- **HighwayLayer**: used in the constriction of a Highway Network, see Srivastava et al., 2015
+- **DropOut**: performs dropout with given dropchance (p). See Srivastava et al., 2014
 
 ###Recurrent
-Recurrent layersworking with multidimensional (time-series) data
+Recurrent layers working with multidimensional (time-series) data
 
-- RLayer: simple recurrence, output is simply fed back in each timestep.
-- LSTM: Long-Short Term Memory, see Hochreiter et al., 1997
-- EchoLayer: an untrainable, specially initialized recurrent layer used
-in Echo State Network. See Reservoir computing and Jaeger, 2007 (Scholarpaedia)
+- **RLayer**: simple recurrence, output is simply fed back in each timestep.
+- **LSTM**: Long-Short Term Memory, see Hochreiter et al., 1997
+- **Reservoir**: an untrainable, specially initialized recurrent layer used
+in Echo State Networks. See Reservoir computing and Jaeger, 2007 (Scholarpaedia)
 
 ###Tensor
 Feedforward layers working with multidimensional data
 
-- PoolLayer: untrainable layer performing the max-pooling operation
-- ConvLayer: performs convolution on a batch of images by learnable kernels
+- **PoolLayer**: untrainable layer performing the max-pooling operation
+- **ConvLayer**: performs convolution on a batch of images by learnable kernels
 of a given shape.
 
 ##Optimizers

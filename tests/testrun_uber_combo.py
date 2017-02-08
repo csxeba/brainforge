@@ -26,7 +26,7 @@ def build_ultimate_recurrent_combo_network(data: Sequence, gradcheck=True):
     net = Network(input_shape=inshape, name="UltimateRecurrentComboNetwork")
     net.add(LSTM(20, activation="tanh", return_seq=True))
     net.add(RLayer(10, activation="tanh", return_seq=True))
-    net.add(EchoLayer(5, activation="tanh"))
+    net.add(Reservoir(5, activation="tanh"))
     net.add(DenseLayer(20, activation="tanh"))
     net.add(HighwayLayer(activation="tanh"))
     net.add(DenseLayer(outshape, activation="sigmoid"))

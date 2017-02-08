@@ -4,7 +4,7 @@ def translate_architecture(arch):
         Flatten, Reshape)
     from layers.fancy import DropOut
     from layers.fancy import HighwayLayer
-    from layers.recurrent import EchoLayer
+    from layers.recurrent import Reservoir
     from layers.recurrent import LSTM
     from layers.recurrent import RLayer
     from layers.tensor import ConvLayer
@@ -20,7 +20,7 @@ def translate_architecture(arch):
         "Resh": Reshape,
         "RLay": RLayer,
         "LSTM": LSTM,
-        "Echo": EchoLayer,
+        "Echo": Reservoir,
         "MaxP": PoolLayer,
         "Conv": ConvLayer
     }

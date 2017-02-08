@@ -208,7 +208,7 @@ class LSTM(_Recurrent):
         return "LSTM-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
-class EchoLayer(RLayer):
+class Reservoir(RLayer):
 
     def __init__(self, neurons, activation, return_seq=False, p=0.1):
         RLayer.__init__(self, neurons, activation, return_seq)
