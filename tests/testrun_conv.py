@@ -27,12 +27,12 @@ def build_keras_reference(data: CData):
 def build_cnn(data: CData):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestBrainforgeCNN")
-    net.add(ConvLayer(1, 5, 5))
+    net.add(ConvLayer(5, 5, 5))
     net.add(PoolLayer(3))
     net.add(Activation("tanh"))
     net.add(Flatten())
-    net.add(DenseLayer(outshape, activation="sigmoid", trainable=False))
-    net.finalize("xent", optimizer="adam")
+    net.add(DenseLayer(outshape, activation="sigmoid", trainable=True))
+    net.finalize("mse", optimizer="adam")
     return net
 
 
@@ -47,8 +47,8 @@ def xperiment():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
     # net.fit(*mnist.table("learning", m=30), batch_size=10, epochs=1, verbose=0)
-    net.gradient_check(*mnist.table("testing", m=20))
+    # net.gradient_check(*mnist.table("testing", m=20))
     net.fit(*mnist.table("learning"), batch_size=30, epochs=10, verbose=1)
 
 if __name__ == '__main__':
-    keras_run()
+    xperiment()
