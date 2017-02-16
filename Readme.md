@@ -65,7 +65,7 @@ The following cost functions are supported:
 Experimental support is available for the optimization of hyperparameters
 using a simple genetic algorithm.
 
-##Exaplmes
+##Examples
 ###Simple shallow Dense network
 ```python
 import numpy as np
