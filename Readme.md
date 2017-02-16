@@ -59,7 +59,6 @@ The following cost functions are supported:
 
 - Mean Squared Error (MSE)
 - Categorical crossentropy (Xent)
-- Negative Log Likelyhood (NLL, untested!)
 
 ##Evolution
 Experimental support is available for the optimization of hyperparameters
