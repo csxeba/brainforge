@@ -1,8 +1,10 @@
 import numpy as np
 
 from brainforge.layers import LayerBase, FFBase
-from brainforge.ops import sigmoid
+from brainforge.ops import Sigmoid
 from brainforge.util import white, rtm
+
+sigmoid = Sigmoid()
 
 
 class HighwayLayer(FFBase):

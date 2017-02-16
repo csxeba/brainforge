@@ -280,13 +280,13 @@ def crossing_over(chromosome1, chromosome2):
                 chromosome1[:position] + chromosome2[position:])
 
 
+def wrapchoice(*args):
+        return random.choice(args)
+
+
 def random_genome(ranges):
     return [{float: random.uniform, int: random.randrange, str: wrapchoice}
             [type(t[0])](*t) for t in ranges]
-
-
-def wrapchoice(*args):
-        return random.choice(args)
 
 
 def random_locus(pop, locus):

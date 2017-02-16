@@ -8,10 +8,10 @@ class PoolLayer(LayerBase):
 
     def __init__(self, fdim):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        from ..ops import MaxPool
+        from ..ops import MaxPoolOp
         self.fdim = fdim
         self.filter = None
-        self.op = MaxPool()
+        self.op = MaxPoolOp()
 
     def connect(self, to, inshape):
         ic, iy, ix = inshape
@@ -69,11 +69,11 @@ class ConvLayer(LayerBase):
         self.op = None
 
     def connect(self, to, inshape):
-        from ..ops import Convolution
+        from ..ops import ConvolutionOp
 
         LayerBase.connect(self, to, inshape)
         depth, iy, ix = inshape
-        self.op = Convolution()
+        self.op = ConvolutionOp()
         self.inshape = inshape
         self.depth = depth
         self.weights = white(self.nfilters, self.depth, self.fy, self.fx)

@@ -1,44 +1,47 @@
 import time
 
-from brainforge.evolution import Population
+from brainforge import Network
+from brainforge.layers import DenseLayer
+from brainforge.evolution import Population, to_phenotype
+
+from csxdata import CData, roots
+
+dataroot = roots["csvs"] + "grapes.csv"
+frame = CData(dataroot, headers=1, indeps=6, feature="EVJARAT")
+frame.transformation = "std"
+
+inshape, outshape = frame.neurons_required
+
+# Genome will be the number of hidden neurons
+# at each network layer.
+ranges = ((2, 300), (2, 180))
 
 
-def fn(genome):
-    from csxdata.utilities.misc import euclidean
-
-    target = [50] * len(genome)
-    return euclidean(genome, target)
-
-
-def test_evolution():
-    limit = 1000
-    survivors = 0.4
-    crossing_over_rate = 0.2
-    mutation_rate = 0.01
-    mutation_delta = 0.1
-    max_offsprings = 3
-    epochs = 300
-    fitness = fn
-    genome_len = 10
-
-    ranges = [(0, 100) for _ in range(genome_len)]
-
-    demo_pop = Population(limit=limit,
-                          survivors_rate=survivors,
-                          crossing_over_rate=crossing_over_rate,
-                          mutation_rate=mutation_rate,
-                          mutation_delta=mutation_delta,
-                          fitness_function=fitness,
-                          max_offsprings=max_offsprings,
-                          ranges=ranges)
-
-    print("Population created with {} individuals".format(len(demo_pop.individuals)))
-    demo_pop.describe(3)
-    demo_pop.run(epochs)
-    print("Run done.")
+def phenotype_to_ann(phenotype):
+    net = Network(inshape, layers=[
+        DenseLayer(int(phenotype[0]), activation="tanh"),
+        DenseLayer(int(phenotype[1]), activation="tanh"),
+        DenseLayer(outshape, activation="sigmoid")
+    ])
+    net.finalize(cost="mse", optimizer="adam")
+    return net
 
 
-if __name__ == '__main__':
+# Define the fitness function -> evaluate the neural network
+def fitness(genotype):
     start = time.time()
-    test_evolution()
-    print("Time elapsed: {} s".format(round(time.time()-start, 2)))
+    phenotype = to_phenotype(genotype, ranges)
+    net = phenotype_to_ann(phenotype)
+    net.fit_csxdata(frame, batch_size=20, epochs=50, verbose=0)
+    score = net.evaluate(*frame.table("testing", m=10))[-1]
+    timereq = (time.time() - start) * 10
+    return (1. - score) + timereq  # fitness is minimized, so we need error rate
+
+
+pop = Population(
+    loci=len(ranges),
+    limit=30,
+    fitness_function=fitness,
+).run(epochs=30, verbosity=4)
+
+best = to_phenotype(pop.best, ranges)

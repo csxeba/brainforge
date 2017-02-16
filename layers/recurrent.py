@@ -3,8 +3,10 @@ import abc
 import numpy as np
 
 from brainforge.layers import FFBase
-from brainforge.ops import sigmoid
+from brainforge.ops import Sigmoid
 from brainforge.util import white, white_like
+
+sigmoid = Sigmoid()
 
 
 class _Recurrent(FFBase):

@@ -126,17 +126,30 @@ class Network:
         from ..costs import cost_fns as costs
         from ..optimizers import optimizer as opt
 
-        if cost == "xent":
+        self.cost = costs[cost] if isinstance(cost, str) else cost
+        self.optimizer = optimizer
+
+        if str(cost).lower() == "xent":
             if str(self.layers[-1].activation) not in ("softmax", "sigmoid"):
-                errmsg = "Sorry, xent only supported with softmax or sigmoid output activation!"
+                errmsg = "Sorry, xent only supported with softmax or sigmoid output activation!\n"
+                errmsg += "{} not supported!".format(str(self.layers[-1].activation))
                 raise RuntimeError(errmsg)
+            self.layers[-1].activation.derivative = lambda X: np.ones_like(X)
+
+            # TODO: discard this ugly hack!
+            if str(self.layers[-1].activation) == "sigmoid":
+                from ..costs._costs import _XentOnSigmoid
+                self.cost = _XentOnSigmoid()
+            else:
+                from ..costs._costs import _XentOnSoftmax
+                self.cost = _XentOnSoftmax()
 
         for layer in self.layers:
             if layer.trainable:
                 if isinstance(optimizer, str):
                     optimizer = opt[optimizer](layer)
                 layer.optimizer = optimizer
-        self.cost = costs[cost] if isinstance(cost, str) else cost
+
         self._finalized = True
 
     def pop(self):
@@ -200,7 +213,7 @@ class Network:
                 done = ((bno * batch_size) + self.m) / self.N
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(done, np.mean(costs)), end="")
 
-        if verbose and validation and None not in validation:
+        if verbose and validation:
             print_progress()
             print()
         elif verbose:
@@ -346,7 +359,7 @@ class Autoencoder(Network):
         self._finalized = False
 
     def finalize(self, cost, optimizer="sgd"):
-        from costs._costs import cost_fns as costs
+        from ..costs import cost_fns as costs
         from ..optimizers import optimizer as opt
         from ..layers import DenseLayer
 

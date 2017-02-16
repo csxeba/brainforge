@@ -2,7 +2,7 @@
 import numpy as np
 
 
-class Flatten:
+class FlattenOp:
 
     def __init__(self):
         from ..util import rtm
@@ -18,7 +18,7 @@ class Flatten:
         return np.prod(inshape),  # return as tuple!
 
 
-class Reshape:
+class ReshapeOp:
 
     def __init__(self, shape):
         self.shape = shape
@@ -34,7 +34,7 @@ class Reshape:
         return self.shape
 
 
-class Convolution:
+class ConvolutionOp:
 
     def valid(self, A, F):
         im, ic, iy, ix = A.shape
@@ -81,7 +81,7 @@ class Convolution:
         return "Convolution"
 
 
-class ScipySigConv:
+class ScipySigConvOp:
 
     def __init__(self):
         from scipy.signal import convolve
@@ -122,7 +122,7 @@ class ScipySigConv:
             raise RuntimeError("Unsupported mode: " + str(mode))
 
 
-class MaxPool:
+class MaxPoolOp:
 
     def __init__(self):
         pass
@@ -164,86 +164,3 @@ class MaxPool:
         elif len(inshape) == 2:
             iy, ix = inshape
             return iy // fdim, ix // fdim
-
-
-class _ActivationFunctionBase:
-
-    def __call__(self, Z: np.ndarray): pass
-
-    def __str__(self): raise NotImplementedError
-
-    def derivative(self, Z: np.ndarray):
-        raise NotImplementedError
-
-    def backwards(self, A):
-        return self.derivative(A)
-
-    @property
-    def outshape(self):
-        return self._inshape
-
-
-class _Sigmoid(_ActivationFunctionBase):
-
-    def __call__(self, Z: np.ndarray):
-        return np.divide(1.0, np.add(1, np.exp(-Z)))
-
-    def __str__(self): return "sigmoid"
-
-    def derivative(self, A):
-        return np.multiply(A, np.subtract(1.0, A))
-
-
-class _Tanh(_ActivationFunctionBase):
-
-    def __call__(self, Z):
-        return np.tanh(Z)
-
-    def __str__(self): return "tanh"
-
-    def derivative(self, A):
-        return np.subtract(1.0, np.square(A))
-
-
-class _Linear(_ActivationFunctionBase):
-
-    def __call__(self, Z):
-        return Z
-
-    def __str__(self): return "linear"
-
-    def derivative(self, Z):
-        return np.ones_like(Z)
-
-
-class _ReLU(_ActivationFunctionBase):
-
-    def __call__(self, Z):
-        return np.maximum(0.0, Z)
-
-    def __str__(self): return "relu"
-
-    def derivative(self, A):
-        d = np.greater(A, 0.0).astype("float32")
-        return d
-
-
-class _SoftMax(_ActivationFunctionBase):
-
-    def __call__(self, Z):
-        eZ = np.exp(Z)
-        return eZ / np.sum(eZ, axis=1, keepdims=True)
-
-    def __str__(self): return "softmax"
-
-    def derivative(self, A: np.ndarray):
-        return 1.
-
-
-sigmoid = _Sigmoid()
-tanh = _Tanh()
-linear = _Linear()
-relu = _ReLU()
-softmax = _SoftMax()
-
-act_fns = {key.lower(): fn for key, fn in locals().items() if key[0] not in ("_", "F")}

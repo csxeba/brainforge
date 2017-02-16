@@ -26,7 +26,7 @@ class LayerBase(abc.ABC):
         self.optimizer = None
 
         if isinstance(activation, str):
-            self.activation = act_fns[activation]
+            self.activation = act_fns[activation]()
         else:
             self.activation = activation
 
@@ -276,16 +276,16 @@ class DenseLayer(FFBase):
 class Flatten(_Op):
 
     def connect(self, to, inshape):
-        from brainforge.ops import Flatten as Flat, Reshape as Resh
+        from brainforge.ops import FlattenOp, ReshapeOp
         _Op.connect(self, to, inshape)
-        self.opf = Flat()
-        self.opb = Resh(inshape)
+        self.opf = FlattenOp()
+        self.opb = ReshapeOp(inshape)
 
 
 class Reshape(_Op):
 
     def connect(self, to, inshape):
-        from brainforge.ops import Flatten as Flat, Reshape as Resh
+        from brainforge.ops import FlattenOp, ReshapeOp
         _Op.connect(self, to, inshape)
-        self.opf = Resh(inshape)
-        self.opb = Flat()
+        self.opf = ReshapeOp(inshape)
+        self.opb = FlattenOp()

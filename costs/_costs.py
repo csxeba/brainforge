@@ -18,7 +18,9 @@ class _CostFnBase(abc.ABC):
     def __str__(self): return ""
 
     @staticmethod
-    def derivative(outputs, targets): pass
+    @abc.abstractmethod
+    def derivative(outputs, targets):
+        raise NotImplementedError
 
 
 class _MSE(_CostFnBase):
@@ -34,32 +36,72 @@ class _MSE(_CostFnBase):
         return "MSE"
 
 
-class _Xent(_CostFnBase):
+class _XentOnSigmoid(_CostFnBase):
 
     def __call__(self, a: np.ndarray, y: np.ndarray):
         return -np.sum(y * np.log(a) + (1 - y) * np.log(1 - a))
 
     @staticmethod
     def derivative(outputs, targets):
-        # Simplified form, only useable with SoftMax
-        # and Sigmoid output activations.
+        return np.subtract(outputs, targets)
+
+
+class _XentOnSoftmax(_CostFnBase):
+
+    def __call__(self, a: np.ndarray, y: np.ndarray):
+        return -np.sum(y * np.log(a))
+
+    @staticmethod
+    def derivative(outputs, targets):
         return np.subtract(outputs, targets)
 
     def __str__(self):
         return "Xent"
 
 
-class _NLL(_CostFnBase):
-    """Negative logstring-likelyhood cost function"""
-    def __call__(self, outputs, targets=None):
-        return np.negative(np.log(outputs))
+class _Xent(_CostFnBase):
+
+    def __call__(self, a: np.ndarray, y: np.ndarray):
+        return _Xent.call_on_softmax(a, y)
 
     @staticmethod
-    def derivative(outputs, targets=None):
-        return np.reciprocal(outputs)
+    def call_on_sigmoid(a: np.ndarray, y: np.ndarray):
+        return -np.sum(y * np.log(a) + (1 - y) * np.log(1 - a))
+
+    @staticmethod
+    def call_on_softmax(a, y):
+        return -np.sum(y * np.log(a))
+
+    @staticmethod
+    def derivative(outputs, targets):
+        return _Xent.simplified_derivative(outputs, targets)
+
+    @staticmethod
+    def simplified_derivative(outputs, targets):
+        return np.subtract(outputs, targets)
+
+    @staticmethod
+    def ugly_derivative(outputs, targets):
+        enum = targets - outputs
+        denom = (outputs - 1.) * outputs
+        return enum / denom
 
     def __str__(self):
-        return "NLL"
+        return "Xent"
+
+
+class _Hinge(_CostFnBase):
+
+    def __call__(self, outputs, targets):
+        return np.sum(np.mean(np.maximum(0., 1. - targets * outputs), axis=1))
+
+    def __str__(self):
+        return "Hinge"
+
+    @staticmethod
+    def derivative(outputs, targets):
+        # TODO: implement this
+        raise NotImplementedError
 
 
 class _Cost:
@@ -71,15 +113,11 @@ class _Cost:
     def xent(self):
         return _Xent()
 
-    @property
-    def nll(self):
-        return _NLL()
-
     def __getitem__(self, item: str):
         if not isinstance(item, str):
             raise TypeError("Please supply a string!")
         item = item.lower()
-        d = {str(fn).lower(): fn for fn in (_NLL(), _MSE(), _Xent())}
+        d = {str(fn).lower(): fn for fn in (_MSE(), _Xent())}
         if item not in d:
             raise IndexError("Requested cost function is unsupported!")
         return d[item]
@@ -87,5 +125,4 @@ class _Cost:
 
 mse = _MSE()
 xent = _Xent()
-nll = _NLL()
 cost_fns = _Cost()

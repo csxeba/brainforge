@@ -19,18 +19,18 @@ class TestNetwork(unittest.TestCase):
 
         self.net = Network(self.data.neurons_required[0], name="NumGradTestNetwork")
         self.net.add(DenseLayer(30, activation="sigmoid"))
-        self.net.add(DenseLayer(self.data.neurons_required[1]))
 
     def test_mse_with_sigmoid_output(self):
+        self.net.add(DenseLayer(self.data.neurons_required[1], activation="sigmoid"))
         self.net.finalize(cost="mse", optimizer="sgd")
         self.run_numerical_gradient_test()
 
     def test_xent_with_sigmoid_output(self):
+        self.net.add(DenseLayer(self.data.neurons_required[1], activation="sigmoid"))
         self.net.finalize(cost="xent", optimizer="sgd")
         self.run_numerical_gradient_test()
 
     def test_xent_with_softmax_output(self):
-        self.net.pop()
         self.net.add(DenseLayer(self.data.neurons_required[1], activation="softmax"))
         self.net.finalize(cost="xent", optimizer="sgd")
         self.run_numerical_gradient_test()
