@@ -164,6 +164,7 @@ class Network:
         if not self._finalized:
             raise RuntimeError("Architecture not finalized!")
 
+        costs = []
         for epoch in range(1, epochs+1):
             if shuffle:
                 arg = np.arange(X.shape[0])
@@ -171,7 +172,8 @@ class Network:
                 X, Y = X[arg], Y[arg]
             if verbose:
                 print("Epoch {}/{}".format(epoch, epochs))
-            self.epoch(X, Y, batch_size, monitor, validation, verbose)
+            costs += self.epoch(X, Y, batch_size, monitor, validation, verbose)
+        return costs
 
     def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
         fanin, outshape = frame.neurons_required
@@ -184,7 +186,7 @@ class Network:
         X, Y = frame.table("learning")
         validation = frame.table("testing")
 
-        self.fit(X, Y, batch_size, epochs, monitor, validation, verbose, shuffle)
+        return self.fit(X, Y, batch_size, epochs, monitor, validation, verbose, shuffle)
 
     def epoch(self, X, Y, batch_size, monitor, validation, verbose):
 

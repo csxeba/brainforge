@@ -28,36 +28,30 @@ import numpy as np
 class Population:
     """Model of a population in the ecologigal sense"""
 
-    def __init__(self, loci, fitness_function,
+    def __init__(self, loci,
+                 fitness_function,
                  fitness_weights,
-                 limit=100, survivors_rate=0.5,
-                 mutation_rate=0.1, mutation_delta=0.25,
-                 force_update_at_every=0):
+                 limit=100):
         """
         :param loci: number of elements in an individual's chromosome
         :param fitness_function: function used to evaluate the "badness" of an individual
         :param limit: maximum number of individuals
-        :param survivors_rate: probability of survival
-        :param mutation_rate: probability of mutation
-        :param mutation_delta: mutation = gene + uniform(+-delta)
         """
 
         self.fitness = fitness_function
         self.fitness_w = np.array(fitness_weights)
         self.limit = limit
-        self.survivors = survivors_rate
-        self.mutation_rate = mutation_rate
-        self.mutation_delta = mutation_delta
 
         self.fitnesses = np.zeros((limit, len(fitness_weights)))
         self.grades = np.zeros((limit,))
         self.individuals = np.random.uniform(size=(limit, loci))
-        self.force_update = force_update_at_every
 
         self.age = 0
 
-        self.update()
-        print("EVOLUTION: initial grade:", self.grade())
+        self.update(verbose=1)
+        print("EVOLUTION: initial total grade:", self.total_grade())
+        print("EVOLUTION: initial mean  grade:", self.mean_grade())
+        print("EVOLUTION: initial best  grade:", self.grades.min())
 
     def update(self, inds=None, verbose=0):
         if inds is None:
@@ -72,47 +66,55 @@ class Population:
             self.grades[ind] = (self.fitnesses[ind] * self.fitness_w).sum()
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
-        self.grades = rescale(self.grades)
 
-    def run(self, epochs, verbosity=1):
-        past_grades = []
+    def run(self, epochs, verbosity=1,
+            survival_rate=0.5, mutation_rate=0.1,
+            mutation_delta=0.05, force_update_at_every=0):
+
+        mean_grades = []
+        total_grades = []
+        bests = []
         for epoch in range(1, epochs+1):
             if verbosity:
                 print("-"*50)
                 print("Epoch {0:>{w}}/{1}".format(epoch, epochs, w=len(str(epochs))))
-            diers = np.random.choice([0., 1.], size=self.grades.shape,
-                                     p=[self.survivors, 1.-self.survivors])
-            candidates = self.get_candidates()
-            candidates = diers[:, None] * candidates + (1.-diers[:, None]) * self.individuals
+            prbs = rescale(self.grades)
+            survive_pb = np.random.uniform(high=prbs, size=self.grades.shape)
+            survivors = np.less_equal(survive_pb, survival_rate)
+            candidates = self.get_candidates(prbs)
+            candidates = (1. - survivors)[:, None] * candidates +\
+                         survivors[:, None] * self.individuals
             mut_mask = np.random.choice([0., 1.],
                                         size=self.individuals.shape,
-                                        p=[1.-self.mutation_rate, self.mutation_rate])
-            mutations = mut_mask * np.random.uniform(low=-self.mutation_delta,
-                                                     high=self.mutation_delta,
+                                        p=[1.-mutation_rate, mutation_rate])
+            mutations = mut_mask * np.random.uniform(low=-mutation_delta,
+                                                     high=mutation_delta,
                                                      size=self.individuals.shape)
             self.individuals = np.clip(candidates + mutations, 0., 1.)
 
-            inds = np.argwhere(diers + mut_mask.sum(axis=1))
-            if self.force_update:
-                if epoch % self.force_update != 0:
+            inds = np.argwhere(survivors + mut_mask.sum(axis=1))
+            if force_update_at_every:
+                if epoch % force_update_at_every != 0:
                     inds = None
             self.update(inds, verbose=verbosity)
 
             self.age += 1
             if verbosity:
                 self.describe(verbosity-1)
-            past_grades.append(self.grade())
+            mean_grades.append(self.mean_grade())
+            total_grades.append(self.total_grade())
+            bests.append(self.grades.min())
 
         print()
-        return past_grades
+        return mean_grades, total_grades, bests
 
-    def get_candidates(self):
+    def get_candidates(self, prbs):
         candidates = np.zeros_like(self.individuals)
         rr = lambda: randrange(self.limit)
         i = 0
         while i != self.limit:
             left, right = rr(), rr()
-            prob = 1. - (self.grades[left] * self.grades[right])
+            prob = 1. - (prbs[left] * prbs[right])
             if prob > np.random.uniform():
                 continue
             new = mate(self.individuals[left], self.individuals[right])
@@ -120,26 +122,30 @@ class Population:
             i += 1
         return candidates
 
-    def grade(self):
+    def total_grade(self):
+        return self.grades.sum()
+
+    def mean_grade(self):
         """Calculates an average fitness value for the whole population"""
-        return (self.fitnesses * self.fitness_w[None, :]).sum()
+        return self.grades.std()
 
     def describe(self, show=0):
         """Print out useful information about a population"""
         showme = np.argsort(self.grades)[:show]
         chain = "-"*50 + "\n"
-        chain += "Population of age {}\n".format(self.age)
         for i, index in enumerate(showme):
             genomechain = ", ".join(
                 "{:>6.4f}".format(loc) for loc in
                 np.round(self.individuals[index], 4))
             fitnesschain = "[" + ", ".join(
-                "{:>8.4f}".format(fns) for fns in
+                "{:^8.4f}".format(fns) for fns in
                 self.fitnesses[index]) + "]"
             chain += "TOP {:>2}: [{:^14}] F = {:<}\n".format(
                 i+1, genomechain, fitnesschain)
-        chain += "Size : {}\n".format(self.limit)
-        chain += "Avg F: {}".format(self.grade())
+        chain += "Best Grade : {:7>.4f}\n".format(self.grades.min())
+        chain += "Mean Grade : {:7>.4f}, STD: {:7>.4f}\n"\
+                 .format(self.grades.mean(), self.grades.std())
+        chain += "Total Grade: {:7>.4f}".format(self.total_grade())
         print(chain)
 
     @property
@@ -166,8 +172,8 @@ def to_phenotype(ind, ranges):
 def rescale(vector):
     output = vector - vector.min()
     output /= output.max()
-    output *= 0.90
+    output *= 0.95
     output += 0.05
-    assert np.isclose(output.min(), 0.05) and np.isclose(output.max(), 0.95), \
+    assert np.isclose(output.min(), 0.05) and np.isclose(output.max(), 1.), \
         "Failed with values: {}, {}".format(output.min(), output.max())
     return output
