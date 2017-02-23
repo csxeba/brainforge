@@ -1,7 +1,7 @@
 import numpy as np
 
-from brainforge.layers import LayerBase
-from brainforge.util import white
+from .core import LayerBase
+from ..util import white
 
 
 class PoolLayer(LayerBase):

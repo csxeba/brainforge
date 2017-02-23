@@ -24,7 +24,7 @@ import numpy as np
 
 class Network:
 
-    def __init__(self, input_shape=(), layers=(), name=""):
+    def __init__(self, input_shape, layers=(), name=""):
         # Referencing the data wrapper on which we do the learning
         self.name = name
         # Containers and self-describing variables

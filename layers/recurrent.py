@@ -2,9 +2,9 @@ import abc
 
 import numpy as np
 
-from brainforge.layers import FFBase
-from brainforge.ops import Sigmoid
-from brainforge.util import white, white_like
+from .core import FFBase
+from ..ops import Sigmoid
+from ..util import white, white_like
 
 sigmoid = Sigmoid()
 

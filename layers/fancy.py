@@ -1,8 +1,8 @@
 import numpy as np
 
-from brainforge.layers import LayerBase, FFBase
-from brainforge.ops import Sigmoid
-from brainforge.util import white, rtm
+from .core import LayerBase, FFBase
+from ..ops import Sigmoid
+from ..util import white, rtm
 
 sigmoid = Sigmoid()
 
@@ -29,7 +29,7 @@ class HighwayLayer(FFBase):
         self.biases = np.zeros((self.neurons*3,))
         FFBase.connect(self, to, inshape)
 
-    def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
+    def feedforward(self, stimuli) -> np.ndarray:
         self.inputs = rtm(stimuli)
         self.gates = self.inputs.dot(self.weights) + self.biases
         self.gates[:, :self.neurons] = self.activation(self.gates[:, :self.neurons])
@@ -77,17 +77,18 @@ class DropOut(LayerBase):
         self.dropchance = 1. - dropchance
         self.mask = None
         self.neurons = None
+        self.training = True
 
     def connect(self, to, inshape):
         self.neurons = inshape
 
-    def feedforward(self, questions):
-        self.inputs = questions
+    def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
+        self.inputs = stimuli
         self.mask = np.random.uniform(0, 1, self.neurons) < self.dropchance
-        self.output = questions * self.mask
+        self.output = stimuli * (self.mask if self.training else self.dropchance)
         return self.output
 
-    def backpropagate(self, error):
+    def backpropagate(self, error: np.ndarray) -> np.ndarray:
         output = error * self.mask
         self.mask = np.ones_like(self.mask) * self.dropchance
         return output
@@ -116,11 +117,16 @@ class DropOut(LayerBase):
 class Experimental:
 
     class AboLayer(LayerBase):
+
         def __init__(self, brain, position, activation):
             LayerBase.__init__(self, brain, position, activation)
             self.brain = brain
             self.fanin = brain.layers[-1].fanout
             self.neurons = []
+
+        @classmethod
+        def from_capsule(cls, capsule):
+            pass
 
         def add_minion(self, empty_network):
             minion = empty_network
@@ -149,3 +155,6 @@ class Experimental:
 
         def outshape(self):
             return ...
+
+        def __str__(self):
+            pass

@@ -49,7 +49,6 @@ class Population:
         self.age = 0
 
         self.update(verbose=1)
-        print("EVOLUTION: initial total grade:", self.total_grade())
         print("EVOLUTION: initial mean  grade:", self.mean_grade())
         print("EVOLUTION: initial best  grade:", self.grades.min())
 
@@ -63,13 +62,14 @@ class Population:
             if verbose:
                 print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=len(str(lim))), end="")
             self.fitnesses[ind] = self.fitness(gen)
-            self.grades[ind] = (self.fitnesses[ind] * self.fitness_w).sum()
+            # self.grades[ind] = (self.fitnesses[ind] * self.fitness_w).sum()
+            self.grades[ind] = np.prod(self.fitnesses[ind])
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
 
     def run(self, epochs, verbosity=1,
             survival_rate=0.5, mutation_rate=0.1,
-            mutation_delta=0.05, force_update_at_every=0):
+            force_update_at_every=0):
 
         mean_grades = []
         total_grades = []
@@ -82,19 +82,17 @@ class Population:
             survive_pb = np.random.uniform(high=prbs, size=self.grades.shape)
             survivors = np.less_equal(survive_pb, survival_rate)
             candidates = self.get_candidates(prbs)
-            candidates = (1. - survivors)[:, None] * candidates +\
-                         survivors[:, None] * self.individuals
+            candidates = ((1. - survivors)[:, None] * candidates +
+                          survivors[:, None] * self.individuals)
             mut_mask = np.random.choice([0., 1.],
                                         size=self.individuals.shape,
                                         p=[1.-mutation_rate, mutation_rate])
-            mutations = mut_mask * np.random.uniform(low=-mutation_delta,
-                                                     high=mutation_delta,
-                                                     size=self.individuals.shape)
-            self.individuals = np.clip(candidates + mutations, 0., 1.)
+            mutations = mut_mask * np.random.uniform(low=0., high=1., size=self.individuals.shape)
+            self.individuals = candidates + mutations
 
             inds = np.argwhere(survivors + mut_mask.sum(axis=1))
             if force_update_at_every:
-                if epoch % force_update_at_every != 0:
+                if epoch % force_update_at_every == 0:
                     inds = None
             self.update(inds, verbose=verbosity)
 
@@ -110,10 +108,10 @@ class Population:
 
     def get_candidates(self, prbs):
         candidates = np.zeros_like(self.individuals)
-        rr = lambda: randrange(self.limit)
+        rr = lambda: (randrange(self.limit), randrange(self.limit))
         i = 0
         while i != self.limit:
-            left, right = rr(), rr()
+            left, right = rr()
             prob = 1. - (prbs[left] * prbs[right])
             if prob > np.random.uniform():
                 continue
@@ -142,10 +140,12 @@ class Population:
                 self.fitnesses[index]) + "]"
             chain += "TOP {:>2}: [{:^14}] F = {:<}\n".format(
                 i+1, genomechain, fitnesschain)
-        chain += "Best Grade : {:7>.4f}\n".format(self.grades.min())
+        chain += "Best Grade : {:7>.4f} ".format(self.grades.min())
+        chain += "Fitnesses: ["
+        chain += ", ".join("{}".format(f) for f in self.fitnesses[self.grades.argmin()])
+        chain += "]\n"
         chain += "Mean Grade : {:7>.4f}, STD: {:7>.4f}\n"\
                  .format(self.grades.mean(), self.grades.std())
-        chain += "Total Grade: {:7>.4f}".format(self.total_grade())
         print(chain)
 
     @property

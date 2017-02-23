@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from brainforge.util import white, white_like
+from ..util import white, white_like
 
 
 class LayerBase(abc.ABC):

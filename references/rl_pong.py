@@ -69,9 +69,9 @@ def policy_backward(eph, epdlogp):
 
 env = gym.make("Pong-v0")
 observation = env.reset()
-prev_x = None  # used in computing the difference frame
+prev_x = np.zeros(D)  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
-running_reward = None
+running_reward = 0
 reward_sum = 0
 episode_number = 0
 while True:
@@ -79,7 +79,7 @@ while True:
 
     # preprocess the observation, set input to network to be difference image
     cur_x = prepro(observation)
-    x = cur_x - prev_x if prev_x is not None else np.zeros(D)
+    x = cur_x - prev_x
     prev_x = cur_x
 
     # forward the policy network and sample an action from the returned probability
@@ -128,13 +128,13 @@ while True:
                 grad_buffer[k] = np.zeros_like(v)  # reset batch gradient buffer
 
         # boring book-keeping
-        running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
-        print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
-        if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
+        running_reward = running_reward * 0.99 + reward_sum * 0.01
+        # print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
+        # if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
         reward_sum = 0
         observation = env.reset()  # reset env
-        prev_x = None
+        prev_x = np.zeros(D)
 
-    if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
-        print('ep {}: game finished, reward: {}'.format(episode_number, reward)
-              + ('' if reward == -1 else ' !!!!!!!!'))
+        if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
+            print('ep {:>5}: epoch finished, reward: {:>4}, running: {:.4f}'
+                  .format(episode_number, reward, running_reward))
