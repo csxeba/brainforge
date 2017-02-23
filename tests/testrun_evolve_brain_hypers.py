@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 
+import matplotlib
 from matplotlib import pyplot as plt
 
 from brainforge import Network
@@ -10,16 +11,18 @@ from brainforge.evolution import Population, to_phenotype
 
 from csxdata import CData, roots
 
+matplotlib.use("Qt5Agg")
+
 dataroot = roots["misc"] + "mnist.pkl.gz"
 frame = CData(dataroot, headers=None)
 frame.transformation = "std"
-tX, tY = frame.table("learning", shuff=True, m=5000)
+tX, tY = frame.table("learning", shuff=True, m=10000)
 
 inshape, outshape = frame.neurons_required
 
 # Genome will be the number of hidden neurons
 # at each network layer.
-ranges = ((2, 60), (2, 60))
+ranges = ((2, 100), (2, 100))
 
 
 def phenotype_to_ann(phenotype):
@@ -29,7 +32,7 @@ def phenotype_to_ann(phenotype):
         DenseLayer(int(phenotype[1]), activation="tanh"),
         DenseLayer(outshape, activation="softmax")
     ])
-    net.finalize(cost="xent", optimizer="adam")
+    net.finalize(cost="xent", optimizer="adagrad")
     return net
 
 
@@ -38,7 +41,7 @@ def fitness(genotype):
     start = time.time()
     phenotype = to_phenotype(genotype, ranges)
     net = phenotype_to_ann(phenotype)
-    net.fit(tX, tY, batch_size=20, epochs=3, verbose=0)
+    net.fit(tX, tY, batch_size=50, epochs=10, verbose=0)
     score = net.evaluate(*frame.table("testing", shuff=True, m=100))[-1]
     timereq = time.time() - start
     return (1. - score), timereq  # fitness is minimized, so we need error rate
@@ -46,18 +49,18 @@ def fitness(genotype):
 
 pop = Population(
     loci=len(ranges),
-    limit=12,
+    limit=21,
     fitness_function=fitness,
-    fitness_weights=[5., 1.])
+    fitness_weights=[10., 1.])
 
-means, totals, bests = pop.run(epochs=10, verbosity=1,
-                               survival_rate=0.7,
-                               mutation_rate=0.2,
-                               mutation_delta=0.02)
+means, totals, bests = pop.run(epochs=30, verbosity=4,
+                               survival_rate=0.8,
+                               mutation_rate=0.1,
+                               mutation_delta=0.01)
 logs = pop.run(epochs=3, verbosity=1,
-               survival_rate=0.5,
+               survival_rate=0.66,
                mutation_rate=0.0,
-               mutation_delta=0.02)
+               mutation_delta=0.0)
 
 means += logs[0]
 totals += logs[1]
@@ -66,7 +69,7 @@ bests += logs[2]
 print("\nThe winner is:")
 winner = phenotype_to_ann(to_phenotype(pop.best, ranges))
 winner.describe(1)
-winner.fit_csxdata(frame, epochs=60, monitor=["acc"])
+winner.fit_csxdata(frame, epochs=30, monitor=["acc"])
 
 Xs = np.arange(1, len(means)+1)
 fig, axes = plt.subplots(2, sharex=True)
