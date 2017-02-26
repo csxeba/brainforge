@@ -32,6 +32,8 @@ class _Recurrent(FFBase):
 
     @abc.abstractmethod
     def backpropagate(self, error):
+        self.nabla_w = np.zeros_like(self.weights)
+        self.nabla_b = np.zeros_like(self.biases)
         if self.return_seq:
             return error.transpose(1, 0, 2)
         else:
@@ -91,10 +93,6 @@ class RLayer(_Recurrent):
 
         error = _Recurrent.backpropagate(self, error)
 
-        # gradient of the cost wrt the weights: dC/dW
-        self.nabla_w = np.zeros_like(self.weights)
-        # gradient of the cost wrt to biases: dC/db
-        self.nabla_b = np.zeros_like(self.biases)
         # the gradient flowing backwards in time
         delta = np.zeros_like(error[-1])
         # the gradient wrt the whole input tensor: dC/dX = dC/dY_{l-1}
@@ -166,9 +164,6 @@ class LSTM(_Recurrent):
 
         error = _Recurrent.backpropagate(self, error)
 
-        self.nabla_w = np.zeros_like(self.weights)
-        self.nabla_b = np.zeros_like(self.biases)
-
         actprime = self.activation.derivative
         sigprime = sigmoid.derivative
 
@@ -208,6 +203,74 @@ class LSTM(_Recurrent):
 
     def __str__(self):
         return "LSTM-{}-{}".format(self.neurons, str(self.activation)[:4])
+
+
+class GRU(_Recurrent):
+
+    def __init__(self, neurons, activation, return_seq=False):
+        super().__init__(neurons, activation, return_seq)
+
+    def connect(self, to, inshape):
+        super().connect(to, inshape)
+        self.weights = white(inshape[-1] + self.neurons, self.neurons * 3)
+        self.biases = np.zeros(self.neurons * 3)
+
+    def feedforward(self, X):
+        self.inputs = X.transpose(1, 0, 2)
+        output = super().feedforward(X)
+        self.time = X.shape[0]
+        self.cache = []
+
+        for t in range(self.time):
+            Z = np.concatenate((self.inputs[t], output), axis=1)
+            U, R = np.split(sigmoid(Z.dot(self.weights[:self.neurons*2])), 2, -1)
+            K = R * Z
+            O = self.activation(K.dot(self.weights[-self.neurons:]))
+            output = U * output + (1. - U) * O
+
+            self.cache.append([output, K])
+            self.gates.append([O, U, R])
+            self.Zs.append(Z)
+
+        if self.return_seq:
+            self.output = np.stack([cache[0] for cache in self.cache], axis=1)
+        else:
+            self.output = self.cache[-1][0]
+
+    def backpropagate(self, error):
+        error = _Recurrent.backpropagate(self, error)
+
+        actprime = self.activation.derivative
+        sigprime = sigmoid.derivative
+
+        dH = np.zeros((self.time, self.neurons))
+        dX = np.zeros_like(self.inputs)
+
+        Wo, Wu, Wr = np.split(self.weights, 3, axis=-1)
+        neu = self.neurons
+        smx1 = lambda *ar: np.concatenate(list(map(lambda a: np.sum(a, axis=1), ar)), axis=1)
+
+        for t in range(-1, -(self.time+1), -1):
+            (output, K), (O, U, R), Z = self.cache[t], self.gates[t], self.Zs[t]
+            dH += error[t]
+            dU = (Z[:-neu] - O) * sigprime(U) * dH
+            dO = (1. - U) * actprime(O) * dH
+            nWu = Z.T @ dU
+            nWo = K.T.dot(dO)
+            dK = dO @ Wo.T
+            dR = Z * dK * sigprime(R)
+            nWr = Z.T @ dR
+            dZ = dU @ Wu.T + R * dK + dR @ Wr.T
+            dX[t] = dZ[:-neu]
+            dH = dZ[-neu:] * U
+
+            self.nabla_w += np.concatenate((nWo, nWu, nWr), axis=1)
+            self.nabla_b += smx1((dO, dU, dR))
+
+        return dX.transpose(1, 0, 2)
+
+    def __str__(self):
+        return "GRU-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
 class Reservoir(RLayer):
