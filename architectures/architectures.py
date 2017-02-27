@@ -309,7 +309,7 @@ class Network:
                     continue
                 layer.set_weights(w)
 
-    def gradient_check(self, X, y, verbose=1, epsilon=1e-5):
+    def gradient_check(self, X, Y, verbose=1, epsilon=1e-5):
         from ..util import gradient_check
         if self.age == 0:
             warnings.warn("Performing gradient check on an untrained Neural Network!",

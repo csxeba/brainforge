@@ -122,7 +122,7 @@ class _Cost:
         if not isinstance(item, str):
             raise TypeError("Please supply a string!")
         item = item.lower()
-        d = {str(fn).lower(): fn for fn in (_MSE(), _Xent())}
+        d = {str(fn).lower(): fn for fn in (_MSE(), _Xent(), _Hinge())}
         if item not in d:
             raise IndexError("Requested cost function is unsupported!")
         return d[item]

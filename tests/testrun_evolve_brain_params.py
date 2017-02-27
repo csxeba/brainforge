@@ -9,7 +9,6 @@ from brainforge.evolution import Population
 from csxdata import CData, roots
 from csxdata.utilities.vectorops import upscale
 
-BRAINS = 12
 NIND = 300
 fweights = [1, 1]
 
