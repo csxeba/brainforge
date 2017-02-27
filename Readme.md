@@ -32,7 +32,7 @@ For model fitting:
   - *Y*: numpy array containing the training Ys (the dependent variables) 
   - *batch_size*: the batch size of stochastic training. 1 for on-line (per-lesson) training. Defaults to 20.
   - *epochs*: the number of epochs to train for. Defaults to 30.
-  - *monitor*: iterable, containing strings, specifiing what runtime scores to monitor. Currently, only "acc" is.
+  - *monitor*: iterable, containing strings, specifiing what runtime scores to monitor. Currently, only "acc" is supported.
 Defaults to nothingness (aka void or nihil).
   - *validation*: tuple, containing separate X and Y tensors used to validate the network performance. Defualts to an
 empty tuple.
