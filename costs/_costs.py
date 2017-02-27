@@ -11,7 +11,7 @@ def l2term(eta, lmbd, N):
     return 1 - ((eta * lmbd) / N)
 
 
-class _CostFnBase(abc.ABC):
+class CostFunction(abc.ABC):
 
     def __call__(self, outputs, targets): pass
 
@@ -23,7 +23,7 @@ class _CostFnBase(abc.ABC):
         raise NotImplementedError
 
 
-class _MSE(_CostFnBase):
+class _MSE(CostFunction):
 
     def __call__(self, outputs, targets):
         return 0.5 * np.linalg.norm(outputs - targets) ** 2
@@ -36,7 +36,7 @@ class _MSE(_CostFnBase):
         return "MSE"
 
 
-class _XentOnSigmoid(_CostFnBase):
+class _XentOnSigmoid(CostFunction):
 
     def __call__(self, a: np.ndarray, y: np.ndarray):
         return -np.sum(y * np.log(a) + (1 - y) * np.log(1 - a))
@@ -46,7 +46,7 @@ class _XentOnSigmoid(_CostFnBase):
         return np.subtract(outputs, targets)
 
 
-class _XentOnSoftmax(_CostFnBase):
+class _XentOnSoftmax(CostFunction):
 
     def __call__(self, a: np.ndarray, y: np.ndarray):
         return -np.sum(y * np.log(a))
@@ -59,7 +59,7 @@ class _XentOnSoftmax(_CostFnBase):
         return "Xent"
 
 
-class _Xent(_CostFnBase):
+class _Xent(CostFunction):
 
     def __call__(self, a: np.ndarray, y: np.ndarray):
         return _Xent.call_on_softmax(a, y)
@@ -90,7 +90,7 @@ class _Xent(_CostFnBase):
         return "Xent"
 
 
-class _Hinge(_CostFnBase):
+class _Hinge(CostFunction):
 
     def __call__(self, outputs, targets):
         return np.sum(np.maximum(0., 1. - targets * outputs))

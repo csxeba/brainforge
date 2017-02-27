@@ -1,7 +1,5 @@
 #Brainforge documentation
-Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on
-**NumPy**. The interface is intended to look like Keras' interface, but no compilation is done in the
-background.
+Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy**.
 
 ##Models
 A Neural Network can be considered as a stack of Layer instances. The following models are implemented in Brainforge:
@@ -18,10 +16,10 @@ method.
 
 ####Methods
 For building the architecture:
-- *add*: expects a Layer instance, which it adds to the top of the layer stack.
+- *add*: expects a Layer instance, which is added to the top of the layer stack.
 - *pop*: deletes the last layer from the layer stack.
 - *finalize*: finalizes the model, making it ready to fit the data.
-  - *cost*: string or CostFunction instance, specifiing the cost (or loss) function used to evaluate the network's
+  - *cost*: string or CostFunction inste, specifiing the cost (or loss) function used to evaluate the network's
 performance. See section: **Costs**
   - *optimizer*: string or Optimizer instance, specifiing the optimizing algorithm used to update the parameters of the
 layers. See section: **Optimizers**
@@ -73,7 +71,7 @@ Wraps **Network**, automatically builds the decoder part of an autoencoder, give
 interface as **Network**.
 
 ##Layers
-Neural networking operations are implemented as *Layer* subclasses and an ANN can be thought of a stack of *Layer*
+Neural networking operations are implemented as *Layer* subclasses and an ANN can be thought of as a stack of *Layer*
 instances.
 
 ###Core layers
@@ -360,7 +358,7 @@ pop.run(epochs=12,
         mutation_rate=0.05,
         force_update_at_every=3)
 # Select the best candidate and convert it to a network
-best = phenotype_to_ann(to_phenotype(pop.best))
+best = phenotype_to_ann(to_phenotype(pop.best, ranges))
 ```
 
 ###Evolve network weights and biases
@@ -419,12 +417,8 @@ means, bests = pop.run(epochs=100,
                        mutation_rate=0.3)
 # Plot the run dynamics
 Xs = np.arange(1, len(means)+1)
-fig, axarr = plt.subplots(2, sharex=True)
-axarr[0].plot(Xs, totals)
-axarr[1].plot(Xs, means, color="blue")
-axarr[1].plot(Xs, bests, color="red")
-axarr[0].set_title("Total grade")
-axarr[1].set_title("Mean (blue) and best (red) grades")
-plt.tight_layout()
+plt.plot(Xs, means, color="blue")
+plt.plot(Xs, bests, color="red")
+plt.title("Mean (blue) and best (red) grades")  # Yea I'm lazy
 plt.show()
 ```

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class ActivationFunctionBase:
+class ActivationFunction:
 
     def __call__(self, Z: np.ndarray) -> np.ndarray:
         raise NotImplementedError
@@ -13,7 +13,7 @@ class ActivationFunctionBase:
         raise NotImplementedError
 
 
-class Sigmoid(ActivationFunctionBase):
+class Sigmoid(ActivationFunction):
 
     def __call__(self, Z: np.ndarray) -> np.ndarray:
         return np.divide(1.0, np.add(1, np.exp(-Z)))
@@ -24,7 +24,7 @@ class Sigmoid(ActivationFunctionBase):
         return A * np.subtract(1.0, A)
 
 
-class Tanh(ActivationFunctionBase):
+class Tanh(ActivationFunction):
 
     def __call__(self, Z) -> np.ndarray:
         return np.tanh(Z)
@@ -35,7 +35,7 @@ class Tanh(ActivationFunctionBase):
         return np.subtract(1.0, np.square(A))
 
 
-class Linear(ActivationFunctionBase):
+class Linear(ActivationFunction):
 
     def __call__(self, Z) -> np.ndarray:
         return Z
@@ -46,7 +46,7 @@ class Linear(ActivationFunctionBase):
         return np.ones_like(Z)
 
 
-class ReLU(ActivationFunctionBase):
+class ReLU(ActivationFunction):
 
     def __call__(self, Z) -> np.ndarray:
         return np.maximum(0.0, Z)
@@ -59,7 +59,7 @@ class ReLU(ActivationFunctionBase):
         return d
 
 
-class SoftMax(ActivationFunctionBase):
+class SoftMax(ActivationFunction):
 
     def __call__(self, Z) -> np.ndarray:
         # nZ = Z - np.max(Z)
@@ -73,4 +73,4 @@ class SoftMax(ActivationFunctionBase):
         raise NotImplementedError
 
 
-act_fns = {key.lower(): cls for key, cls in locals().items() if "Base" not in key}
+act_fns = {key.lower(): cls for key, cls in locals().items() if "Function" not in key}
