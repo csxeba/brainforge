@@ -41,10 +41,10 @@ pop = Population(
     fitness_weights=fweights
 )
 means, totals, bests = pop.run(epochs=100,
-                               survival_rate=0.8,
-                               mutation_rate=0.01)
+                               survival_rate=0.0,
+                               mutation_rate=0.3)
 Xs = np.arange(1, len(means)+1)
-fig, axarr = plt.subplots(2, sharey=True)
+fig, axarr = plt.subplots(2, sharex=True)
 axarr[0].plot(Xs, totals)
 axarr[1].plot(Xs, means, color="blue")
 axarr[1].plot(Xs, bests, color="red")

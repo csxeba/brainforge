@@ -31,7 +31,9 @@ class Population:
     def __init__(self, loci,
                  fitness_function,
                  fitness_weights,
-                 limit=100):
+                 limit=100,
+                 grade_function=None,
+                 mate_function=None):
         """
         :param loci: number of elements in an individual's chromosome
         :param fitness_function: function used to evaluate the "badness" of an individual
@@ -44,13 +46,19 @@ class Population:
 
         self.fitnesses = np.zeros((limit, len(fitness_weights)))
         self.grades = np.zeros((limit,))
+        self.grade_function = (self._default_grade_function
+                               if grade_function is None
+                               else grade_function)
+        self.mate_function = (self._default_mate_function
+                              if mate_function is None
+                              else mate_function)
         self.individuals = np.random.uniform(size=(limit, loci))
 
         self.age = 0
 
         self.update(verbose=1)
-        print("EVOLUTION: initial mean  grade:", self.mean_grade())
-        print("EVOLUTION: initial best  grade:", self.grades.min())
+        print("EVOLUTION: initial mean grade:", self.mean_grade())
+        print("EVOLUTION: initial best grade:", self.grades.min())
 
     def update(self, inds=None, verbose=0):
         if inds is None:
@@ -62,8 +70,7 @@ class Population:
             if verbose:
                 print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=len(str(lim))), end="")
             self.fitnesses[ind] = self.fitness(gen)
-            # self.grades[ind] = (self.fitnesses[ind] * self.fitness_w).sum()
-            self.grades[ind] = np.prod(self.fitnesses[ind])
+            self.grades[ind] = self.grade_function(ind)
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
 
@@ -88,6 +95,7 @@ class Population:
                                         size=self.individuals.shape,
                                         p=[1.-mutation_rate, mutation_rate])
             mutations = mut_mask * np.random.uniform(low=0., high=1., size=self.individuals.shape)
+
             self.individuals = candidates + mutations
 
             inds = np.argwhere(survivors + mut_mask.sum(axis=1))
@@ -115,7 +123,7 @@ class Population:
             prob = 1. - (prbs[left] * prbs[right])
             if prob > np.random.uniform():
                 continue
-            new = mate(self.individuals[left], self.individuals[right])
+            new = self.mate_function(left, right)
             candidates[i] = new
             i += 1
         return candidates
@@ -153,10 +161,12 @@ class Population:
         arg = np.argmin(self.grades)
         return self.individuals[arg]
 
+    def _default_mate_function(self, ind1, ind2):
+        gen1, gen2 = self.individuals[ind1], self.individuals[ind2]
+        return np.where(np.random.uniform(size=gen1.shape) < 0.5, gen1, gen2)
 
-def mate(ind1, ind2):
-    """Mate an individual with another"""
-    return np.where(np.random.uniform(size=ind1.shape) < 0.5, ind1, ind2)
+    def _default_grade_function(self, ind):
+        return (self.fitnesses[ind] * self.fitness_w).sum()
 
 
 def to_phenotype(ind, ranges):

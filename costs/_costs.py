@@ -93,15 +93,20 @@ class _Xent(_CostFnBase):
 class _Hinge(_CostFnBase):
 
     def __call__(self, outputs, targets):
-        return np.sum(np.mean(np.maximum(0., 1. - targets * outputs), axis=1))
+        return np.sum(np.maximum(0., 1. - targets * outputs))
 
     def __str__(self):
         return "Hinge"
 
     @staticmethod
     def derivative(outputs, targets):
-        # TODO: implement this
-        raise NotImplementedError
+        """
+        Using subderivatives,
+        d/da = -y whenever output > 0
+        """
+        out = -targets
+        out[outputs > 1.] = 0.
+        return out
 
 
 class _Cost:

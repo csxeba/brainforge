@@ -1,73 +1,76 @@
 import numpy as np
 
 
-class _ActivationFunctionBase:
+class ActivationFunctionBase:
 
-    def __call__(self, Z: np.ndarray): pass
+    def __call__(self, Z: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
 
-    def __str__(self): raise NotImplementedError
+    def __str__(self):
+        raise NotImplementedError
 
-    def derivative(self, Z: np.ndarray):
+    def derivative(self, Z: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
 
-class Sigmoid(_ActivationFunctionBase):
+class Sigmoid(ActivationFunctionBase):
 
-    def __call__(self, Z: np.ndarray):
+    def __call__(self, Z: np.ndarray) -> np.ndarray:
         return np.divide(1.0, np.add(1, np.exp(-Z)))
 
     def __str__(self): return "sigmoid"
 
-    def derivative(self, A):
+    def derivative(self, A) -> np.ndarray:
         return A * np.subtract(1.0, A)
 
 
-class Tanh(_ActivationFunctionBase):
+class Tanh(ActivationFunctionBase):
 
-    def __call__(self, Z):
+    def __call__(self, Z) -> np.ndarray:
         return np.tanh(Z)
 
     def __str__(self): return "tanh"
 
-    def derivative(self, A):
+    def derivative(self, A) -> np.ndarray:
         return np.subtract(1.0, np.square(A))
 
 
-class Linear(_ActivationFunctionBase):
+class Linear(ActivationFunctionBase):
 
-    def __call__(self, Z):
+    def __call__(self, Z) -> np.ndarray:
         return Z
 
     def __str__(self): return "linear"
 
-    def derivative(self, Z):
+    def derivative(self, Z) -> np.ndarray:
         return np.ones_like(Z)
 
 
-class ReLU(_ActivationFunctionBase):
+class ReLU(ActivationFunctionBase):
 
-    def __call__(self, Z):
+    def __call__(self, Z) -> np.ndarray:
         return np.maximum(0.0, Z)
 
     def __str__(self): return "relu"
 
-    def derivative(self, A):
-        d = np.greater(A, 0.0).astype("float32")
+    def derivative(self, A) -> np.ndarray:
+        d = np.copy(A)
+        d[A <= 0.] = 0.
         return d
 
 
-class SoftMax(_ActivationFunctionBase):
+class SoftMax(ActivationFunctionBase):
 
-    def __call__(self, Z):
+    def __call__(self, Z) -> np.ndarray:
         # nZ = Z - np.max(Z)
         eZ = np.exp(Z)
         return eZ / np.sum(eZ, axis=1, keepdims=True)
 
     def __str__(self): return "softmax"
 
-    def derivative(self, A: np.ndarray):
+    def derivative(self, A: np.ndarray) -> np.ndarray:
         """This has to be replaced by a linear backward pass"""
         raise NotImplementedError
 
 
-act_fns = {key.lower(): cls for key, cls in locals().items() if key[0] not in "_"}
+act_fns = {key.lower(): cls for key, cls in locals().items() if "Base" not in key}

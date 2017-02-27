@@ -26,7 +26,7 @@ def _build(data, what):
     net = Network(input_shape=inshape, name="TestRNN")
     if what.lower() == "lstm":
         net.add(LSTM(30, activation="tanh", return_seq=True))
-        net.add(LSTM(30, activation="tanh"))
+        net.add(LSTM(10, activation="tanh"))
     else:
         net.add(RLayer(30, activation="tanh", return_seq=True))
         net.add(RLayer(30, activation="tanh"))
@@ -50,7 +50,7 @@ def xperiment():
     print("Initial cost: {} acc: {}".format(*net.evaluate(*petofi.table("testing"))))
     print(speak_to_me(net, petofi))
 
-    net.fit(*petofi.table("learning", m=40, shuff=True), epochs=1, verbose=0, shuffle=False)
+    net.fit(*petofi.table("learning", m=10, shuff=True), epochs=1, verbose=0, shuffle=False)
     if not net.gradient_check(*petofi.table("testing", m=10)):
         return
 

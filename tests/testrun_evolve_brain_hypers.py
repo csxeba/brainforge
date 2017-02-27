@@ -55,12 +55,10 @@ pop = Population(
 
 means, totals, bests = pop.run(epochs=30, verbosity=4,
                                survival_rate=0.8,
-                               mutation_rate=0.1,
-                               mutation_delta=0.01)
+                               mutation_rate=0.1)
 logs = pop.run(epochs=3, verbosity=1,
                survival_rate=0.66,
-               mutation_rate=0.0,
-               mutation_delta=0.0)
+               mutation_rate=0.0)
 
 means += logs[0]
 totals += logs[1]
