@@ -37,7 +37,7 @@ def forge_ae():
 if __name__ == '__main__':
     net = forge_net()
 
-    obj = plt.matshow(net.layers[1].output)
+    obj = plt.matshow(np.zeros([20] + list(net.layers[1].outshape)))
 
     datagen = learnme(1000)
     epoch = 0
