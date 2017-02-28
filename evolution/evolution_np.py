@@ -1,4 +1,5 @@
-from random import randrange
+import warnings
+from random import randrange, choice
 
 import numpy as np
 
@@ -12,7 +13,7 @@ class Population:
 
     def __init__(self, loci,
                  fitness_function,
-                 fitness_weights,
+                 fitness_weights=None,
                  limit=100,
                  grade_function=None,
                  mate_function=None):
@@ -23,17 +24,24 @@ class Population:
         """
 
         self.fitness = fitness_function
-        self.fitness_w = np.array(fitness_weights)
         self.limit = limit
 
         self.fitnesses = np.zeros((limit, len(fitness_weights)))
         self.grades = np.zeros((limit,))
-        self.grade_function = (self._default_grade_function
-                               if grade_function is None
-                               else grade_function)
+        if grade_function is None:
+            if fitness_weights is None:
+                raise RuntimeError("Either supply grade_function or fitness_weights!")
+            self.grade_function = self._default_grade_function
+        else:
+            if fitness_weights is not None:
+                warnings.warn("grade_function supplied, fitness_weights ignored!")
+            self.grade_function = grade_function
+
         self.mate_function = (self._default_mate_function
                               if mate_function is None
                               else mate_function)
+
+        self.fitness_w = fitness_weights
         self.individuals = np.random.uniform(size=(limit, loci))
 
         self.age = 0
@@ -48,61 +56,82 @@ class Population:
         else:
             inds = inds.ravel()
         lim = self.limit
+        strlen = len(str(lim))
         for ind, gen in zip(inds, self.individuals):
             if verbose:
-                print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=len(str(lim))), end="")
+                print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=strlen), end="")
             self.fitnesses[ind] = self.fitness(gen)
-            self.grades[ind] = self.grade_function(ind)
+            self.grades[ind] = self.grade_function(self.fitnesses[ind])
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
+
+    def selection(self, rate):
+        survmask = np.zeros_like(self.grades)
+        if rate:
+            survivors = np.argsort(self.grades)[:int(self.limit * rate)]
+            survmask[survivors] = 1.
+        return survmask
+
+    def mutation(self, rate):
+        if rate:
+            mut_mask = np.random.choice([0., 1.],
+                                        size=self.individuals.shape,
+                                        p=[1. - rate, rate])
+            mutations = mut_mask * np.random.uniform(low=0., high=1., size=self.individuals.shape)
+        else:
+            mutations = np.zeros_like(self.individuals)
+        return mutations
 
     def run(self, epochs, verbosity=1,
             survival_rate=0.5, mutation_rate=0.1,
             force_update_at_every=0):
 
         mean_grades = []
-        total_grades = []
+        grades_std = []
         bests = []
+        epln = len(str(epochs))
         for epoch in range(1, epochs+1):
             if verbosity:
                 print("-"*50)
-                print("Epoch {0:>{w}}/{1}".format(epoch, epochs, w=len(str(epochs))))
-            prbs = rescale(self.grades)
-            survive_pb = np.random.uniform(high=prbs, size=self.grades.shape)
-            survivors = np.less_equal(survive_pb, survival_rate)
-            candidates = self.get_candidates(prbs)
-            candidates = ((1. - survivors)[:, None] * candidates +
-                          survivors[:, None] * self.individuals)
-            mut_mask = np.random.choice([0., 1.],
-                                        size=self.individuals.shape,
-                                        p=[1.-mutation_rate, mutation_rate])
-            mutations = mut_mask * np.random.uniform(low=0., high=1., size=self.individuals.shape)
+                print("Epoch {0:>{w}}/{1}".format(epoch, epochs, w=epln))
 
-            self.individuals = candidates + mutations
+            survmask = self.selection(survival_rate)
+            candidates = self.get_candidates(survivors=np.argwhere(survmask))
+            newgen = ((1. - survmask)[:, None] * candidates +
+                      survmask[:, None] * self.individuals)
+            mutations = self.mutation(mutation_rate)
 
-            inds = np.argwhere(survivors + mut_mask.sum(axis=1))
-            if force_update_at_every:
-                if epoch % force_update_at_every == 0:
-                    inds = None
+            self.individuals = newgen + mutations
+
+            if force_update_at_every and epoch % force_update_at_every == 0:
+                inds = None
+            else:
+                inds = np.argwhere(survmask + mutations.sum(axis=1))
+
             self.update(inds, verbose=verbosity)
 
-            self.age += 1
             if verbosity:
                 self.describe(verbosity-1)
-            mean_grades.append(self.mean_grade())
-            total_grades.append(self.total_grade())
+            mean_grades.append(self.grades.mean())
+            grades_std.append(self.grades.std())
             bests.append(self.grades.min())
 
-        print()
-        return mean_grades, total_grades, bests
+            self.age += 1
 
-    def get_candidates(self, prbs):
+        print()
+        return np.array(mean_grades), np.array(grades_std), np.array(bests)
+
+    def get_candidates(self, survivors=None):
+        prbs = rescale(self.grades)
         candidates = np.zeros_like(self.individuals)
-        rr = lambda: (randrange(self.limit), randrange(self.limit))
+        if survivors is None:
+            rr = lambda: (randrange(self.limit), randrange(self.limit))
+        else:
+            rr = lambda: (choice(survivors), choice(survivors))
         i = 0
         while i != self.limit:
             left, right = rr()
-            prob = 1. - (prbs[left] * prbs[right])
+            prob = np.mean([prbs[left], prbs[right]])
             if prob > np.random.uniform():
                 continue
             new = self.mate_function(left, right)
@@ -121,18 +150,21 @@ class Population:
         """Print out useful information about a population"""
         showme = np.argsort(self.grades)[:show]
         chain = "-"*50 + "\n"
-        for i, index in enumerate(showme):
+        shln = len(str(show))
+        for i, index in enumerate(showme, start=1):
             genomechain = ", ".join(
                 "{:>6.4f}".format(loc) for loc in
                 np.round(self.individuals[index], 4))
             fitnesschain = "[" + ", ".join(
                 "{:^8.4f}".format(fns) for fns in
                 self.fitnesses[index]) + "]"
-            chain += "TOP {:>2}: [{:^14}] F = {:<}\n".format(
-                i+1, genomechain, fitnesschain)
-        chain += "Best Grade : {:7>.4f} ".format(self.grades.min())
+            chain += "TOP {:>{w}}: [{:^14}] F = {:<} G = {:.4f}\n".format(
+                i, genomechain, fitnesschain, self.grades[index],
+                w=shln)
+        bestman = self.grades.argmin()
+        chain += "Best Grade : {:7>.4f} ".format(self.grades[bestman])
         chain += "Fitnesses: ["
-        chain += ", ".join("{}".format(f) for f in self.fitnesses[self.grades.argmin()])
+        chain += ", ".join("{}".format(f) for f in self.fitnesses[bestman])
         chain += "]\n"
         chain += "Mean Grade : {:7>.4f}, STD: {:7>.4f}\n"\
                  .format(self.grades.mean(), self.grades.std())
@@ -147,8 +179,8 @@ class Population:
         gen1, gen2 = self.individuals[ind1], self.individuals[ind2]
         return np.where(np.random.uniform(size=gen1.shape) < 0.5, gen1, gen2)
 
-    def _default_grade_function(self, ind):
-        return (self.fitnesses[ind] * self.fitness_w).sum()
+    def _default_grade_function(self, fitnesses):
+        return np.dot(fitnesses, self.fitness_w)
 
 
 def to_phenotype(ind, ranges):
@@ -166,6 +198,4 @@ def rescale(vector):
     output /= output.max()
     output *= 0.95
     output += 0.05
-    assert np.isclose(output.min(), 0.05) and np.isclose(output.max(), 1.), \
-        "Failed with values: {}, {}".format(output.min(), output.max())
     return output

@@ -5,21 +5,26 @@ from brainforge.evolution import Population
 
 
 def fitness(ind):
-    return ind.sum()
-
+    return np.array([ind.sum()])
 
 pop = Population(
     loci=5,
-    limit=30,
     fitness_function=fitness,
     fitness_weights=[1.],
-    mutation_rate=0.01,
-    mutation_delta=0.05,
-    selection_pressure=0.5
-)
-log, bests = pop.run(1000, verbosity=0)
-print("EVOLUTION: Final grade:   {}".format(pop.grade()))
-print("EVOLUTION: Final best :   {}".format(fitness(pop.best)))
-plt.plot(np.arange(len(log)), log)
-plt.plot(np.arange(len(log)), np.array(bests).sum(axis=1))
+    limit=1000)
+
+means, stds, bests = pop.run(100, verbosity=0,
+                             survival_rate=0.33,
+                             mutation_rate=0.0)
+print("EVOLUTION: Final grade:   {}".format(pop.mean_grade()))
+print("EVOLUTION: Final best :   {}".format(fitness(pop.best)[0]))
+Xs = np.arange(1, len(means)+1)
+
+pop.describe(3)
+
+plt.title("Run dynamics: means (blue), std (red), bests (green)")
+plt.plot(Xs, means, color="blue")
+plt.plot(Xs, means+stds, color="red")
+plt.plot(Xs, means-stds, color="red")
+plt.plot(Xs, bests, color="green")
 plt.show()
