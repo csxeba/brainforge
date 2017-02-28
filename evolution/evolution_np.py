@@ -11,16 +11,19 @@ import numpy as np
 class Population:
     """Model of a population in the ecologigal sense"""
 
-    def __init__(self, loci,
-                 fitness_function,
+    def __init__(self, loci: int,
+                 fitness_function: callable,
                  fitness_weights=None,
-                 limit=100,
-                 grade_function=None,
-                 mate_function=None):
+                 limit: int=100,
+                 grade_function: callable=None,
+                 mate_function: callable=None):
         """
         :param loci: number of elements in an individual's chromosome
-        :param fitness_function: function used to evaluate the "badness" of an individual
+        :param fitness_function: accepts a genotype, returns a tuple of fitnesses
+        :param fitness_weights: used as summation weights if grade_function is not set
         :param limit: maximum number of individuals
+        :param grade_function: accepts fitnesses of an individual, returns scalar
+        :param mate_function: accepts two genotypes, returns an offspring genotype
         """
 
         self.fitness = fitness_function
@@ -65,6 +68,24 @@ class Population:
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
 
+    def get_candidates(self, survivors=None):
+        prbs = rescale(self.grades)
+        candidates = np.zeros_like(self.individuals)
+        if survivors is None:
+            rr = lambda: (randrange(self.limit), randrange(self.limit))
+        else:
+            rr = lambda: (choice(survivors), choice(survivors))
+        i = 0
+        while i != self.limit:
+            left, right = rr()
+            prob = np.mean([prbs[left], prbs[right]])
+            if prob > np.random.uniform():
+                continue
+            new = self.mate_function(left, right)
+            candidates[i] = new
+            i += 1
+        return candidates
+
     def selection(self, rate):
         survmask = np.zeros_like(self.grades)
         if rate:
@@ -77,14 +98,27 @@ class Population:
             mut_mask = np.random.choice([0., 1.],
                                         size=self.individuals.shape,
                                         p=[1. - rate, rate])
-            mutations = mut_mask * np.random.uniform(low=0., high=1., size=self.individuals.shape)
+            mutations = mut_mask * np.random.uniform(low=0., high=1.,
+                                                     size=self.individuals.shape)
         else:
             mutations = np.zeros_like(self.individuals)
         return mutations
 
-    def run(self, epochs, verbosity=1,
-            survival_rate=0.5, mutation_rate=0.1,
-            force_update_at_every=0):
+    def run(self, epochs: int,
+            survival_rate: float=0.5,
+            mutation_rate: float=0.1,
+            force_update_at_every: int=0,
+            verbosity: int=1):
+        """
+        Runs the algorithm, optimizing the individuals.
+
+        :param epochs: number of epochs to run for
+        :param survival_rate: 0-1, how many individuals survive the selection
+        :param mutation_rate: 0-1, rate of mutation at each epoch
+        :param force_update_at_every: complete reupdate at specified intervals
+        :param verbosity: 1 is verbose, < 1 also prints out v - 1 individuals
+        :return: means, stds, bests (grades at each epoch)
+        """
 
         mean_grades = []
         grades_std = []
@@ -121,24 +155,6 @@ class Population:
         print()
         return np.array(mean_grades), np.array(grades_std), np.array(bests)
 
-    def get_candidates(self, survivors=None):
-        prbs = rescale(self.grades)
-        candidates = np.zeros_like(self.individuals)
-        if survivors is None:
-            rr = lambda: (randrange(self.limit), randrange(self.limit))
-        else:
-            rr = lambda: (choice(survivors), choice(survivors))
-        i = 0
-        while i != self.limit:
-            left, right = rr()
-            prob = np.mean([prbs[left], prbs[right]])
-            if prob > np.random.uniform():
-                continue
-            new = self.mate_function(left, right)
-            candidates[i] = new
-            i += 1
-        return candidates
-
     def total_grade(self):
         return self.grades.sum()
 
@@ -147,7 +163,6 @@ class Population:
         return self.grades.std()
 
     def describe(self, show=0):
-        """Print out useful information about a population"""
         showme = np.argsort(self.grades)[:show]
         chain = "-"*50 + "\n"
         shln = len(str(show))
@@ -175,8 +190,8 @@ class Population:
         arg = np.argmin(self.grades)
         return self.individuals[arg]
 
-    def _default_mate_function(self, ind1, ind2):
-        gen1, gen2 = self.individuals[ind1], self.individuals[ind2]
+    @staticmethod
+    def _default_mate_function(gen1, gen2):
         return np.where(np.random.uniform(size=gen1.shape) < 0.5, gen1, gen2)
 
     def _default_grade_function(self, fitnesses):

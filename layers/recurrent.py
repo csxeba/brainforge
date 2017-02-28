@@ -286,6 +286,25 @@ class GRU(_Recurrent):
         return "GRU-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
+class ClockworkLayer(_Recurrent):
+    def __init__(self, neurons, clocktimes, activaton, return_seq=False):
+        super().__init__(neurons, activaton, return_seq)
+
+        self.time_mask = None
+
+    def connect(self, to, inshape):
+        pass
+
+    def feedforward(self, stimuli):
+        pass
+
+    def backpropagate(self, error):
+        pass
+
+    def __str__(self):
+        pass
+
+
 class Reservoir(RLayer):
 
     def __init__(self, neurons, activation, return_seq=False, p=0.1):
