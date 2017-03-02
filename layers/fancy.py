@@ -1,6 +1,6 @@
 import numpy as np
 
-from .core import LayerBase, FFBase
+from .core import LayerBase, FFBase, NoParamMixin
 from ..ops import Sigmoid
 from ..util import white, rtm
 
@@ -70,7 +70,7 @@ class HighwayLayer(FFBase):
         return "Highway-{}".format(str(self.activation))
 
 
-class DropOut(LayerBase):
+class DropOut(LayerBase, NoParamMixin):
 
     def __init__(self, dropchance):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -85,19 +85,13 @@ class DropOut(LayerBase):
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.inputs = stimuli
         self.mask = np.random.uniform(0, 1, self.neurons) < self.dropchance
-        self.output = stimuli * (self.mask if self.training else self.dropchance)
+        self.output = stimuli * (self.mask if self.brain.learning else self.dropchance)
         return self.output
 
     def backpropagate(self, error: np.ndarray) -> np.ndarray:
         output = error * self.mask
         self.mask = np.ones_like(self.mask) * self.dropchance
         return output
-
-    def get_weights(self, unfold=True): raise NotImplementedError
-
-    def set_weights(self, w, fold=True): raise NotImplementedError
-
-    def shuffle(self) -> None: raise NotImplementedError
 
     @property
     def outshape(self):

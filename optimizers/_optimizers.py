@@ -1,11 +1,28 @@
+import abc
+
 import numpy as np
 
 
-class SGD:
+class Optimizer(abc.ABC):
 
-    def __init__(self, layer, eta=0.01):
+    def __init__(self, layer, eta):
         self.layer = layer
         self.eta = eta
+
+    @abc.abstractmethod
+    def __call__(self, m):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def __str__(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def capsule(self):
+        raise NotImplementedError
+
+
+class SGD(Optimizer):
 
     def __call__(self, m):
         eta = self.eta / m
@@ -22,7 +39,7 @@ class SGD:
 class Momentum(SGD):
 
     def __init__(self, layer, eta=0.1, mu=0.9, nesterov=False, *args):
-        SGD.__init__(self, layer, eta)
+        super().__init__(layer, eta)
         self.mu = mu
         self.nesterov = nesterov
         if not args:
@@ -45,7 +62,7 @@ class Momentum(SGD):
         self.layer.biases -= self.vb
 
     def __str__(self):
-        return ("Nesterov " if self.nesterov else "") +"Momentum"
+        return ("Nesterov " if self.nesterov else "") + "Momentum"
 
     def capsule(self):
         return [self.eta, self.mu, self.nesterov]  # , self.vW, self.vb]
@@ -54,7 +71,7 @@ class Momentum(SGD):
 class Adagrad(SGD):
 
     def __init__(self, layer, eta=0.01, epsilon=1e-8, *args):
-        SGD.__init__(self, layer, eta)
+        super().__init__(layer, eta)
         self.epsilon = epsilon
         if not args:
             self.mW = np.zeros_like(layer.weights)
@@ -81,7 +98,7 @@ class Adagrad(SGD):
 class RMSprop(Adagrad):
 
     def __init__(self, layer, eta=0.1, decay=0.9, epsilon=1e-8, *args):
-        Adagrad.__init__(self, layer, eta, epsilon)
+        super().__init__(self, layer, eta, epsilon)
         self.decay = decay
         if args:
             if len(args) != 2:
@@ -105,7 +122,7 @@ class RMSprop(Adagrad):
 class Adam(SGD):
 
     def __init__(self, layer, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
-        SGD.__init__(self, layer, eta)
+        super().__init__(layer, eta)
         self.decay_memory = decay_memory
         self.decay_velocity = decay_velocity
         self.epsilon = epsilon

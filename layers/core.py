@@ -11,6 +11,7 @@ class LayerBase(abc.ABC):
 
         from brainforge.ops import act_fns
 
+        self.position = 0
         self.brain = None
         self.inputs = None
         self.output = None
@@ -38,6 +39,7 @@ class LayerBase(abc.ABC):
     def connect(self, to, inshape):
         self.brain = to
         self.inshape = inshape
+        self.position = len(self.brain.layers)
 
     @abc.abstractmethod
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray: raise NotImplementedError
@@ -86,6 +88,25 @@ class LayerBase(abc.ABC):
     def __str__(self): raise NotImplementedError
 
 
+class NoParamMixin(abc.ABC):
+
+    def shuffle(self) -> None:
+        pass
+
+    def get_weights(self, unfold=True):
+        pass
+
+    def set_weights(self, w, fold=True):
+        pass
+
+    def gradients(self):
+        pass
+
+    @property
+    def nparams(self):
+        return
+
+
 class FFBase(LayerBase):
     """Base class for the fully connected layer types"""
     def __init__(self, neurons: int, activation, **kw):
@@ -103,7 +124,7 @@ class FFBase(LayerBase):
         return self.neurons if isinstance(self.neurons, tuple) else (self.neurons,)
 
 
-class _Op(LayerBase):
+class _Op(LayerBase, NoParamMixin):
 
     def __init__(self):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -120,15 +141,6 @@ class _Op(LayerBase):
     def backpropagate(self, error) -> np.ndarray:
         return self.opb(error)
 
-    def get_weights(self, unfold=True):
-        return NotImplemented
-
-    def set_weights(self, w, fold=True):
-        return NotImplemented
-
-    def shuffle(self) -> None:
-        return NotImplemented
-
     def capsule(self):
         return [self.inshape]
 
@@ -144,7 +156,7 @@ class _Op(LayerBase):
         return str(self.opf)
 
 
-class Activation(LayerBase):
+class Activation(LayerBase, NoParamMixin):
 
     def __init__(self, activation):
         LayerBase.__init__(self, activation, trainable=False)
@@ -154,7 +166,8 @@ class Activation(LayerBase):
         return self.output
 
     def backpropagate(self, error) -> np.ndarray:
-        return error * self.activation.derivative(self.output)
+        if self.position > 1:
+            return error * self.activation.derivative(self.output)
 
     @property
     def outshape(self):
@@ -171,7 +184,7 @@ class Activation(LayerBase):
         return "Activation-{}".format(str(self.activation))
 
 
-class InputLayer(LayerBase):
+class InputLayer(LayerBase, NoParamMixin):
 
     def __init__(self, shape):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -192,14 +205,6 @@ class InputLayer(LayerBase):
         return questions
 
     def backpropagate(self, error): pass
-
-    def shuffle(self): pass
-
-    def get_weights(self, unfold=True):
-        return None
-
-    def set_weights(self, w, fold=True):
-        pass
 
     def capsule(self):
         return [self.inshape]
@@ -273,19 +278,29 @@ class DenseLayer(FFBase):
         return "Dense-{}-{}".format(self.neurons, str(self.activation)[:5])
 
 
-class Flatten(_Op):
-
-    def connect(self, to, inshape):
-        from brainforge.ops import FlattenOp, ReshapeOp
-        _Op.connect(self, to, inshape)
-        self.opf = FlattenOp()
-        self.opb = ReshapeOp(inshape)
-
-
 class Reshape(_Op):
 
+    def __init__(self, shape):
+        super().__init__()
+        self.shape = shape
+
     def connect(self, to, inshape):
-        from brainforge.ops import FlattenOp, ReshapeOp
+        from brainforge.ops import ReshapeOp
         _Op.connect(self, to, inshape)
-        self.opf = ReshapeOp(inshape)
-        self.opb = FlattenOp()
+        self.opf = ReshapeOp(self.shape)
+        self.opb = ReshapeOp(inshape)
+
+    def backpropagate(self, error):
+        if self.position > 1:
+            return super().backpropagate(error)
+
+
+class Flatten(Reshape):
+
+    def __init__(self):
+        super().__init__(None)
+
+    def connect(self, to, inshape):
+        from brainforge.ops import ReshapeOp
+        super().connect(to, inshape)
+        self.opf = ReshapeOp((inshape[0], np.prod(inshape[1:])))

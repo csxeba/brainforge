@@ -1,10 +1,10 @@
 import numpy as np
 
-from .core import LayerBase
+from .core import LayerBase, NoParamMixin
 from ..util import white
 
 
-class PoolLayer(LayerBase):
+class PoolLayer(LayerBase, NoParamMixin):
 
     def __init__(self, fdim):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -34,7 +34,8 @@ class PoolLayer(LayerBase):
         :param error:
         :return: numpy.ndarray, the errors of the previous layer
         """
-        return self.op.backward(error, self.filter)
+        if self.position > 1:
+            return self.op.backward(error, self.filter)
 
     @property
     def outshape(self):

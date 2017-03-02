@@ -37,6 +37,7 @@ class Network:
         self.N = 0  # X's size goes here
         self.m = 0  # Batch size goes here
         self._finalized = False
+        self.learning = False
 
         self._add_input_layer(input_shape)
         if layers:
@@ -117,7 +118,7 @@ class Network:
             self._add_input_layer(input_dim)
             self.architecture.append(str(self.layers[-1]))
 
-        layer.connect(self, self.layers[-1].outshape)
+        layer.connect(self, inshape=self.layers[-1].outshape)
         self.layers.append(layer)
         self.architecture.append(str(layer))
         layer.connected = True
@@ -190,6 +191,8 @@ class Network:
 
     def epoch(self, X, Y, batch_size, monitor, validation, verbose):
 
+        self.learning = True
+
         self.N = X.shape[0]
 
         def print_progress():
@@ -221,6 +224,7 @@ class Network:
         elif verbose:
             print()
         self.age += 1
+        self.learning = False
         return costs
 
     def _fit_batch(self, X, Y, parameter_update=True):
@@ -314,7 +318,7 @@ class Network:
         if self.age == 0:
             warnings.warn("Performing gradient check on an untrained Neural Network!",
                           RuntimeWarning)
-        return gradient_check(self, X, y, verbose=verbose, epsilon=epsilon)
+        return gradient_check(self, X, Y, verbose=verbose, epsilon=epsilon)
 
     @property
     def output(self):
