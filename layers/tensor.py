@@ -8,7 +8,7 @@ class PoolLayer(LayerBase, NoParamMixin):
 
     def __init__(self, fdim):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        from ..ops import MaxPoolOp
+        from ..ops.numba_ops import MaxPoolOp
         self.fdim = fdim
         self.filter = None
         self.op = MaxPoolOp()
@@ -25,7 +25,7 @@ class PoolLayer(LayerBase, NoParamMixin):
         :param questions: numpy.ndarray, a batch of outsize from the previous layer
         :return: numpy.ndarray, max pooled batch
         """
-        self.output, self.filter = self.op.apply(questions, self.fdim)
+        self.output = self.op.apply(questions, self.fdim)
         return self.output
 
     def backpropagate(self, error):

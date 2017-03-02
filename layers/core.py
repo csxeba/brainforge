@@ -131,9 +131,6 @@ class _Op(LayerBase, NoParamMixin):
         self.opf = None
         self.opb = None
 
-    def connect(self, to, inshape):
-        LayerBase.connect(self, to, inshape)
-
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.output = self.opf(stimuli)
         return self.output
@@ -303,4 +300,4 @@ class Flatten(Reshape):
     def connect(self, to, inshape):
         from brainforge.ops import ReshapeOp
         super().connect(to, inshape)
-        self.opf = ReshapeOp((inshape[0], np.prod(inshape[1:])))
+        self.opf = ReshapeOp((np.prod(inshape),))

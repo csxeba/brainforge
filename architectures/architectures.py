@@ -99,6 +99,11 @@ class Network:
 
         return net
 
+    @classmethod
+    def from_csxdata(cls, frame, layers=(), name=""):
+        inshp = frame.neurons_required[0]
+        return cls(inshp, layers, name)
+
     # ---- Methods for architectures building ----
 
     def _add_input_layer(self, input_shape):
@@ -165,16 +170,38 @@ class Network:
         if not self._finalized:
             raise RuntimeError("Architecture not finalized!")
 
+        self.N = X.shape[0]
+
         costs = []
+        lstr = len(str(epochs))
         for epoch in range(1, epochs+1):
             if shuffle:
                 arg = np.arange(X.shape[0])
                 np.random.shuffle(arg)
                 X, Y = X[arg], Y[arg]
             if verbose:
-                print("Epoch {}/{}".format(epoch, epochs))
-            costs += self.epoch(X, Y, batch_size, monitor, validation, verbose)
+                print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
+            batches = (((X[start:start+batch_size], Y[start:start+batch_size])
+                        for start in range(0, self.N, batch_size)))
+            costs += self.epoch(batches, monitor, validation, verbose)
+        self.age += epochs
         return costs
+
+    def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
+        self.N = epochs * lessons_per_epoch
+
+        epcosts = []
+        lstr = len(str(epochs))
+        epoch = 1
+        while epoch <= epochs:
+            if verbose:
+                print("\nEpoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
+
+            epcosts += self.epoch(generator, monitor, validation, verbose)
+            epoch += 1
+
+        self.age += epochs
+        return epcosts
 
     def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
         fanin, outshape = frame.neurons_required
@@ -184,50 +211,42 @@ class Network:
             errstring += "outshape: {} <-> Net outshape: {}\n".format(outshape, self.layers[-1].outshape)
             raise RuntimeError(errstring)
 
-        X, Y = frame.table("learning")
-        validation = frame.table("testing")
+        validation = frame.table("testing") if frame.n_testing else ()
+        batch_stream = frame.batchgen(batch_size, "learning", weigh=False, infinite=True)
 
-        return self.fit(X, Y, batch_size, epochs, monitor, validation, verbose, shuffle)
+        return self.fit_generator(batch_stream, frame.N // batch_size,
+                                  epochs, monitor, validation, verbose)
 
-    def epoch(self, X, Y, batch_size, monitor, validation, verbose):
-
-        self.learning = True
-
-        self.N = X.shape[0]
-
-        def print_progress():
-            classificaton = "acc" in monitor
-            results = self.evaluate(*validation, classify=classificaton)
-
-            chain = "testing cost: {0:.5f}"
-            if classificaton:
-                tcost, tacc = results
-                accchain = "\taccuracy: {0:.2%}".format(tacc)
-            else:
-                tcost = results[0]
-                accchain = ""
-            print(chain.format(tcost) + accchain, end="")
+    def epoch(self, generator, monitor, validation, verbose):
 
         costs = []
-        batches = ((X[start:start+batch_size], Y[start:start+batch_size])
-                   for start in range(0, self.N, batch_size))
+        done = 0.
 
-        for bno, (inputs, targets) in enumerate(batches):
-            costs.append(self._fit_batch(inputs, targets))
+        self.learning = True
+        while done < 1.:
+            costs.append(self._fit_batch(next(generator)))
+            done += self.m / self.N
             if verbose:
-                done = ((bno * batch_size) + self.m) / self.N
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(done, np.mean(costs)), end="")
-
-        if verbose and validation:
-            print_progress()
-            print()
-        elif verbose:
-            print()
-        self.age += 1
         self.learning = False
+
+        if verbose:
+            print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(costs)), end="")
+
+        if verbose:
+            if validation:
+                self._print_progress(validation, monitor)
+            print()
+
         return costs
 
-    def _fit_batch(self, X, Y, parameter_update=True):
+    def backpropagation(self, Y):
+        error = self.cost.derivative(self.layers[-1].output, Y)
+        for layer in self.layers[-1:0:-1]:
+            error = layer.backpropagate(error)
+
+    def _fit_batch(self, batch, parameter_update=True):
+        X, Y = batch
         self.prediction(X)
         self.backpropagation(Y)
         if parameter_update:
@@ -235,19 +254,24 @@ class Network:
 
         return self.cost(self.output, Y) / self.m
 
-    def backpropagation(self, Y):
-        error = self.cost.derivative(self.layers[-1].output, Y)
-        for layer in self.layers[-1:0:-1]:
-            error = layer.backpropagate(error)
-
     def _parameter_update(self):
         for layer in filter(lambda x: x.trainable, self.layers):
             layer.optimizer(self.m)
 
-    # ---- Methods for forward propagation ----
+    def _print_progress(self, validation, monitor):
+        classificaton = "acc" in monitor
+        results = self.evaluate(*validation, classify=classificaton)
 
-    def regress(self, X):
-        return self.prediction(X)
+        chain = "testing cost: {0:.5f}"
+        if classificaton:
+            tcost, tacc = results
+            accchain = "\taccuracy: {0:.2%}".format(tacc)
+        else:
+            tcost = results[0]
+            accchain = ""
+        print(chain.format(tcost) + accchain, end="")
+
+    # ---- Methods for forward propagation ----
 
     def classify(self, X):
         return np.argmax(self.prediction(X), axis=1)

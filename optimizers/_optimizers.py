@@ -5,7 +5,7 @@ import numpy as np
 
 class Optimizer(abc.ABC):
 
-    def __init__(self, layer, eta):
+    def __init__(self, layer, eta=0.1):
         self.layer = layer
         self.eta = eta
 
@@ -47,7 +47,9 @@ class Momentum(SGD):
             self.vb = np.zeros_like(layer.biases)
         else:
             if len(args) != 2:
-                raise RuntimeError("Invalid number of params for Adagrad!")
+                msg = "Invalid number of params for Momentum! Got this:\n"
+                msg += str(args)
+                raise RuntimeError(msg)
             self.vW, self.vb = args
 
     def __call__(self, m):
@@ -78,7 +80,9 @@ class Adagrad(SGD):
             self.mb = np.zeros_like(layer.biases)
         else:
             if len(args) != 2:
-                raise RuntimeError("Invalid number of params for Adagrad!")
+                msg = "Invalid number of params for Adagrad! Got this:\n"
+                msg += str(args)
+                raise RuntimeError(msg)
             self.mW, self.mb = args
 
     def __call__(self, m):
@@ -98,11 +102,13 @@ class Adagrad(SGD):
 class RMSprop(Adagrad):
 
     def __init__(self, layer, eta=0.1, decay=0.9, epsilon=1e-8, *args):
-        super().__init__(self, layer, eta, epsilon)
+        super().__init__(layer, eta, epsilon)
         self.decay = decay
         if args:
             if len(args) != 2:
-                raise RuntimeError("Invalid number of params for Adagrad!")
+                msg = "Invalid number of params for RMSprop! Got this:\n"
+                msg += str(args)
+                raise RuntimeError(msg)
             self.mW, self.mb = args
 
     def __call__(self, m):
@@ -134,7 +140,8 @@ class Adam(SGD):
             self.vb = np.zeros_like(layer.biases)
         else:
             if len(args) != 4:
-                raise RuntimeError("Invalid number of params for ADAM!")
+                raise RuntimeError("Invalid number of params for ADAM! Got this:\n"
+                                   + str(args))
             self.mW, self.mb, self.vW, self.vb = args
 
     def __call__(self, m):

@@ -29,10 +29,10 @@ def build_cnn(data: CData):
     net = Network(input_shape=inshape, name="TestBrainforgeCNN")
     net.add(ConvLayer(5, 5, 5))
     net.add(PoolLayer(3))
-    net.add(Activation("tanh"))
     net.add(Flatten())
-    net.add(DenseLayer(outshape, activation="sigmoid", trainable=True))
-    net.finalize("mse", optimizer="adam")
+    net.add(Activation("tanh"))
+    net.add(DenseLayer(outshape, activation="softmax", trainable=True))
+    net.finalize("xent", optimizer="adam")
     return net
 
 
@@ -46,9 +46,8 @@ def keras_run():
 def xperiment():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
-    # net.fit(*mnist.table("learning", m=30), batch_size=10, epochs=1, verbose=0)
-    # net.gradient_check(*mnist.table("testing", m=20))
-    net.fit(*mnist.table("learning"), batch_size=30, epochs=10, verbose=1)
+    X, Y = mnist.table("learning", m=1000)
+    net.fit(X, Y, batch_size=30, epochs=1, verbose=0)
 
 if __name__ == '__main__':
     xperiment()

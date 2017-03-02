@@ -81,6 +81,7 @@ class DropOut(LayerBase, NoParamMixin):
 
     def connect(self, to, inshape):
         self.neurons = inshape
+        LayerBase.connect(self, to, inshape)
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.inputs = stimuli
