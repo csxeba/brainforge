@@ -25,7 +25,7 @@ class PoolLayer(LayerBase, NoParamMixin):
         :param questions: numpy.ndarray, a batch of outsize from the previous layer
         :return: numpy.ndarray, max pooled batch
         """
-        self.output = self.op.apply(questions, self.fdim)
+        self.output, self.filter = self.op.apply(questions, self.fdim)
         return self.output
 
     def backpropagate(self, error):
