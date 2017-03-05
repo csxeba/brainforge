@@ -104,7 +104,7 @@ class Network:
         inshp = frame.neurons_required[0]
         return cls(inshp, layers, name)
 
-    # ---- Methods for architectures building ----
+    # ---- Methods for architecture building ----
 
     def _add_input_layer(self, input_shape):
         if not input_shape:
@@ -241,7 +241,8 @@ class Network:
         return costs
 
     def backpropagation(self, Y):
-        error = self.cost.derivative(self.layers[-1].output, Y)
+        last = self.layers[-1]
+        error = self.cost.derivative(last.output, Y)
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
 

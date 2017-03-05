@@ -9,7 +9,8 @@ class LayerBase(abc.ABC):
     """Abstract base class for all layer type classes"""
     def __init__(self, activation, **kw):
 
-        from brainforge.ops import act_fns
+        from ..ops import act_fns
+        from ..costs import regularizers
 
         self.position = 0
         self.brain = None
@@ -31,10 +32,9 @@ class LayerBase(abc.ABC):
         else:
             self.activation = activation
 
-        if "trainable" in kw:
-            self.trainable = kw["trainable"]
-        else:
-            self.trainable = True
+        self.trainable = kw.get("trainable", True)
+        self.regularizers = [regularizers[r](self) if isinstance(r, str)
+                             else r for r in kw.get("regularizers", [])]
 
     def connect(self, to, inshape):
         self.brain = to
@@ -67,6 +67,10 @@ class LayerBase(abc.ABC):
     @property
     def gradients(self):
         return np.concatenate([self.nabla_w.ravel(), self.nabla_b.ravel()])
+
+    @property
+    def penalty(self):
+        return sum([r() for r in self.regularizers])
 
     @property
     def nparams(self):
