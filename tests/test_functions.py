@@ -3,15 +3,15 @@ import unittest
 import numpy as np
 
 from brainforge.ops import act_fns
-from csxdata import etalon, roots, CData
+from csxdata import etalon
 
 
 class TestSoftmax(unittest.TestCase):
 
     def setUp(self):
         self.data = etalon()
-        self.softmax = act_fns["softmax"]
-        self.rsmaxed = np.round(CData(roots["etalon"] + "smaxed.csv", cross_val=0.0).learning.astype(float), 4)
+        self.softmax = act_fns["softmax"]()
+        self.rsmaxed = np.round(etalon("smaxed.csv").learning.astype(float), 4)
 
     def test_softmax_function(self):
 

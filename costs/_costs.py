@@ -49,8 +49,8 @@ class L2Norm(Regularizer):
 class _Regularizers:
 
     def __init__(self):
-        self.dct = {key.lower(): val for key, val in globals()
-                    if issubclass(val, Regularizer)}
+        self.dct = {key.lower(): val for key, val in globals().items()
+                    if key[:3] in ("L1N", "L2N")}
 
     def __getitem__(self, item):
         if item not in self.dct:
