@@ -37,6 +37,7 @@ def convfull(A, F):
                 mode="constant", constant_values=0.)
     return convvalid(pA, F)
 
+
 spec = "({t},int32)({t})".format(t="{}[:, :, :, :]".format(floatX))
 @nb.jit(nopython=True)
 def maxpool(A, fdim):

@@ -1,29 +1,34 @@
-def save_model(network):
-    if isinstance(network, keras.models.Sequential):
-        _save_keras_model(network)
-    elif isinstance(network, architecture.ann.Network):
-        _save_brainforged_model(network)
+import numpy as np
+
+from ..util.persistance import Capsule
+from ..ops.lowlevel import ops
 
 
-def _save_keras_model(network: keras.models.Sequential):
-    keras.models.save_model(network, roots["brains"] + "kerasmodel_" + network.name + ".h5")
+class Predictor:
 
+    def __init__(self, capsule):
+        c = Capsule.read(capsule)
 
-def _save_brainforged_model(network: csxnet.Network):
-    network.save(roots["brain"] + "csxmodel_" + network.name + ".h5")
+        self.name = "Predictor from " + c["name"]
+        self.ops = [ops[arch.split("-")[0]](params) for arch, params
+                    in zip(c["architechure"], c["layers"])]
+        self.cost = c["cost"]
 
+    def predict(self, X):
+        for op in self.ops:
+            X = op(X)
+        return X
 
-def load_model(path):
-    if "kerasmodel" in path:
-        return _load_keras_model(path)
-    elif "csxmodel" in path:
-        return _load_brainforged_model(path)
+    def classify(self, X):
+        X = self.predict(X)
+        return X.argmax(axis=1)
 
+    def evaluate(self, X, Y, costfn, classify=False):
+        preds = self.predict(X)
+        cost = costfn(preds, Y)
 
-def _load_keras_model(path):
-    return keras.models.load_model(path)
+        if classify:
+            eq = np.equal(preds.argmax(axis=1), Y.argmax(axis=1))
+            return cost, eq.sum() / eq.size()
 
-
-def _load_brainforged_model(path):
-    pass
-
+        return cost

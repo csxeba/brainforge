@@ -48,36 +48,29 @@ class Network:
                 self.add(layer)
 
     def encapsulate(self, dumppath=None):
-        capsule = {
+        from ..util.persistance import Capsule
+        capsule = Capsule(**{
+            "flpath": dumppath,
             "name": self.name,
             "cost": self.cost,
             "optimizers": self.optimizer,
             "architectures": self.architecture[:],
-            "layers": [layer.capsule() for layer in self.layers]}
+            "layers": [layer.capsule() for layer in self.layers]})
 
-        if dumppath is None:
-            return capsule
-        else:
-            import pickle
-            with open(dumppath, "wb") as outfl:
-                pickle.dump(capsule, outfl)
-                outfl.close()
+        if dumppath is not None:
+            capsule.dump()
+        return capsule
 
     @classmethod
     def from_capsule(cls, capsule):
 
-        def prepare_capsule(caps):
-            if isinstance(caps, str):
-                import pickle
-                infl = open(caps, "rb")
-                caps = pickle.load(infl)
-                infl.close()
-            return caps
+        from ..optimizers import optimizers
+        from ..util.persistance import Capsule
+        from ..util.shame import translate_architecture as trsl
 
-        from brainforge.util.shame import translate_architecture as trsl
-        from brainforge.optimizers import optimizer as opts
-
-        c = prepare_capsule(capsule)
+        if not isinstance(capsule, Capsule):
+            capsule = Capsule.read(capsule)
+        c = capsule
 
         net = Network(input_shape=c["layers"][0][0], name=c["name"])
 
@@ -90,7 +83,7 @@ class Network:
 
         opti = c["optimizers"]
         if isinstance(opti, str):
-            opti = opts[opti]()
+            opti = optimizers[opti]()
         net.finalize(cost=c["cost"], optimizer=opti)
 
         for layer, lcaps in zip(net.layers, c["layers"]):
@@ -129,31 +122,16 @@ class Network:
         layer.connected = True
 
     def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns as costs
-        from ..optimizers import optimizer as opt
+        from ..costs import cost_fns
+        from ..optimizers import optimizers
 
-        self.cost = costs[cost] if isinstance(cost, str) else cost
+        self.cost = cost_fns[cost](self) if isinstance(cost, str) else cost
         self.optimizer = optimizer
-
-        if str(cost).lower() == "xent":
-            if str(self.layers[-1].activation) not in ("softmax", "sigmoid"):
-                errmsg = "Sorry, xent only supported with softmax or sigmoid output activation!\n"
-                errmsg += "{} not supported!".format(str(self.layers[-1].activation))
-                raise RuntimeError(errmsg)
-            self.layers[-1].activation.derivative = lambda X: np.ones_like(X)
-
-            # TODO: discard this ugly hack!
-            if str(self.layers[-1].activation) == "sigmoid":
-                from ..costs._costs import _XentOnSigmoid
-                self.cost = _XentOnSigmoid()
-            else:
-                from ..costs._costs import _XentOnSoftmax
-                self.cost = _XentOnSoftmax()
 
         for layer in self.layers:
             if layer.trainable:
                 if isinstance(optimizer, str):
-                    optimizer = opt[optimizer](layer)
+                    optimizer = optimizers[optimizer](layer)
                 layer.optimizer = optimizer
 
         self._finalized = True
@@ -390,8 +368,8 @@ class Autoencoder(Network):
         self._finalized = False
 
     def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns as costs
-        from ..optimizers import optimizer as opt
+        from ..costs import cost_fns
+        from ..optimizers import optimizers
         from ..layers import DenseLayer
 
         for layer in reversed(self.layers[1:]):
@@ -405,9 +383,9 @@ class Autoencoder(Network):
         for layer in self.layers:
             if layer.trainable:
                 if isinstance(optimizer, str):
-                    optimizer = opt[optimizer](layer)
+                    optimizer = optimizers[optimizer](layer)
                 layer.optimizer = optimizer
-        self.cost = costs[cost] if isinstance(cost, str) else cost
+        self.cost = cost_fns[cost] if isinstance(cost, str) else cost
         self._finalized = True
 
     def encode(self, X):

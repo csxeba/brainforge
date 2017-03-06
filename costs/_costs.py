@@ -60,6 +60,9 @@ class _Regularizers:
 
 class CostFunction(abc.ABC):
 
+    def __init__(self, brain):
+        self.brain = brain
+
     def __call__(self, outputs, targets): pass
 
     def __str__(self): return ""
@@ -83,33 +86,11 @@ class _MSE(CostFunction):
         return "MSE"
 
 
-class _XentOnSigmoid(CostFunction):
-
-    def __call__(self, a: np.ndarray, y: np.ndarray):
-        return -np.sum(y * np.log(a) + (1 - y) * np.log(1 - a))
-
-    @staticmethod
-    def derivative(outputs, targets):
-        return np.subtract(outputs, targets)
-
-
-class _XentOnSoftmax(CostFunction):
-
-    def __call__(self, a: np.ndarray, y: np.ndarray):
-        return -np.sum(y * np.log(a))
-
-    @staticmethod
-    def derivative(outputs, targets):
-        return np.subtract(outputs, targets)
-
-    def __str__(self):
-        return "Xent"
-
-
 class _Xent(CostFunction):
 
-    def __init__(self, outact="softmax"):
-        outact = str(outact).lower()
+    def __init__(self, brain):
+        super().__init__(brain)
+        outact = str(self.brain.layers[-1].activation)
         if outact not in ("sigmoid", "softmax"):
             msg = "Supplied output activation function ({})\n".format(outact)
             msg += "is not supported with the Cross-Entropy cost function!\n"
@@ -169,26 +150,16 @@ class _Hinge(CostFunction):
         return out
 
 
-class _Cost:
-    @property
-    def mse(self):
-        return _MSE()
+class _CostFunctions:
 
-    @property
-    def xent(self):
-        return _Xent()
+    def __init__(self):
+        self.dct = {"xent": _Xent,
+                    "hinge": _Hinge,
+                    "mse": _MSE}
 
-    def __getitem__(self, item: str):
-        if not isinstance(item, str):
-            raise TypeError("Please supply a string!")
-        item = item.lower()
-        d = {str(fn).lower(): fn for fn in (_MSE(), _Xent(), _Hinge())}
-        if item not in d:
-            raise IndexError("Requested cost function is unsupported!")
-        return d[item]
+    def __getitem__(self, item):
+        if item not in self.dct:
+            raise RuntimeError("No such cost function:", item)
 
-
-mse = _MSE()
-xent = _Xent()
-cost_fns = _Cost()
+cost_fns = _CostFunctions()
 regularizers = _Regularizers()

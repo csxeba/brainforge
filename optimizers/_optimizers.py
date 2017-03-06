@@ -163,4 +163,4 @@ class Adam(SGD):
         return param
 
 
-optimizer = {key.lower(): cls for key, cls in locals().items() if key != "np"}
+optimizers = {key.lower(): cls for key, cls in locals().items() if key != "np"}

@@ -97,7 +97,7 @@ class ConvLayer(LayerBase):
         iT = self.inputs.transpose(1, 0, 2, 3)
         eT = error.transpose(1, 0, 2, 3)
         self.nabla_w = self.op.apply(iT, eT, mode="valid").transpose(1, 0, 2, 3)
-        # self.nabla_b = error.sum()
+        # self.nabla_b = error.sum()  # TODO: why is this commented out???
         rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
         backpass = self.op.apply(error, rW, "full")
         return backpass
