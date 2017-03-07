@@ -126,14 +126,8 @@ class Network:
         from ..optimizers import optimizers
 
         self.cost = cost_fns[cost](self) if isinstance(cost, str) else cost
-        self.optimizer = optimizer
-
-        for layer in self.layers:
-            if layer.trainable:
-                if isinstance(optimizer, str):
-                    optimizer = optimizers[optimizer](layer)
-                layer.optimizer = optimizer
-
+        self.optimizer = optimizers[optimizer]() if isinstance(optimizer, str) else optimizers
+        self.optimizer.connect(self)
         self._finalized = True
 
     def pop(self):
@@ -234,8 +228,7 @@ class Network:
         return self.cost(self.output, Y) / self.m
 
     def _parameter_update(self):
-        for layer in filter(lambda x: x.trainable, self.layers):
-            layer.optimizer(self.m)
+        self.optimizer(self.m)
 
     def _print_progress(self, validation, monitor):
         classificaton = "acc" in monitor
@@ -319,7 +312,7 @@ class Network:
                 layer.set_weights(w)
 
     def get_gradients(self, unfold=True):
-        grads = [l.gradients for l in self.layers]
+        grads = [l.gradients for l in self.layers if l.trainable]
         if unfold:
             grads = np.concatenate(grads)
         return grads

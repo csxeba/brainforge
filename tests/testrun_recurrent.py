@@ -26,24 +26,24 @@ def build(data, what):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestRNN")
     rl1 = 180
+    rl2 = 120
     act = "relu"
-    if what.lower() == "lstm":
-        net.add(LSTM(rl1, activation=act))
-    elif what.lower() == "gru":
-        net.add(GRU(rl1, activation=act))
-    elif what.lower() == "cwrnn":
-        net.add(ClockworkLayer(rl1, activaton=act))
-    else:
-        net.add(RLayer(rl1, activation=act))
 
+    LayerType = {"lstm": LSTM, "gru": GRU,
+                 "cwrnn": ClockworkLayer,
+                 "rlayer": RLayer}[what.lower()]
+
+    LayerType(rl1, act, return_seq=True)
+    LayerType(rl2, act)
+    net.add(DenseLayer(120, activation="tanh"))
     net.add(DenseLayer(outshape, activation="softmax"))
-    net.finalize("xent", optimizer="adagrad")
+    net.finalize("xent", optimizer="rmsprop")
     return net
 
 
 def xperiment():
     petofi = pull_petofi_data()
-    net = build(petofi, what="CWRNN")
+    net = build(petofi, what="GRU")
     net.describe(verbose=1)
     print("Initial cost: {} acc: {}".format(*net.evaluate(*petofi.table("testing"))))
     print(speak_to_me(net, petofi))

@@ -10,9 +10,12 @@ def _rms(X: np.ndarray):
 
 class Optimizer(abc.ABC):
 
-    def __init__(self, brain, eta=0.1):
-        self.brain = brain
+    def __init__(self, eta=0.1):
+        self.brain = None
         self.eta = eta
+
+    def connect(self, brain):
+        self.brain = brain
 
     @abc.abstractmethod
     def __call__(self, m):
@@ -43,18 +46,23 @@ class SGD(Optimizer):
 
 class Momentum(SGD):
 
-    def __init__(self, brain, eta=0.1, mu=0.9, nesterov=False, *args):
-        super().__init__(brain, eta)
+    def __init__(self, eta=0.1, mu=0.9, nesterov=False, *args):
+        super().__init__(eta)
         self.mu = mu
         self.nesterov = nesterov
         if not args:
-            self.velocity = np.zeros((brain.nparams,))
+            self.velocity = None
         else:
             if len(args) != 1:
                 msg = "Invalid number of params for Momentum! Got this:\n"
                 msg += str(args)
                 raise RuntimeError(msg)
             self.velocity = args[0]
+
+    def connect(self, brain):
+        super().connect(brain)
+        if self.velocity is None:
+            self.velocity = np.zeros((brain.nparams,))
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
@@ -73,17 +81,23 @@ class Momentum(SGD):
 
 class Adagrad(SGD):
 
-    def __init__(self, brain, eta=0.01, epsilon=1e-8, *args):
-        super().__init__(brain, eta)
+    def __init__(self, eta=0.01, epsilon=1e-8, *args):
+        warnings.warn("Adagrad is untested and possibly faulty!")
+        super().__init__(eta)
         self.epsilon = epsilon
         if not args:
-            self.memory = np.zeros((brain.nparams,))
+            self.memory = None
         else:
             if len(args) != 1:
-                msg = "Invalid number of params for Adagrad! Got this:\n"
+                msg = "Invalid number of params for {}! Got this:\n".format(str(self))
                 msg += str(args)
                 raise RuntimeError(msg)
             self.memory = args[0]
+
+    def connect(self, brain):
+        super().connect(brain)
+        if self.memory is None:
+            self.memory = np.zeros((brain.nparams,))
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
@@ -100,15 +114,9 @@ class Adagrad(SGD):
 
 class RMSprop(Adagrad):
 
-    def __init__(self, brain, eta=0.1, decay=0.9, epsilon=1e-8, *args):
-        super().__init__(brain, eta, epsilon)
+    def __init__(self, eta=0.1, decay=0.9, epsilon=1e-8, *args):
+        super().__init__(eta, epsilon, *args)
         self.decay = decay
-        if args:
-            if len(args) != 1:
-                msg = "Invalid number of params for RMSprop! Got this:\n"
-                msg += str(args)
-                raise RuntimeError(msg)
-            self.memory = args[0]
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
@@ -126,20 +134,27 @@ class RMSprop(Adagrad):
 
 class Adadelta(SGD):
 
-    def __init__(self, brain, rho=0.99, epsilon=1e-8, *args):
-        warnings.warn("Adadelta is untested!", RuntimeWarning)
-        super().__init__(brain, eta=None)
+    def __init__(self, rho=0.99, epsilon=1e-8, *args):
+        warnings.warn("Adadelta is untested and possibly faulty!", RuntimeWarning)
+        super().__init__(eta=0.0)
         self.rho = rho
         self.epsilon = epsilon
         if not args:
-            self.gmemory = np.zeros((self.brain.nparams,))
-            self.umemory = np.copy(self.gmemory)
+            self.gmemory = None
+            self.umemory = None
         else:
             if len(args) != 2:
                 msg = "Invalid number of params for Adadelta! Got this:\n"
                 msg += str(args)
                 raise RuntimeError(msg)
             self.gmemory, self.umemory = args
+
+    def connect(self, brain):
+        super().connect(brain)
+        if self.gmemory is None:
+            self.gmemory = np.zeros((self.brain.nparams,))
+        if self.umemory is None:
+            self.umemory = np.zeros((self.brain.nparams,))
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
@@ -152,20 +167,27 @@ class Adadelta(SGD):
 
 class Adam(SGD):
 
-    def __init__(self, brain, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
-        super().__init__(brain, eta)
+    def __init__(self, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
+        super().__init__(eta)
         self.decay_memory = decay_memory
         self.decay_velocity = decay_velocity
         self.epsilon = epsilon
 
         if not args:
-            self.memory = np.zeros((brain.nparams,))
-            self.velocity = np.copy(self.memory)
+            self.memory = None
+            self.velocity = None
         else:
             if len(args) != 2:
                 raise RuntimeError("Invalid number of params for ADAM! Got this:\n"
                                    + str(args))
             self.memory, self.velocity = args
+
+    def connect(self, brain):
+        super().connect(brain)
+        if self.memory is None:
+            self.memory = np.zeros((brain.nparams,))
+        if self.velocity is None:
+            self.velocity = np.zeros((brain.nparams,))
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
