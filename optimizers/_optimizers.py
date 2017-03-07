@@ -1,12 +1,17 @@
 import abc
+import warnings
 
 import numpy as np
 
 
+def _rms(X: np.ndarray):
+    return np.sqrt((X**2).mean())
+
+
 class Optimizer(abc.ABC):
 
-    def __init__(self, layer, eta=0.1):
-        self.layer = layer
+    def __init__(self, brain, eta=0.1):
+        self.brain = brain
         self.eta = eta
 
     @abc.abstractmethod
@@ -25,9 +30,9 @@ class Optimizer(abc.ABC):
 class SGD(Optimizer):
 
     def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
         eta = self.eta / m
-        self.layer.weights -= self.layer.nabla_w * eta
-        self.layer.biases -= self.layer.nabla_b * eta
+        self.brain.set_weights(W - self.brain.gradients * eta)
 
     def __str__(self):
         return "SGD"
@@ -38,30 +43,26 @@ class SGD(Optimizer):
 
 class Momentum(SGD):
 
-    def __init__(self, layer, eta=0.1, mu=0.9, nesterov=False, *args):
-        super().__init__(layer, eta)
+    def __init__(self, brain, eta=0.1, mu=0.9, nesterov=False, *args):
+        super().__init__(brain, eta)
         self.mu = mu
         self.nesterov = nesterov
         if not args:
-            self.vW = np.zeros_like(layer.weights)
-            self.vb = np.zeros_like(layer.biases)
+            self.velocity = np.zeros((brain.nparams,))
         else:
-            if len(args) != 2:
+            if len(args) != 1:
                 msg = "Invalid number of params for Momentum! Got this:\n"
                 msg += str(args)
                 raise RuntimeError(msg)
-            self.vW, self.vb = args
+            self.velocity = args[0]
 
     def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
         eta = self.eta / m
-        self.vW *= self.mu
-        self.vb *= self.mu
-        deltaW = self.layer.weights + self.vW if self.nesterov else self.layer.nabla_w
-        deltab = self.layer.biases + self.vb if self.nesterov else self.layer.nabla_b
-        self.vW += deltaW * eta
-        self.vb += deltab * eta
-        self.layer.weights -= self.vW
-        self.layer.biases -= self.vb
+        self.velocity *= self.mu
+        deltaW = W + self.velocity if self.nesterov else self.brain.gradients
+        self.velocity += deltaW * eta
+        self.brain.set_weights(W - self.velocity)
 
     def __str__(self):
         return ("Nesterov " if self.nesterov else "") + "Momentum"
@@ -72,25 +73,23 @@ class Momentum(SGD):
 
 class Adagrad(SGD):
 
-    def __init__(self, layer, eta=0.01, epsilon=1e-8, *args):
-        super().__init__(layer, eta)
+    def __init__(self, brain, eta=0.01, epsilon=1e-8, *args):
+        super().__init__(brain, eta)
         self.epsilon = epsilon
         if not args:
-            self.mW = np.zeros_like(layer.weights)
-            self.mb = np.zeros_like(layer.biases)
+            self.memory = np.zeros((brain.nparams,))
         else:
-            if len(args) != 2:
+            if len(args) != 1:
                 msg = "Invalid number of params for Adagrad! Got this:\n"
                 msg += str(args)
                 raise RuntimeError(msg)
-            self.mW, self.mb = args
+            self.memory = args[0]
 
     def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
         eta = self.eta / m
-        self.mW += self.layer.nabla_w ** 2
-        self.mb += self.layer.nabla_b ** 2
-        self.layer.weights -= (eta / np.sqrt(self.mW + self.epsilon)) * self.layer.nabla_w
-        self.layer.biases -= (eta / np.sqrt(self.mb + self.epsilon)) * self.layer.nabla_b
+        self.memory += self.brain.gradients ** 2
+        self.brain.set_weights(W - (eta / np.sqrt(self.memory + self.epsilon)) * self.brain.gradients)
 
     def __str__(self):
         return "Adagrad"
@@ -101,22 +100,22 @@ class Adagrad(SGD):
 
 class RMSprop(Adagrad):
 
-    def __init__(self, layer, eta=0.1, decay=0.9, epsilon=1e-8, *args):
-        super().__init__(layer, eta, epsilon)
+    def __init__(self, brain, eta=0.1, decay=0.9, epsilon=1e-8, *args):
+        super().__init__(brain, eta, epsilon)
         self.decay = decay
         if args:
-            if len(args) != 2:
+            if len(args) != 1:
                 msg = "Invalid number of params for RMSprop! Got this:\n"
                 msg += str(args)
                 raise RuntimeError(msg)
-            self.mW, self.mb = args
+            self.memory = args[0]
 
     def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
+        gW = self.brain.gradients
         eta = self.eta / m
-        self.mW = self.decay * self.mW + (1 - self.decay) * self.layer.nabla_w**2
-        self.mb = self.decay * self.mb + (1 - self.decay) * self.layer.nabla_b**2
-        self.layer.weights -= eta * self.layer.nabla_w / (np.sqrt(self.mW) + self.epsilon)
-        self.layer.biases -= eta * self.layer.nabla_b / (np.sqrt(self.mb) + self.epsilon)
+        self.memory = self.decay * self.memory + (1 - self.decay) * (gW ** 2)
+        self.brain.set_weights(W - ((eta * gW) / (np.sqrt(self.memory + self.epsilon))))
 
     def __str__(self):
         return "RMSprop"
@@ -125,34 +124,57 @@ class RMSprop(Adagrad):
         return [self.eta, self.decay, self.epsilon]  # , self.mW, self.mb]
 
 
+class Adadelta(SGD):
+
+    def __init__(self, brain, rho=0.99, epsilon=1e-8, *args):
+        warnings.warn("Adadelta is untested!", RuntimeWarning)
+        super().__init__(brain, eta=None)
+        self.rho = rho
+        self.epsilon = epsilon
+        if not args:
+            self.gmemory = np.zeros((self.brain.nparams,))
+            self.umemory = np.copy(self.gmemory)
+        else:
+            if len(args) != 2:
+                msg = "Invalid number of params for Adadelta! Got this:\n"
+                msg += str(args)
+                raise RuntimeError(msg)
+            self.gmemory, self.umemory = args
+
+    def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
+        gW = self.brain.gradients
+        self.gmemory = self.rho * self.gmemory + (1. - self.rho) * gW**2
+        self.brain.set_weights(W - (self.umemory / self.gmemory) * gW)
+        update = (_rms(self.umemory) / _rms(gW)) * gW
+        self.umemory = self.rho * self.umemory + (1. - self.rho) * update**2
+
+
 class Adam(SGD):
 
-    def __init__(self, layer, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
-        super().__init__(layer, eta)
+    def __init__(self, brain, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
+        super().__init__(brain, eta)
         self.decay_memory = decay_memory
         self.decay_velocity = decay_velocity
         self.epsilon = epsilon
 
         if not args:
-            self.mW = np.zeros_like(layer.weights)
-            self.mb = np.zeros_like(layer.biases)
-            self.vW = np.zeros_like(layer.weights)
-            self.vb = np.zeros_like(layer.biases)
+            self.memory = np.zeros((brain.nparams,))
+            self.velocity = np.copy(self.memory)
         else:
-            if len(args) != 4:
+            if len(args) != 2:
                 raise RuntimeError("Invalid number of params for ADAM! Got this:\n"
                                    + str(args))
-            self.mW, self.mb, self.vW, self.vb = args
+            self.memory, self.velocity = args
 
     def __call__(self, m):
+        W = self.brain.get_weights(unfold=True)
+        gW = self.brain.gradients
         eta = self.eta / m
-        self.mW = self.decay_memory*self.mW + (1-self.decay_memory)*self.layer.nabla_w
-        self.mb = self.decay_memory*self.mb + (1-self.decay_memory)*self.layer.nabla_b
-        self.vW = self.decay_velocity*self.vW + (1-self.decay_velocity)*(self.layer.nabla_w**2)
-        self.vb = self.decay_velocity*self.vb + (1-self.decay_velocity)*(self.layer.nabla_b**2)
-
-        self.layer.weights -= eta * self.mW / (np.sqrt(self.vW) + self.epsilon)
-        self.layer.biases -= eta * self.mb / (np.sqrt(self.vb) + self.epsilon)
+        self.memory = self.decay_memory * self.memory + (1 - self.decay_memory) * gW
+        self.velocity = (self.decay_velocity * self.velocity +
+                         (1 - self.decay_velocity) * (gW ** 2))
+        self.brain.set_weights(W - ((eta * self.memory) / (np.sqrt(self.velocity + self.epsilon))))
 
     def __str__(self):
         return "Adam"
@@ -163,4 +185,5 @@ class Adam(SGD):
         return param
 
 
-optimizers = {key.lower(): cls for key, cls in locals().items() if key != "np"}
+optimizers = {key.lower(): cls for key, cls in locals().items()
+              if key not in ("np", "abc", "warnings")}

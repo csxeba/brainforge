@@ -121,17 +121,18 @@ class RLayer(RecurrentBase):
 
 class LSTM(RecurrentBase):
 
-    def __init__(self, neurons, activation, return_seq=False):
+    def __init__(self, neurons, activation, bias_init_factor=7., return_seq=False):
         RecurrentBase.__init__(self, neurons, activation, return_seq)
         self.G = neurons * 3
         self.Zs = []
         self.gates = []
+        self.bias_init_factor = bias_init_factor
 
     def connect(self, to, inshape):
         RecurrentBase.connect(self, to, inshape)
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
-        self.biases = np.zeros((self.neurons * 4,))
+        self.biases = np.ones((self.neurons * 4,)) * self.bias_init_factor
 
     def feedforward(self, X: np.ndarray):
 
@@ -292,30 +293,48 @@ class GRU(RecurrentBase):
 
 class ClockworkLayer(RLayer):
 
-    def __init__(self, neurons, activaton, return_seq=False):
+    def __init__(self, neurons, activaton, blocksizes=None, ticks=None, return_seq=False):
         super().__init__(neurons, activaton, return_seq)
-        self.tick = None
+
+        if blocksizes is None:
+            block = neurons // 5
+            blocksizes = [block] * 5
+            blocksizes[0] += (neurons % block)
+        else:
+            if sum(blocksizes) != self.neurons:
+                msg = "Please specify blocksizes so that they sum up to the number "
+                msg += "of neurons specified for this layer! ({})".format(neurons)
+                raise RuntimeError(msg)
+        self.blocksizes = blocksizes
+
+        if ticks is None:
+            ticks = [2**i for i in range(len(self.blocksizes))]
+        else:
+            if min(ticks) < 0 or len(ticks) != len(self.blocksizes):
+                msg = "Ticks specifies the timestep when each block is activated.\n"
+                msg += "Please specify the <ticks> parameter so, that its length is "
+                msg += "equal to the number of blocks specifid (defaults to 5). "
+                msg += "Please also consider that timesteps < 0 are invalid!"
+                raise RuntimeError(msg)
+        self.ticks = np.array(ticks)
+        self.tick_array = np.zeros((self.neurons,))
+        print("CW blocks:", self.blocksizes)
+        print("CW ticks :", self.ticks)
 
     def connect(self, to, inshape):
 
-        def fibo(upto, i=1, j=1, c=None):
-            c = [] if c is None else c
-            c.append(j)
-            if c[-1] >= upto:
-                return c[:-1] + [upto]
-            else:
-                fibo(upto, j, j+i, c)
+        self.Z = inshape[-1] + self.neurons
 
-        t, d = inshape
-        blocksizes = [0] + fibo(upto=self.neurons)
-        U = np.zeros((self.neurons, self.neurons))
-        W = white((d + self.neurons, self.neurons))
-        self.tick = np.zeros((self.neurons,))
-        for start, stop in zip(blocksizes[:-1], blocksizes[1:]):
-            U[start:stop, stop:] = white_like(U[start:stop, stop:])
-            self.tick[start:stop] = stop
+        W = np.zeros((self.neurons, self.neurons))
+        U = white(inshape[-1], self.neurons)
 
-        self.weights = np.concatenate((W, U), axis=1)
+        for i, bls in enumerate(self.blocksizes):
+            start = i*bls
+            end = start + bls
+            W[start:end, start:] = white_like(W[start:end, start:])
+            self.tick_array[start:end] = self.ticks[i]
+
+        self.weights = np.concatenate((W, U), axis=0)
         self.biases = np.zeros((self.neurons,))
 
         RecurrentBase.connect(self, to, inshape)
@@ -323,15 +342,15 @@ class ClockworkLayer(RLayer):
     def feedforward(self, stimuli):
         output = RecurrentBase.feedforward(self, stimuli)
 
-        for t in range(self.time):
-            time_gate = np.equal(self.tick % t, 0.)
-            Z = np.concatenate((self.inputs[t], output), axis=-1)
-            gated_W = self.weights * time_gate[:, None]
-            gated_b = self.biases * np.repeat(time_gate, 2)
+        for t in range(1, self.time+1):
+            time_gate = np.equal(t % self.tick_array, 0.)
+            Z = np.concatenate((self.inputs[t-1], output), axis=-1)
+            gated_W = self.weights * time_gate[None, :]
+            gated_b = self.biases * time_gate
             output = self.activation(Z.dot(gated_W) + gated_b)
 
             self.Zs.append(Z)
-            self.gates.append([gated_W, gated_b])
+            self.gates.append([time_gate, gated_W])
             self.cache.append(output)
 
         if self.return_seq:
@@ -352,13 +371,13 @@ class ClockworkLayer(RLayer):
         for t in range(self.time-1, -1, -1):
             output = self.cache[t]
             Z = self.Zs[t]
-            gated_W, gated_b = self.gates[t]
+            time_gate, gated_W = self.gates[t]
 
             dh += error[t]
             dh *= self.activation.derivative(output)
 
-            self.nabla_w += Z.T @ dh
-            self.nabla_b += dh.sum(axis=0)
+            self.nabla_w += (Z.T @ dh) * time_gate[None, :]
+            self.nabla_b += dh.sum(axis=0) * time_gate
 
             deltaZ = dh @ gated_W.T
             dX[t] = deltaZ[:, :-self.neurons]

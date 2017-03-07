@@ -299,7 +299,9 @@ class Network:
 
     def get_weights(self, unfold=True):
         ws = [layer.get_weights(unfold=unfold) for layer in self.layers if layer.trainable]
-        return np.concatenate(ws) if unfold else ws
+        if unfold:
+            ws = np.concatenate(ws)
+        return ws
 
     def set_weights(self, ws, fold=True):
         if fold:
@@ -315,6 +317,12 @@ class Network:
                 if not layer.trainable:
                     continue
                 layer.set_weights(w)
+
+    def get_gradients(self, unfold=True):
+        grads = [l.gradients for l in self.layers]
+        if unfold:
+            grads = np.concatenate(grads)
+        return grads
 
     def gradient_check(self, X, Y, verbose=1, epsilon=1e-5):
         from ..util import gradient_check
@@ -334,6 +342,10 @@ class Network:
     @weights.setter
     def weights(self, ws):
         self.set_weights(ws, fold=(ws.ndim > 1))
+
+    @property
+    def gradients(self):
+        return self.get_gradients(unfold=True)
 
     @property
     def nparams(self):
