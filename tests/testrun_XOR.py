@@ -1,50 +1,24 @@
 import numpy as np
 
-from matplotlib import pyplot as plt
-
 from brainforge import Network
 from brainforge.layers import DenseLayer
 
-plt.ion()
-
-
-def learnme(m=20):
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    Y = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
+def input_stream(m=20):
+    Xs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    Ys = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
 
     while 1:
-        arg = np.random.randint(len(X), size=m)
-        yield X[arg], Y[arg]
+        arg = np.random.randint(len(Xs), size=m)
+        yield Xs[arg], Ys[arg]
 
+net = Network(input_shape=(2,), layers=[
+    DenseLayer(30, activation="sigmoid"),
+    DenseLayer(2, activation="softmax")
+])
+net.finalize(cost="xent", optimizer="sgd")
 
-def forge_net():
-    bob = Network(input_shape=(2,), layers=[
-        DenseLayer(12, activation="sigmoid"),
-        DenseLayer(2, activation="sigmoid")
-    ])
-    bob.finalize(cost="xent", optimizer="adam")
-    return bob
+datagen = input_stream(1000)
+validation = next(input_stream(100))
 
-
-def forge_ae():
-    ae = Network(input_shape=(2,), layers=[
-        DenseLayer(20, activation="sigmoid"),
-        DenseLayer(2)
-    ])
-    ae.finalize(cost="mse", optimizer="adam")
-    return ae
-
-if __name__ == '__main__':
-    net = forge_net()
-
-    obj = plt.matshow(np.zeros([20] + list(net.layers[1].outshape)))
-
-    datagen = learnme(1000)
-    epoch = 0
-    while epoch < 30:
-        print("Epoch", epoch+1)
-        X, Y = next(datagen)
-        net.epoch(X, Y, batch_size=20, monitor=["acc"], validation=next(learnme(100)), verbose=1)
-        obj.set_data = net.layers[1].output
-        plt.pause(0.5)
-        epoch += 1
+net.fit_generator(datagen, 1000000, epochs=3, monitor=["acc"],
+                  validation=validation, verbose=1)

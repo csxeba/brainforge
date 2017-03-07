@@ -202,7 +202,7 @@ ones, which are not up-to-date (e.g. offsprings and mutants).
 
 
 ##Examples
-###Fit shallow net to XOR
+###Fit shallow net to the XOR problem
 ```python
 import numpy as np
 
@@ -218,20 +218,16 @@ def input_stream(m=20):
         yield Xs[arg], Ys[arg]
 
 net = Network(input_shape=(2,), layers=[
-    DenseLayer(12, activation="sigmoid"),
-    DenseLayer(2, activation="sigmoid")
+    DenseLayer(30, activation="sigmoid"),
+    DenseLayer(2, activation="softmax")
 ])
-net.finalize(cost="xent", optimizer="adam")
+net.finalize(cost="xent", optimizer="sgd")
 
 datagen = input_stream(1000)
-valid_stream = input_stream(100)
+validation = next(input_stream(100))
 
-for epoch, (X, Y) in enumerate(datagen, start=1):
-    print("Epoch", epoch+1)
-    net.epoch(X, Y, batch_size=20, monitor=["acc"],
-              validation=next(valid_stream), verbose=1)
-    if epoch == 30:
-        break
+net.fit_generator(datagen, 1000000, epochs=3, monitor=["acc"],
+                  validation=validation, verbose=1)
 ```
 
 For more complicated tasks, the use of the library csxdata is suggested.
@@ -242,7 +238,7 @@ from csxdata import CData
 
 from brainforge import Network
 from brainforge.layers import (DenseLayer, DropOut, Activation,
-                               PoolLayer, ConvLayer)
+                               PoolLayer, ConvLayer, Flatten)
 
 dataroot = "path/to/pickled/gzipped/tuple/of/X/Y/ndarrays.pkl.gz"
 images = CData(dataroot, indeps=0, headers=None)
@@ -252,11 +248,11 @@ inshape, outshape = images.neurons_required
 model = Network(inshape, layers=(
     ConvLayer(nfilters=10, filterx=3, filtery=3),
     PoolLayer(fdim=2),
-    DropOut(0.5),
     Activation("relu"),
     ConvLayer(nfilters=10, filterx=5, filtery=5),
     PoolLayer(fdim=3),
     Activation("relu"),
+    Flatten(),
     DenseLayer(120, activation="tanh"),
     DropOut(0.5),
     DenseLayer(outshape, activation="softmax")

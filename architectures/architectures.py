@@ -201,7 +201,7 @@ class Network:
         done = 0.
 
         self.learning = True
-        while done < 1.:
+        while round(done, 5) < 1.:
             costs.append(self._fit_batch(next(generator)))
             done += self.m / self.N
             if verbose:
@@ -246,7 +246,7 @@ class Network:
             tcost, tacc = results
             accchain = "\taccuracy: {0:.2%}".format(tacc)
         else:
-            tcost = results[0]
+            tcost = results
             accchain = ""
         print(chain.format(tcost) + accchain, end="")
 

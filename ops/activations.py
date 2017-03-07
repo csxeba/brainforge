@@ -54,7 +54,7 @@ class ReLU(ActivationFunction):
     def __str__(self): return "relu"
 
     def derivative(self, A) -> np.ndarray:
-        d = np.copy(A)
+        d = np.ones_like(A)
         d[A <= 0.] = 0.
         return d
 
@@ -70,7 +70,7 @@ class SoftMax(ActivationFunction):
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
         """This has to be replaced by a linear backward pass"""
-        raise NotImplementedError
+        return 1.
 
 
 act_fns = {key.lower(): cls for key, cls in locals().items() if "Function" not in key}

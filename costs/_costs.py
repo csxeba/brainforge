@@ -160,6 +160,7 @@ class _CostFunctions:
     def __getitem__(self, item):
         if item not in self.dct:
             raise RuntimeError("No such cost function:", item)
+        return self.dct[item]
 
 cost_fns = _CostFunctions()
 regularizers = _Regularizers()

@@ -229,22 +229,25 @@ class GRU(RecurrentBase):
 
         ctx1 = lambda *ar: np.concatenate(ar, axis=1)
 
+        cch = []
+
         for t in range(self.time):
             Z = ctx1(self.inputs[t], output)
             U, R = np.split(sigmoid(Z @ Wur + bur), 2, axis=1)
             K = R * output
+
             Zk = ctx1(self.inputs[t], K)
             O = self.activation(Zk @ Wo + bo)
             output = U * output + (1. - U) * O
 
-            self.cache.append([output, K])
+            cch.append(output)
             self.gates.append([U, R, O])
             self.Zs.append([Z, Zk])
 
         if self.return_seq:
-            self.output = np.stack([cache[0] for cache in self.cache], axis=1)
+            self.output = np.stack(cch, axis=1)
         else:
-            self.output = self.cache[-1][0]
+            self.output = cch[-1]
 
         return self.output
 
@@ -262,13 +265,14 @@ class GRU(RecurrentBase):
         ct = lambda *ar, ax=1: np.concatenate(ar, axis=ax)
 
         for t in range(-1, -(self.time+1), -1):
-            (output, K), (U, R, O), (Z, Zk) = self.cache[t], self.gates[t], self.Zs[t]
+            (U, R, O), (Z, Zk) = self.gates[t], self.Zs[t]
+            prevout = Z[:, -neu:]
             dh += error[t]
-            dU = (Z[:, -neu:] - O) * sigprime(U) * dh
+            dU = (prevout - O) * sigprime(U) * dh
             dO = (1. - U) * actprime(O) * dh  # type: np.ndarray
             dZk = dO @ Wo.T
             dK = dZk[:, -neu:]
-            dR = output * sigprime(R) * dK
+            dR = prevout * sigprime(R) * dK
             dZ = ct(dU, dR) @ ct(Wu, Wr).T
 
             nWur = Z.T @ ct(dU, dR)

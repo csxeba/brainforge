@@ -10,15 +10,14 @@ from csxdata import CData, roots
 from csxdata.utilities.vectorops import upscale
 
 NIND = 300
-fweights = [1, 1]
+fweights = [1]
 
 
 def fitness(geno):
     pheno = upscale(geno, -10., 10.)
     net.set_weights(pheno)
     cost, acc = net.evaluate(*frame.table("learning", m=100))
-    fness = 1. - acc, np.linalg.norm(pheno)
-    return fness
+    return 1. - acc,
 
 
 def build_net(inshp, outshp):
