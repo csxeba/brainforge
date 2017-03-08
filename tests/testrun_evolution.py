@@ -11,16 +11,16 @@ def upscale(ind):
 
 
 def fitness(ind):
-    return np.sum(upscale(ind)),
+    return np.prod(ind), np.sum(ind)
 
 
 def matefn(ind1, ind2):
-    return (ind1 + ind2) / 2.
+    return np.where(np.random.uniform())
 
 pop = Population(
     loci=2,
     fitness_function=fitness,
-    fitness_weights=[1.],
+    fitness_weights=[1., 1.],
     mate_function=matefn,
     limit=100)
 
