@@ -30,10 +30,11 @@ pop.individuals = np.clip(pop.individuals, 0., 1.)
 
 X, Y = pop.individuals.T
 plt.ion()
-obj = plt.scatter(X, Y, color="red", vmin=-5., vmax=5.)
+obj = plt.plot(X, Y, "ro")
 plt.show()
+plt.xlim([-5, 5])
+plt.ylim([-5, 5])
 for i in range(100):
     pop.run(1, verbosity=0)
-    plt.cla()
-    plt.scatter(*pop.individuals.T, color="red", vmin=-5., vmax=5.)
+    obj.set_data(*pop.individuals.T)
     plt.pause(0.1)
