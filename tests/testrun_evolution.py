@@ -11,8 +11,7 @@ def upscale(ind):
 
 
 def fitness(ind):
-    x = upscale(ind)
-    return np.sum(x**2),
+    return np.sum(upscale(ind)),
 
 
 def matefn(ind1, ind2):
@@ -28,13 +27,12 @@ pop = Population(
 pop.individuals += 0.5
 pop.individuals = np.clip(pop.individuals, 0., 1.)
 
-X, Y = pop.individuals.T
 plt.ion()
-obj = plt.plot(X, Y, "ro")
+obj = plt.plot(*upscale(pop.individuals.T), "ro")[0]
 plt.show()
 plt.xlim([-5, 5])
 plt.ylim([-5, 5])
 for i in range(100):
     pop.run(1, verbosity=0)
-    obj.set_data(*pop.individuals.T)
-    plt.pause(0.1)
+    obj.set_data(*upscale(pop.individuals.T))
+    plt.pause(0.01)
