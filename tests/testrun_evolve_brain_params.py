@@ -6,49 +6,53 @@ from brainforge import Network
 from brainforge.layers import DenseLayer
 from brainforge.evolution import Population
 
-from csxdata import CData, roots
+from csxdata import CData
 from csxdata.utilities.vectorops import upscale
 
-NIND = 300
-fweights = [1]
+
+# 2 fitness values are being used, the classification error rate
+# and the L2 norm of the weights. The weight assigned to L2 is
+# roughly equivalent to the lambda term in L2 weight regularization.
+fweights = (1., 0.1)
 
 
 def fitness(geno):
     pheno = upscale(geno, -10., 10.)
     net.set_weights(pheno)
-    cost, acc = net.evaluate(*frame.table("learning", m=100))
-    return 1. - acc,
+    cost, acc = net.evaluate(*frame.table("learning"))
+    class_error = 1. - acc
+    l2term = np.linalg.norm(pheno) / (35000. * 2)
+    fness = class_error, l2term
+    return fness
 
+frame = CData(source="/data/Prog/data/csvs/grapes.csv", indeps=6, headers=1, feature="szin",
+              lower=True, dehun=True, decimal=True)
+frame.transformation = "std"
 
-def build_net(inshp, outshp):
-    model = Network(inshp, layers=[
+# We only need a single net, because the Network.set_weights(fold=True)
+# can be used to set the network weights to the evolved parameters.
+net = Network(frame.neurons_required[0], layers=[
         DenseLayer(30, activation="tanh"),
-        DenseLayer(outshp, activation="sigmoid")
+        DenseLayer(frame.neurons_required[1], activation="sigmoid")
     ])
-    model.finalize(cost="mse", optimizer="adam")
-    return model
+net.finalize(cost="mse", optimizer="adam")
 
-
-frame = CData(roots["misc"] + "mnist.pkl.gz", cross_val=0.0,
-              indeps=0, headers=0, fold=False)
-
-net = build_net(*frame.neurons_required)
 pop = Population(
     limit=300,
-    loci=net.get_weights().size,
+    loci=net.nparams,
     fitness_function=fitness,
     fitness_weights=fweights,
-    grade_function=lambda *ph: np.prod(np.array(ph))
 )
-means, totals, bests = pop.run(epochs=200,
-                               survival_rate=0.5,
-                               mutation_rate=0.0)
+
+means, stds, bests = pop.run(epochs=300,
+                             survival_rate=0.0,
+                             mutation_rate=0.01,
+                             verbosity=0)
+# Plot the run dynamics
 Xs = np.arange(1, len(means)+1)
-fig, axarr = plt.subplots(2, sharex=True)
-axarr[0].plot(Xs, totals)
-axarr[1].plot(Xs, means, color="blue")
-axarr[1].plot(Xs, bests, color="red")
-axarr[0].set_title("Total grade")
-axarr[1].set_title("Mean (blue) and best (red) grades")
-plt.tight_layout()
+plt.plot(Xs, means, color="blue")
+plt.plot(Xs, means+stds, color="green", linestyle="--")
+plt.plot(Xs, means-stds, color="green", linestyle="--")
+plt.plot(Xs, bests, color="red")
+plt.title("Mean (blue) and best (red) grades")  # Yes, I'm lazy
 plt.show()

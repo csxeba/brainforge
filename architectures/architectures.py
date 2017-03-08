@@ -34,6 +34,8 @@ class Network:
         self.cost = None
         self.optimizer = None
 
+        self.X = None
+        self.Y = None
         self.N = 0  # X's size goes here
         self.m = 0  # Batch size goes here
         self._finalized = False
@@ -219,16 +221,15 @@ class Network:
             error = layer.backpropagate(error)
 
     def _fit_batch(self, batch, parameter_update=True):
-        X, Y = batch
-        self.prediction(X)
-        self.backpropagation(Y)
+        self.X, self.Y = batch
+        self.prediction(self.X)
         if parameter_update:
             self._parameter_update()
 
-        return self.cost(self.output, Y) / self.m
+        return self.cost(self.output, self.Y) / self.m
 
     def _parameter_update(self):
-        self.optimizer(self.m)
+        self.optimizer.optimize(self.m, self.X, self.Y)
 
     def _print_progress(self, validation, monitor):
         classificaton = "acc" in monitor

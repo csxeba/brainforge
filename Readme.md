@@ -337,37 +337,49 @@ valid = seq.table("testing")
 model.fit(X, Y, batch_size=120, epochs=100,
           monitor=["acc"], validation=valid)
 ```
-###Evolve network hyperparameters
+###Evolve network hyperparameters.
+In this script, we use the evolutionary algorithm to optimize the number of neurons in two hidden layers, along with
+dropout rates. The fitness values are constructed so, that besides the classification error rate, we try to minimize
+the time required to train a net for 30 epochs.
+This approach creates a separate neural network for every individual during update time, so dependiing on the input
+dimensions, this can be quite a RAM-hog.
 ```python
 import time
 
+import numpy as np
+from matplotlib import pyplot as plt
+
 from brainforge import Network
-from brainforge.layers import DenseLayer
+from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
 from csxdata import CData
 
-dataroot = "path/to/data.csv"
-frame = CData(dataroot, headers=1, indeps=1, feature="FeatureName")
+dataroot = "/path/to/csv"
+frame = CData(dataroot, headers=1, indeps=3, feature="FeatureName")
 
 inshape, outshape = frame.neurons_required
 
 # Genome will be the number of hidden neurons at two network DenseLayers.
-ranges = ((10, 100), (10, 60))
-# We determine 2 fitness values: the network's classification accuracy and
+ranges = ((10, 300), (0, 0.75), (10, 300), (0, 0.75))
+# We determine 2 fitness values: the network's classification error and
 # the time required to run the net. These two values will both be minimized
-# and the accuracy will be considered with a 20x higher weight. 
-fweights = (20, 1)
+# and the accuracy will be considered with a 20x higher weight.
+fweights = (200, 1)
+
 
 def phenotype_to_ann(phenotype):
     net = Network(inshape, layers=[
         DenseLayer(int(phenotype[0]), activation="tanh"),
-        DenseLayer(int(phenotype[1]), activation="tanh"),
+        DropOut(dropchance=phenotype[1]),
+        DenseLayer(int(phenotype[2]), activation="tanh"),
+        DropOut(dropchance=phenotype[3]),
         DenseLayer(outshape, activation="softmax")
     ])
-    net.finalize(cost="xent", optimizer="adagrad")
+    net.finalize(cost="xent", optimizer="momentum")
     return net
-    
+
+
 # Define the fitness function
 def fitness(genotype):
     start = time.time()
@@ -378,20 +390,27 @@ def fitness(genotype):
     time_req = time.time() - start
     return error_rate, time_req
 
-# Build a population of 12 individuals
-pop = Population(loci=2, limit=12,
+
+# Build a population of 12 individuals. grade_function and mate_function are
+# left to defaults.
+pop = Population(loci=4, limit=15,
                  fitness_function=fitness,
                  fitness_weights=fweights)
 # The population is optimized for 12 rounds with the hyperparameters below.
-# at every 3 rounds, we force a complete-reupdate of fitnesses, since the
-# neural networks contain some random noise due to initialization, random
-# Xs, etc.
-pop.run(epochs=12,
-        survival_rate=0.7,
-        mutation_rate=0.05,
-        force_update_at_every=3)
-# Select the best candidate and convert it to a network
-best = phenotype_to_ann(to_phenotype(pop.best, ranges))
+# at every 3 rounds, we force a complete-reupdate of fitnesses, because the
+# neural networks utilize randomness due to initialization, random batches, etc.
+means, stds, bests = pop.run(epochs=30,
+                             survival_rate=0.3,
+                             mutation_rate=0.05,
+                             force_update_at_every=3)
+
+Xs = np.arange(1, len(means)+1)
+plt.title("Population grade dynamics of\nevolutionary hyperparameter optimization")
+plt.plot(Xs, means, color="blue")
+plt.plot(Xs, means+stds, color="green", linestyle="--")
+plt.plot(Xs, means-stds, color="green", linestyle="--")
+plt.plot(Xs, bests, color="red")
+plt.show()
 ```
 
 ###Evolve network weights and biases

@@ -2,6 +2,7 @@ import numpy as np
 
 from brainforge import Network
 from brainforge.layers import DenseLayer
+from brainforge.optimizers import Evolution
 
 def input_stream(m=20):
     Xs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
@@ -15,7 +16,7 @@ net = Network(input_shape=(2,), layers=[
     DenseLayer(3, activation="sigmoid"),
     DenseLayer(2, activation="softmax")
 ])
-net.finalize(cost="xent", optimizer="momentum")
+net.finalize(cost="xent", optimizer=Evolution(limit=10))
 
 datagen = input_stream(1000)
 validation = next(input_stream(100))

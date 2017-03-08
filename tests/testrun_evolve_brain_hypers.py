@@ -1,80 +1,67 @@
 import time
 
 import numpy as np
-
-import matplotlib
 from matplotlib import pyplot as plt
 
 from brainforge import Network
-from brainforge.layers import DenseLayer, Flatten
+from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
-from csxdata import CData, roots
+from csxdata import CData
 
-matplotlib.use("Qt5Agg")
-
-dataroot = roots["misc"] + "mnist.pkl.gz"
-frame = CData(dataroot, headers=None)
-frame.transformation = "std"
-tX, tY = frame.table("learning", shuff=True, m=10000)
+dataroot = "/path/to/csv"
+frame = CData(dataroot, headers=1, indeps=3, feature="FeatureName")
 
 inshape, outshape = frame.neurons_required
 
-# Genome will be the number of hidden neurons
-# at each network layer.
-ranges = ((2, 100), (2, 100))
+# Genome will be the number of hidden neurons at two network DenseLayers.
+ranges = ((10, 300), (0, 0.75), (10, 300), (0, 0.75))
+# We determine 2 fitness values: the network's classification error and
+# the time required to run the net. These two values will both be minimized
+# and the accuracy will be considered with a 20x higher weight.
+fweights = (200, 1)
 
 
 def phenotype_to_ann(phenotype):
     net = Network(inshape, layers=[
-        Flatten(),
         DenseLayer(int(phenotype[0]), activation="tanh"),
-        DenseLayer(int(phenotype[1]), activation="tanh"),
+        DropOut(dropchance=phenotype[1]),
+        DenseLayer(int(phenotype[2]), activation="tanh"),
+        DropOut(dropchance=phenotype[3]),
         DenseLayer(outshape, activation="softmax")
     ])
-    net.finalize(cost="xent", optimizer="adagrad")
+    net.finalize(cost="xent", optimizer="momentum")
     return net
 
 
-# Define the fitness function -> evaluate the neural network
+# Define the fitness function
 def fitness(genotype):
     start = time.time()
-    phenotype = to_phenotype(genotype, ranges)
-    net = phenotype_to_ann(phenotype)
-    net.fit(tX, tY, batch_size=50, epochs=10, verbose=0)
-    score = net.evaluate(*frame.table("testing", shuff=True, m=100))[-1]
-    timereq = time.time() - start
-    return (1. - score), timereq  # fitness is minimized, so we need error rate
+    net = phenotype_to_ann(to_phenotype(genotype, ranges))
+    net.fit_csxdata(frame, batch_size=20, epochs=30, verbose=0)
+    score = net.evaluate(*frame.table("testing", m=10), classify=True)[-1]
+    error_rate = 1. - score
+    time_req = time.time() - start
+    return error_rate, time_req
 
 
-pop = Population(
-    loci=len(ranges),
-    limit=21,
-    fitness_function=fitness,
-    fitness_weights=[10., 1.])
-
-means, totals, bests = pop.run(epochs=30, verbosity=4,
-                               survival_rate=0.8,
-                               mutation_rate=0.1)
-logs = pop.run(epochs=3, verbosity=1,
-               survival_rate=0.66,
-               mutation_rate=0.0)
-
-means += logs[0]
-totals += logs[1]
-bests += logs[2]
-
-print("\nThe winner is:")
-winner = phenotype_to_ann(to_phenotype(pop.best, ranges))
-winner.describe(1)
-winner.fit_csxdata(frame, epochs=30, monitor=["acc"])
+# Build a population of 12 individuals. grade_function and mate_function are
+# left to defaults.
+pop = Population(loci=4, limit=15,
+                 fitness_function=fitness,
+                 fitness_weights=fweights)
+# The population is optimized for 12 rounds with the hyperparameters below.
+# at every 3 rounds, we force a complete-reupdate of fitnesses, because the
+# neural networks utilize randomness due to initialization, random batches, etc.
+means, stds, bests = pop.run(epochs=30,
+                             survival_rate=0.3,
+                             mutation_rate=0.05,
+                             force_update_at_every=3)
 
 Xs = np.arange(1, len(means)+1)
-fig, axes = plt.subplots(2, sharex=True)
-axes[0].plot(Xs, totals)
-axes[0].set_title("Total grade")
-axes[1].plot(Xs, means, color="blue")
-axes[1].plot(Xs, bests, color="red")
-axes[1].set_title("Means and bests")
-
+plt.title("Population grade dynamics of\nevolutionary hyperparameter optimization")
+plt.plot(Xs, means, color="blue")
+plt.plot(Xs, means+stds, color="green", linestyle="--")
+plt.plot(Xs, means-stds, color="green", linestyle="--")
+plt.plot(Xs, bests, color="red")
 plt.show()

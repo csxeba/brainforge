@@ -4,27 +4,36 @@ from matplotlib import pyplot as plt
 from brainforge.evolution import Population
 
 
+def upscale(ind):
+    x = np.array(ind) - 0.5
+    x *= 10.
+    return x
+
+
 def fitness(ind):
-    return np.array([ind.sum()])
+    x = upscale(ind)
+    return np.sum(x**2),
+
+
+def matefn(ind1, ind2):
+    return (ind1 + ind2) / 2.
 
 pop = Population(
-    loci=5,
+    loci=2,
     fitness_function=fitness,
     fitness_weights=[1.],
-    limit=1000)
+    mate_function=matefn,
+    limit=100)
 
-means, stds, bests = pop.run(100, verbosity=0,
-                             survival_rate=0.33,
-                             mutation_rate=0.0)
-print("EVOLUTION: Final grade:   {}".format(pop.mean_grade()))
-print("EVOLUTION: Final best :   {}".format(fitness(pop.best)[0]))
-Xs = np.arange(1, len(means)+1)
+pop.individuals += 0.5
+pop.individuals = np.clip(pop.individuals, 0., 1.)
 
-pop.describe(3)
-
-plt.title("Run dynamics: means (blue), std (red), bests (green)")
-plt.plot(Xs, means, color="blue")
-plt.plot(Xs, means+stds, color="red")
-plt.plot(Xs, means-stds, color="red")
-plt.plot(Xs, bests, color="green")
+X, Y = pop.individuals.T
+plt.ion()
+obj = plt.scatter(X, Y, color="red", vmin=-5., vmax=5.)
 plt.show()
+for i in range(100):
+    pop.run(1, verbosity=0)
+    plt.cla()
+    plt.scatter(*pop.individuals.T, color="red", vmin=-5., vmax=5.)
+    plt.pause(0.1)

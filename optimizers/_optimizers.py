@@ -10,15 +10,14 @@ def _rms(X: np.ndarray):
 
 class Optimizer(abc.ABC):
 
-    def __init__(self, eta=0.1):
+    def __init__(self):
         self.brain = None
-        self.eta = eta
 
     def connect(self, brain):
         self.brain = brain
 
     @abc.abstractmethod
-    def __call__(self, m):
+    def optimize(self, *args):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -30,12 +29,24 @@ class Optimizer(abc.ABC):
         raise NotImplementedError
 
 
-class SGD(Optimizer):
+class GradientOptimizer(Optimizer):
 
-    def __call__(self, m):
-        W = self.brain.get_weights(unfold=True)
+    @abc.abstractmethod
+    def optimize(self, *args):
+        self.brain.backpropagate()
+        return self.brain.get_weights(unfold=True), self.brain.gradients
+
+
+class SGD(GradientOptimizer):
+
+    def __init__(self, eta):
+        super().__init__()
+        self.eta = eta
+
+    def optimize(self, m):
+        W, gW = super().optimize(m)
         eta = self.eta / m
-        self.brain.set_weights(W - self.brain.gradients * eta)
+        self.brain.set_weights(W - gW * eta)
 
     def __str__(self):
         return "SGD"
@@ -64,8 +75,8 @@ class Momentum(SGD):
         if self.velocity is None:
             self.velocity = np.zeros((brain.nparams,))
 
-    def __call__(self, m):
-        W = self.brain.get_weights(unfold=True)
+    def optimize(self, m):
+        W, gW = self.brain.get_weights(unfold=True)
         eta = self.eta / m
         self.velocity *= self.mu
         deltaW = W + self.velocity if self.nesterov else self.brain.gradients
@@ -99,7 +110,7 @@ class Adagrad(SGD):
         if self.memory is None:
             self.memory = np.zeros((brain.nparams,))
 
-    def __call__(self, m):
+    def optimize(self, m):
         W = self.brain.get_weights(unfold=True)
         eta = self.eta / m
         self.memory += self.brain.gradients ** 2
@@ -118,7 +129,7 @@ class RMSprop(Adagrad):
         super().__init__(eta, epsilon, *args)
         self.decay = decay
 
-    def __call__(self, m):
+    def optimize(self, m):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         eta = self.eta / m
@@ -156,7 +167,7 @@ class Adadelta(SGD):
         if self.umemory is None:
             self.umemory = np.zeros((self.brain.nparams,))
 
-    def __call__(self, m):
+    def optimize(self, m):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         self.gmemory = self.rho * self.gmemory + (1. - self.rho) * gW**2
@@ -189,7 +200,7 @@ class Adam(SGD):
         if self.memory is None:
             self.memory = np.zeros((brain.nparams,))
 
-    def __call__(self, m):
+    def optimize(self, m):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         eta = self.eta / m
@@ -206,6 +217,47 @@ class Adam(SGD):
         param = [self.eta, self.decay_velocity, self.decay_memory, self.epsilon]
         # param += [self.mW, self.mb, self.vW, self.vb]
         return param
+
+
+class Evolution(GradientOptimizer):
+
+    def __init__(self, survrate=0.3, mutrate=0.1, limit=100, optimize_accuracy=False):
+        super().__init__()
+        self.survrate = survrate
+        self.mutrate = mutrate
+        self.limit = limit
+        self.optimize_accuracy = optimize_accuracy
+        self.pop = None
+        self.X = None
+        self.Y = None
+
+    def connect(self, brain):
+        from ..evolution import Population
+        super().connect(brain)
+        self.pop = Population(self.brain.nparams,
+                              self._fitness,
+                              fitness_weights=[1.],
+                              limit=self.limit)
+
+    def optimize(self, *args):
+        self.pop.run(1, self.survrate, self.mutrate,
+                     force_update_at_every=3, verbosity=0)
+        self.brain.set_weights(self.pop.best*10)
+
+    def _fitness(self, gen):
+        self.brain.set_weights(gen*10., fold=True)
+        if self.optimize_accuracy:
+            cost, acc = self.brain.evaluate(self.brain.X, self.brain.Y, classify=True)
+            grade = 1. - acc
+        else:
+            grade = self.brain.evaluate(self.brain.X, self.brain.Y, classify=False)
+        return grade
+
+    def capsule(self):
+        pass
+
+    def __str__(self):
+        pass
 
 
 optimizers = {key.lower(): cls for key, cls in locals().items()
