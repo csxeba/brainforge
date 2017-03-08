@@ -293,7 +293,7 @@ class GRU(RecurrentBase):
 
 class ClockworkLayer(RLayer):
 
-    def __init__(self, neurons, activaton, blocksizes=None, ticks=None, return_seq=False):
+    def __init__(self, neurons, activaton, blocksizes=None, ticktimes=None, return_seq=False):
         super().__init__(neurons, activaton, return_seq)
 
         if blocksizes is None:
@@ -307,16 +307,16 @@ class ClockworkLayer(RLayer):
                 raise RuntimeError(msg)
         self.blocksizes = blocksizes
 
-        if ticks is None:
-            ticks = [2**i for i in range(len(self.blocksizes))]
+        if ticktimes is None:
+            ticktimes = [2 ** i for i in range(len(self.blocksizes))]
         else:
-            if min(ticks) < 0 or len(ticks) != len(self.blocksizes):
+            if min(ticktimes) < 0 or len(ticktimes) != len(self.blocksizes):
                 msg = "Ticks specifies the timestep when each block is activated.\n"
                 msg += "Please specify the <ticks> parameter so, that its length is "
                 msg += "equal to the number of blocks specifid (defaults to 5). "
                 msg += "Please also consider that timesteps < 0 are invalid!"
                 raise RuntimeError(msg)
-        self.ticks = np.array(ticks)
+        self.ticks = np.array(ticktimes)
         self.tick_array = np.zeros((self.neurons,))
         print("CW blocks:", self.blocksizes)
         print("CW ticks :", self.ticks)

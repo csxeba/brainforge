@@ -12,7 +12,7 @@ def input_stream(m=20):
         yield Xs[arg], Ys[arg]
 
 net = Network(input_shape=(2,), layers=[
-    DenseLayer(30, activation="sigmoid"),
+    DenseLayer(3, activation="sigmoid"),
     DenseLayer(2, activation="softmax")
 ])
 net.finalize(cost="xent", optimizer="momentum")
@@ -20,5 +20,5 @@ net.finalize(cost="xent", optimizer="momentum")
 datagen = input_stream(1000)
 validation = next(input_stream(100))
 
-net.fit_generator(datagen, 100000, epochs=30, monitor=["acc"],
+net.fit_generator(datagen, 5000000, epochs=2, monitor=["acc"],
                   validation=validation, verbose=1)

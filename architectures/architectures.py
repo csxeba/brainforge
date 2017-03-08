@@ -126,7 +126,7 @@ class Network:
         from ..optimizers import optimizers
 
         self.cost = cost_fns[cost](self) if isinstance(cost, str) else cost
-        self.optimizer = optimizers[optimizer]() if isinstance(optimizer, str) else optimizers
+        self.optimizer = optimizers[optimizer]() if isinstance(optimizer, str) else optimizer
         self.optimizer.connect(self)
         self._finalized = True
 

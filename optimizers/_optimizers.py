@@ -169,40 +169,41 @@ class Adam(SGD):
 
     def __init__(self, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
         super().__init__(eta)
-        self.decay_memory = decay_memory
         self.decay_velocity = decay_velocity
+        self.decay_memory = decay_memory
         self.epsilon = epsilon
 
         if not args:
-            self.memory = None
             self.velocity = None
+            self.memory = None
         else:
             if len(args) != 2:
                 raise RuntimeError("Invalid number of params for ADAM! Got this:\n"
                                    + str(args))
-            self.memory, self.velocity = args
+            self.velocity, self.memory = args
 
     def connect(self, brain):
         super().connect(brain)
-        if self.memory is None:
-            self.memory = np.zeros((brain.nparams,))
         if self.velocity is None:
             self.velocity = np.zeros((brain.nparams,))
+        if self.memory is None:
+            self.memory = np.zeros((brain.nparams,))
 
     def __call__(self, m):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         eta = self.eta / m
-        self.memory = self.decay_memory * self.memory + (1 - self.decay_memory) * gW
-        self.velocity = (self.decay_velocity * self.velocity +
-                         (1 - self.decay_velocity) * (gW ** 2))
-        self.brain.set_weights(W - ((eta * self.memory) / (np.sqrt(self.velocity + self.epsilon))))
+        self.velocity = self.decay_velocity * self.velocity + (1 - self.decay_velocity) * gW
+        self.memory = (self.decay_memory * self.memory +
+                       (1 - self.decay_memory) * (gW ** 2))
+        update = ((eta * self.velocity) / (np.sqrt(self.memory + self.epsilon)))
+        self.brain.set_weights(W - update)
 
     def __str__(self):
         return "Adam"
 
     def capsule(self):
-        param = [self.eta, self.decay_memory, self.decay_velocity, self.epsilon]
+        param = [self.eta, self.decay_velocity, self.decay_memory, self.epsilon]
         # param += [self.mW, self.mb, self.vW, self.vb]
         return param
 
