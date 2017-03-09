@@ -1,5 +1,4 @@
 import warnings
-from random import randrange, choice
 
 import numpy as np
 
@@ -9,7 +8,10 @@ import numpy as np
 
 
 class Population:
-    """Model of a population in the ecologigal sense"""
+
+    """
+    Model of a population in the ecologigal sense
+    """
 
     def __init__(self, loci: int,
                  fitness_function: callable,
@@ -75,6 +77,9 @@ class Population:
 
     def get_candidates(self, survivors=None):
 
+        if isinstance(survivors, tuple):
+            survivors = survivors[0]
+
         def indstream():
             counter = 0
             lmt = len(survivors)
@@ -92,9 +97,8 @@ class Population:
 
         prbs = rescale(self.grades)
         candidates = np.zeros_like(self.individuals)
-        if survivors is None:
-            survivors = np.where(self.selection(0.3))
-        survivors = survivors[0]
+        if survivors is None or survivors.size == 0:
+            survivors = np.where(self.selection(0.3))[0]
         i = 0
         for left, right in indstream():
             if i >= self.limit:
@@ -244,8 +248,8 @@ def to_phenotype(ind, ranges):
 
 
 def rescale(vector):
-    output = vector - vector.min()
-    output /= output.max()
+    output = (vector - vector.min())
+    output /= output.max() + 1e-8
     output *= 0.95
     output += 0.05
     return output

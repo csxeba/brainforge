@@ -219,28 +219,47 @@ class Adam(SGD):
         return param
 
 
-class Evolution(GradientOptimizer):
+class Evolution(Optimizer):
 
-    def __init__(self, survrate=0.3, mutrate=0.1, limit=100, optimize_accuracy=False):
+    """
+    Wrapper for brainforge.evolution.Population.
+    Coordinates the differential evolution of weight learning.
+    """
+
+    def __init__(self, survrate=0.3, mutrate=0.1, limit=100, evol_epoch_per_batch=1,
+                 optimize_accuracy=False, mate_function: callable=None,
+                 grade_function: callable=None, mutate_function: callable=None):
+
         super().__init__()
         self.survrate = survrate
         self.mutrate = mutrate
         self.limit = limit
         self.optimize_accuracy = optimize_accuracy
         self.pop = None
-        self.X = None
-        self.Y = None
+        self.pop_params = {kw: fn for kw, fn in locals().items() if "_fn" == kw[-3:]}
+        self.evolepochs = evol_epoch_per_batch
+
+    @classmethod
+    def from_population(cls, population, survrate=0.3, mutrate=0.1, limit=100,
+                        evol_epoch_per_batch=1, optimize_accuracy=False):
+        opti = cls(survrate, mutrate, limit, evol_epoch_per_batch, optimize_accuracy)
+        opti.pop = population
 
     def connect(self, brain):
         from ..evolution import Population
         super().connect(brain)
-        self.pop = Population(self.brain.nparams,
-                              self._fitness,
-                              fitness_weights=[1.],
-                              limit=self.limit)
+        if self.pop is None:
+            self.pop = Population(self.brain.nparams,
+                                  self._fitness,
+                                  fitness_weights=[1.],
+                                  limit=self.limit,
+                                  **self.pop_params)
+        else:
+            inds, params = self.pop.individuals.shape
+            assert inds == self.limit and params == self.brain.nparams
 
     def optimize(self, *args):
-        self.pop.run(1, self.survrate, self.mutrate,
+        self.pop.run(self.evolepochs, self.survrate, self.mutrate,
                      force_update_at_every=3, verbosity=0)
         self.brain.set_weights(self.pop.best*10)
 
@@ -254,11 +273,18 @@ class Evolution(GradientOptimizer):
         return grade
 
     def capsule(self):
-        pass
+        param = [self.survrate, self.mutrate, self.limit, self.evolepochs,
+                 self.optimize_accuracy]
+        pp = self.pop_params
+        param += [pp["mate_function"], pp["grade_function"], pp["mutate_function"]]
+        # param += [self.pop.individuals.ravel()]
+        return param
 
     def __str__(self):
-        pass
+        return "Evolution"
 
 
 optimizers = {key.lower(): cls for key, cls in locals().items()
               if key not in ("np", "abc", "warnings")}
+
+
