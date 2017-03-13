@@ -33,13 +33,27 @@ obj = plt.plot(*upscale(pop.individuals.T), "ro", markersize=2)[0]
 plt.xlim([-1, 11])
 plt.ylim([-1, 11])
 
-X, Y = np.linspace(-1, 11, 10), np.linspace(-1, 11, 10)
+X, Y = np.linspace(-1, 11, 50), np.linspace(-1, 11, 50)
 X, Y = np.meshgrid(X, Y)
 Z = np.array([fitness([x, y]) for x, y in zip(X.ravel(), Y.ravel())]).reshape(X.shape)
 CS = plt.contour(X, Y, Z)
 plt.clabel(CS, inline=1, fontsize=10)
 plt.show()
+means, stds, bests = [], [], []
 for i in range(100):
-    pop.run(1, verbosity=1, survival_rate=0.9)
+    m, s, b = pop.run(1, verbosity=0)
+    means += m; stds += s; bests += b
     obj.set_data(*upscale(pop.individuals.T))
-    plt.pause(0.25)
+    plt.pause(0.01)
+
+means, stds, bests = tuple(map(np.array, (means, stds, bests)))
+plt.close()
+plt.ioff()
+Xs = np.arange(1, len(means) + 1)
+plt.plot(Xs, means, "b-")
+plt.plot(Xs, means+stds, "g--")
+plt.plot(Xs, means-stds, "g--")
+plt.plot(Xs, bests, "r-")
+plt.xlim([Xs.min(), Xs.max()])
+plt.ylim([bests.min(), (means+stds).max()])
+plt.show()
