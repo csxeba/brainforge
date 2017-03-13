@@ -43,7 +43,7 @@ class SGD(GradientOptimizer):
         super().__init__()
         self.eta = eta
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W, gW = super().optimize(m)
         eta = self.eta / m
         self.brain.set_weights(W - gW * eta)
@@ -75,7 +75,7 @@ class Momentum(SGD):
         if self.velocity is None:
             self.velocity = np.zeros((brain.nparams,))
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W, gW = self.brain.get_weights(unfold=True)
         eta = self.eta / m
         self.velocity *= self.mu
@@ -110,7 +110,7 @@ class Adagrad(SGD):
         if self.memory is None:
             self.memory = np.zeros((brain.nparams,))
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W = self.brain.get_weights(unfold=True)
         eta = self.eta / m
         self.memory += self.brain.gradients ** 2
@@ -129,7 +129,7 @@ class RMSprop(Adagrad):
         super().__init__(eta, epsilon, *args)
         self.decay = decay
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         eta = self.eta / m
@@ -167,7 +167,7 @@ class Adadelta(SGD):
         if self.umemory is None:
             self.umemory = np.zeros((self.brain.nparams,))
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         self.gmemory = self.rho * self.gmemory + (1. - self.rho) * gW**2
@@ -200,7 +200,7 @@ class Adam(SGD):
         if self.memory is None:
             self.memory = np.zeros((brain.nparams,))
 
-    def optimize(self, m):
+    def optimize(self, m, *args):
         W = self.brain.get_weights(unfold=True)
         gW = self.brain.gradients
         eta = self.eta / m
