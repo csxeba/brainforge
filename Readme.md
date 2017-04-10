@@ -1,20 +1,18 @@
-#Brainforge documentation
+# Brainforge documentation
 Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy**.
 
-##Models
+## Models
 A Neural Network can be considered as a stack of Layer instances. The following models are implemented in Brainforge:
 
-###Network
+### Network
 The base of all models, this class is a linear stack of Layer instances.
-
-####Constructor parameters
 - *input_shape*: tuple, specifying the dimensionality of the data. An InputLayer will be automatically instanciated
 based on this information.
 - *layers*: some iterable, holding Layer instances. Optional, layers can also be added to the network via the **add()**
 method.
 - *name*: string, specifying a name for the network, used in the **describe()** and **save()** methods.
 
-####Methods
+#### Methods
 For building the architecture:
 - *add*: expects a Layer instance, which is added to the top of the layer stack.
 - *pop*: deletes the last layer from the layer stack.
@@ -66,17 +64,16 @@ if this method's **fold** argument is set.
 - *weights*: property, wrapping **get_weights(unfold=False)** as getter and **set_weights(fold=False)** as setter.
 - *nparams*: property, returning the total number of parameters in the model.
 
-###Autoencoder
+### Autoencoder
 Wraps **Network**, automatically builds the decoder part of an autoencoder, given the encoder part. Has the same
 interface as **Network**.
 
-##Layers
+## Layers
 Neural networking operations are implemented as *Layer* subclasses and an ANN can be thought of as a stack of *Layer*
 instances.
 
-###Core layers
+### Core layers
 These layers are the ones used most regularily when working with ANNs.
-
 - **InputLayer**: passes the input tensor forward, unmodified.
   - No parameters required
   - This layer gets instantiated automatically
@@ -96,9 +93,8 @@ input tensor.
 *Softmax* is only available with *categorycal crossentropy (xent)*, because the raw derivatives I worked out for this 
 function won't pass the numerical gradient test, so it's implemented the simplified form of *(a - y)*.
 
-###Fancy layers
+### Fancy layers
 Some fancy feedforward layers from various scientific articles
-
 - **HighwayLayer**: See Srivastava et al., 2015. This layer applies a gating mechanism to its inputs. This consist of
 a forget gate and an input gate, determining the amount of information discarded and kept. Finally, it applies an
 output gate, selecting the information to be passed on to the next layer. This operation doesn't change the
@@ -109,7 +105,7 @@ See Srivastava et al., 2014
 
 Dropout is currently faulty!
 
-###Recurrent
+### Recurrent
 Recurrent layers working with multidimensional (time-series) data
 
 - **RLayer**: simple recurrence, output is simply fed back in each timestep.
@@ -146,7 +142,7 @@ See Reservoir computing and Jaeger, 2007 (Scholarpaedia)
 the result of the last iteration (False). Defaults to False.
 
 
-###Tensor
+### Tensor
 Feedforward layers working with multidimensional data
 
 - **PoolLayer**: untrainable layer performing the max-pooling operation
@@ -163,7 +159,7 @@ the inputs. "full" means zero padding will be applied and the output tensor will
 
 These tensor processing layers are operating very slowly at the moment, especially PoolLayer.
 
-##Optimizers
+## Optimizers
 Currently the following optimizers are implemented:
 
 - **SGD**: the classic stochastic gradient descent
@@ -196,7 +192,7 @@ and of past squared gradients (memory).
 
 Adagrad and Adadelta are untested and seem to be faulty at the moment.
 
-##Costs
+## Costs
 The following cost functions are supported:
 
 - **Mean Squared Error (MSE)**: can be used with any output activation, but can be slow to converge with saturated
@@ -205,7 +201,7 @@ sigmoids. For classification and regression tasks.
 use for classification tasks (softmax for multiclass, sigmoid for multilabel-multiclass).
 - **Hinge loss (Hinge)**: for maximal margin convergence.
 
-##Evolution
+## Evolution
 Support is available for evolutionary parameter optimization. This technique can be used to either evolve optimal
 hyperparameters for an ANN or to evolve the parameters (weights and biases) themselves (or both).
 The feature can be accessed via the **brainforge.evolution** module, which defines the following class:
@@ -237,10 +233,10 @@ mutation is applied per-locus, so this term gets divided by the length of the ch
 - *force_update_at_every*: integer, specifying whether it is needed to force-update every individual, not just the
 ones, which are not up-to-date (e.g. offsprings and mutants).
 - *verbosity*: integer, specifying the level of verbosity. 1 prints out run dynamics after each epoch. > 1 prints out
-<verbosity-1> number of the top individuals' genomes and fitnesses as grades.
+verbosity-1 number of the top individuals' genomes and fitnesses as grades.
 
-##Examples
-###Fit shallow net to the XOR problem
+## Examples
+### Fit shallow net to the XOR problem
 ```python
 import numpy as np
 
@@ -270,7 +266,7 @@ net.fit_generator(datagen, 5000000, epochs=2, monitor=["acc"],
 
 For more complicated tasks, the use of the library csxdata is suggested.
 
-###Fit LeNet-like ConvNet to images
+### Fit LeNet-like ConvNet to images
 ```python
 from csxdata import CData
 
@@ -302,7 +298,7 @@ model.fit(X, Y, batch_size=20, epochs=30, validation=valid,
           monitor=["acc"])
 ```
 
-###Fit LSTM to text data
+### Fit LSTM to text data
 ```python
 from csxdata import Sequence
 
@@ -337,7 +333,7 @@ valid = seq.table("testing")
 model.fit(X, Y, batch_size=120, epochs=100,
           monitor=["acc"], validation=valid)
 ```
-###Evolve network hyperparameters.
+### Evolve network hyperparameters.
 In this script, we use the evolutionary algorithm to optimize the number of neurons in two hidden layers, along with
 dropout rates. The fitness values are constructed so, that besides the classification error rate, we try to minimize
 the time required to train a net for 30 epochs.
@@ -413,7 +409,7 @@ plt.plot(Xs, bests, color="red")
 plt.show()
 ```
 
-###Evolve network weights and biases
+### Evolve network weights and biases
 ```python
 import numpy as np
 
