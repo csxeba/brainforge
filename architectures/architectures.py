@@ -293,9 +293,7 @@ class Network:
 
     def get_weights(self, unfold=True):
         ws = [layer.get_weights(unfold=unfold) for layer in self.layers if layer.trainable]
-        if unfold:
-            ws = np.concatenate(ws)
-        return ws
+        return np.concatenate(ws) if unfold else ws
 
     def set_weights(self, ws, fold=True):
         if fold:
