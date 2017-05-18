@@ -198,10 +198,13 @@ class Network:
 
         self.learning = True
         while round(done, 5) < 1.:
-            costs.append(self._fit_batch(next(generator)))
+            cost = self.learn_batch(*next(generator))
+            costs.append(cost)
+
             done += self.m / self.N
             if verbose:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(done, np.mean(costs)), end="")
+
         self.learning = False
 
         if verbose:
@@ -214,22 +217,26 @@ class Network:
 
         return costs
 
-    def backpropagation(self, Y):
-        last = self.layers[-1]
-        error = self.cost.derivative(last.output, Y)
+    def backpropagation(self, error):
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
+        return error
 
-    def _fit_batch(self, batch, parameter_update=True):
-        self.X, self.Y = batch
-        self.prediction(self.X)
+    def learn_batch(self, X, Y, parameter_update=True):
+        self.X, self.Y = X, Y
+        preds = self.prediction(self.X)
+        delta = self.cost.derivative(preds, Y)
+        self.backpropagation(delta)
         if parameter_update:
             self._parameter_update()
 
         return self.cost(self.output, self.Y) / self.m
 
     def _parameter_update(self):
-        self.optimizer.optimize(self.m, self.X, self.Y)
+        W = self.optimizer.optimize(
+            self.get_weights(), self.get_gradients(), self.m
+        )
+        self.set_weights(W)
 
     def _print_progress(self, validation, monitor):
         classificaton = "acc" in monitor
