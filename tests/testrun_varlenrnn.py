@@ -3,7 +3,8 @@ from brainforge.layers import RLayer, DenseLayer
 
 from csxdata import WordSequence, roots
 
-pet = WordSequence(roots["txt"] + "petofi.txt", lower=True, dehun=True, decimal=True)
+pet = WordSequence(roots["txt"] + "petofi.txt", cross_val=0,
+                   lower=True, dehun=True, decimal=True)
 
 net = Network(input_shape=pet.neurons_required[0], layers=(
     RLayer(30, "relu"),

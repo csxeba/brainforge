@@ -31,19 +31,8 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
 
 
 def analytical_gradients(network, X, y):
-    anagrads = np.zeros((network.nparams,))
-    network.prediction(X)
-    network.backpropagation(y)
-
-    start = 0
-    for layer in network.layers:
-        if not layer.trainable:
-            continue
-        end = start + layer.nparams
-        anagrads[start:end] = layer.gradients
-        start = end
-
-    return anagrads
+    network.learn_batch(X, y, parameter_update=False)
+    return network.get_gradients()
 
 
 def gradient_check(network, X, y, epsilon=1e-5, display=True, verbose=1):

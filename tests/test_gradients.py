@@ -48,7 +48,3 @@ class TestNetwork(unittest.TestCase):
         self.assertLess(error, 1e-2, "FATAL ERROR, {} (relerr) >= 1e-2".format(dfstr))
         self.assertLess(error, 1e-4, "ERROR, 1e-2 > {} (relerr) >= 1e-4".format(dfstr))
         self.assertLess(error, 1e-7, "SUSPICIOUS, 1e-4 > {} (relerr) >= 1e-7".format(dfstr))
-
-
-if __name__ == '__main__':
-    unittest.main()

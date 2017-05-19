@@ -38,18 +38,18 @@ def get_highway_net(data):
     nw.add(DenseLayer(30, activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))
-    nw.add(DenseLayer(fanout, activation="sigmoid"))
+    nw.add(DenseLayer(fanout, activation="softmax"))
     nw.finalize(cost="xent", optimizer="sgd")
     return nw
 
 
-def test_ann():
+def main():
 
     log(" --- CsxNet Brainforge testrun ---")
     mnist = get_mnist_data(mnistpath)
     mnist.transformation = "std"
 
-    net = get_drop_net(mnist)
+    net = get_highway_net(mnist)
     dsc = net.describe()
     log(dsc)
     print(dsc)
@@ -64,4 +64,4 @@ def test_ann():
 
 
 if __name__ == '__main__':
-    test_ann()
+    main()

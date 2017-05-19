@@ -123,13 +123,14 @@ class Network:
         self.architecture.append(str(layer))
         layer.connected = True
 
-    def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns
+    def finalize(self, cost="mse", optimizer="sgd"):
+        from ..costs import cost_functions
         from ..optimizers import optimizers
 
-        self.cost = cost_fns[cost](self) if isinstance(cost, str) else cost
-        self.optimizer = optimizers[optimizer]() if isinstance(optimizer, str) else optimizer
-        self.optimizer.connect(self)
+        self.cost = cost_functions[cost] \
+            if isinstance(cost, str) else cost
+        self.optimizer = optimizers[optimizer](self.nparams) \
+            if isinstance(optimizer, str) else optimizer
         self._finalized = True
 
     def pop(self):
@@ -140,7 +141,6 @@ class Network:
     # ---- Methods for model fitting ----
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
-
         if not self._finalized:
             raise RuntimeError("Architecture not finalized!")
 
@@ -162,6 +162,8 @@ class Network:
         return costs
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
+        if not self._finalized:
+            raise RuntimeError("Architecture not finalized!")
         self.N = epochs * lessons_per_epoch
 
         epcosts = []
@@ -178,6 +180,8 @@ class Network:
         return epcosts
 
     def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
+        if not self._finalized:
+            raise RuntimeError("Architecture not finalized!")
         fanin, outshape = frame.neurons_required
         if fanin != self.layers[0].outshape or outshape != self.layers[-1].outshape:
             errstring = "Network configuration incompatible with supplied dataframe!\n"
@@ -230,7 +234,7 @@ class Network:
         if parameter_update:
             self._parameter_update()
 
-        return self.cost(self.output, self.Y) / self.m
+        return self.cost(self.output, self.Y)
 
     def _parameter_update(self):
         W = self.optimizer.optimize(
@@ -424,3 +428,8 @@ class Autoencoder(Network):
     # noinspection PyMethodOverriding
     def gradient_check(self, X, verbose=1, epsilon=1e-5):
         return Network.gradient_check(self, X, X, verbose, epsilon)
+
+
+def _xent_hackaround(networkobj, xentobj):
+    xentobj.__call__ = [xentobj.call_on_sigmoid, xentobj.call_on_softmax][int(networkobj.layers[-1].activation.type == "softmax")]
+    return xentobj

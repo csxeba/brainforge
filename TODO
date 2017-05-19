@@ -1,13 +1,10 @@
-TODO: be more Keras-like
- -- create fit_generator method
-TODO: implement more Layer architectures
- -- figure out the GRU backpropagation and implement the layer
 TODO: implement real-time weight matrix observation with plt.ion() and imshow()!
 TODO: write a predictor wrapper, which extracts weights from a model
 TODO: work more on the output strings
 TODO: implement better logging and maybe callbacks!
 TODO: implement Autoencoding by somehow reversing the architecture string
 TODO: implement weight regularization
-TODO: rethink optimizers!
 TODO: remove util/shame!!!
-TODO: implement the ops in numba! (or theano?)
+TODO: implement the ops in Numba! (or Theano?) (or Cython?)
+TODO: fix evolution as an ANN optimizer!
+TODO: implement a (possibly ugly) function and/or operation factory

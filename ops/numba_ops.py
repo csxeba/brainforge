@@ -39,6 +39,8 @@ def convfull(A, F):
 
 
 spec = "({t},int32)({t})".format(t="{}[:, :, :, :]".format(floatX))
+
+
 @nb.jit(nopython=True)
 def maxpool(A, fdim):
     m, ch, iy, ix = A.shape

@@ -3,11 +3,13 @@ import numpy as np
 
 class ActivationFunction:
 
+    type = ""
+
     def __call__(self, Z: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
     def __str__(self):
-        raise NotImplementedError
+        return self.type
 
     def derivative(self, Z: np.ndarray) -> np.ndarray:
         raise NotImplementedError
@@ -15,10 +17,10 @@ class ActivationFunction:
 
 class Sigmoid(ActivationFunction):
 
+    type = "sigmoid"
+
     def __call__(self, Z: np.ndarray) -> np.ndarray:
         return np.divide(1.0, np.add(1, np.exp(-Z)))
-
-    def __str__(self): return "sigmoid"
 
     def derivative(self, A) -> np.ndarray:
         return A * np.subtract(1.0, A)
@@ -26,10 +28,10 @@ class Sigmoid(ActivationFunction):
 
 class Tanh(ActivationFunction):
 
+    type = "tanh"
+
     def __call__(self, Z) -> np.ndarray:
         return np.tanh(Z)
-
-    def __str__(self): return "tanh"
 
     def derivative(self, A) -> np.ndarray:
         return np.subtract(1.0, np.square(A))
@@ -37,10 +39,10 @@ class Tanh(ActivationFunction):
 
 class Linear(ActivationFunction):
 
+    type = "linear"
+
     def __call__(self, Z) -> np.ndarray:
         return Z
-
-    def __str__(self): return "linear"
 
     def derivative(self, Z) -> np.ndarray:
         return np.ones_like(Z)
@@ -48,10 +50,10 @@ class Linear(ActivationFunction):
 
 class ReLU(ActivationFunction):
 
+    type = "relu"
+
     def __call__(self, Z) -> np.ndarray:
         return np.maximum(0.0, Z)
-
-    def __str__(self): return "relu"
 
     def derivative(self, A) -> np.ndarray:
         d = np.ones_like(A)
@@ -61,16 +63,21 @@ class ReLU(ActivationFunction):
 
 class SoftMax(ActivationFunction):
 
+    type = "softmax"
+
     def __call__(self, Z) -> np.ndarray:
         # nZ = Z - np.max(Z)
         eZ = np.exp(Z)
         return eZ / np.sum(eZ, axis=1, keepdims=True)
 
-    def __str__(self): return "softmax"
-
     def derivative(self, A: np.ndarray) -> np.ndarray:
-        """This has to be replaced by a linear backward pass"""
         return 1.
+
+    def true_derivative(self, A: np.ndarray):
+        # TODO: test this with numerical gradient testing!
+        I = np.eye(A.shape[1])
+        idx, idy = np.diag_indices(I)
+        return A * (A[..., None] - I[None, ...])[:, idx, idy]
 
 
 act_fns = {key.lower(): cls for key, cls in locals().items() if "Function" not in key}
