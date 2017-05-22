@@ -27,8 +27,14 @@ def build_keras_reference(data: CData):
 def build_cnn(data: CData):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestBrainforgeCNN")
-    net.add(ConvLayer(5, 5, 5))
-    net.add(PoolLayer(3))
+    net.add(ConvLayer(10, 3, 3))
+    net.add(Activation("tanh"))
+    net.add(ConvLayer(10, 3, 3))
+    net.add(PoolLayer(2))
+    net.add(Activation("tanh"))
+    net.add(ConvLayer(10, 3, 3))
+    net.add(Activation("tanh"))
+    net.add(ConvLayer(10, 3, 3))
     net.add(Flatten())
     net.add(Activation("tanh"))
     net.add(DenseLayer(outshape, activation="softmax", trainable=True))

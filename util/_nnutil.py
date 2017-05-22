@@ -104,7 +104,7 @@ def gradient_check(network, X, y, epsilon=1e-5, display=True, verbose=1):
 
 def white(*dims) -> np.ndarray:
     """Returns a white noise tensor"""
-    return np.random.randn(*dims) / np.sqrt(dims[0] / 2.)
+    return np.random.randn(*dims) * np.sqrt(1. / dims[0])
 
 
 def white_like(array):
@@ -118,5 +118,3 @@ def rtm(A):
         return A
     A = np.atleast_2d(A)
     return A.reshape(A.shape[0], np.prod(A.shape[1:]))
-
-

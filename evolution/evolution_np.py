@@ -140,8 +140,8 @@ class Population:
             survival_rate: float=0.5,
             mutation_rate: float=0.1,
             force_update_at_every: int=0,
-            verbosity: int=1, fitness_args=None,
-            fitness_kwargs=None):
+            verbosity: int=1,
+            *fitness_args, **fitness_kwargs):
         """
         Runs the algorithm, optimizing the individuals.
 

@@ -33,8 +33,8 @@ def build(data, what):
                  "cwrnn": ClockworkLayer,
                  "rlayer": RLayer}[what.lower()]
 
-    LayerType(rl1, act, return_seq=True)
-    LayerType(rl2, act)
+    net.add(LayerType(rl1, act, return_seq=True))
+    net.add(LayerType(rl2, act))
     net.add(DenseLayer(120, activation="tanh"))
     net.add(DenseLayer(outshape, activation="softmax"))
     net.finalize("xent", optimizer="rmsprop")

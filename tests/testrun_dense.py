@@ -16,7 +16,7 @@ def get_mnist_data(path):
 def get_dense_network(data):
     fanin, fanout = data.neurons_required
     nw = Network(fanin, name="TestDenseNet")
-    nw.add(DenseLayer(10, activation="tanh"))
+    nw.add(DenseLayer(120, activation="sigmoid"))
     nw.add(DenseLayer(fanout, activation="softmax"))
     nw.finalize("xent", optimizer="adam")
     return nw
@@ -35,7 +35,7 @@ def get_drop_net(data):
 def get_highway_net(data):
     fanin, fanout = data.neurons_required
     nw = Network(fanin, name="TestHighwayNet")
-    nw.add(DenseLayer(30, activation="tanh"))
+    nw.add(DenseLayer(120, activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))
     nw.add(DenseLayer(fanout, activation="softmax"))
@@ -49,14 +49,14 @@ def main():
     mnist = get_mnist_data(mnistpath)
     mnist.transformation = "std"
 
-    net = get_highway_net(mnist)
+    net = get_dense_network(mnist)
     dsc = net.describe()
     log(dsc)
     print(dsc)
 
-    net.fit(*mnist.table("learning", m=20), batch_size=20, epochs=1, verbose=0, shuffle=False)
-    if not net.gradient_check(*mnist.table("testing", shuff=False, m=20), verbose=1):
-        raise RuntimeError("GradCheck failed!")
+    # net.fit(*mnist.table("learning", m=20), batch_size=20, epochs=1, verbose=0, shuffle=False)
+    # if not net.gradient_check(*mnist.table("testing", shuff=False, m=20), verbose=1):
+    #     raise RuntimeError("GradCheck failed!")
 
     net.fit_csxdata(mnist, batch_size=20, epochs=30, verbose=1, monitor=["acc"])
     log(net.describe(0))
