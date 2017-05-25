@@ -53,7 +53,7 @@ def xperiment():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
     X, Y = mnist.table("learning", m=1000)
-    net.fit(X, Y, batch_size=30, epochs=1, verbose=0)
+    net.fit(X, Y, batch_size=30, epochs=1, verbose=1)
 
 if __name__ == '__main__':
     xperiment()

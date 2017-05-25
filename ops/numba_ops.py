@@ -3,33 +3,34 @@ import numba as nb
 
 
 floatX = nb.typeof(float())
-f4f4_f4 = ("({t}[:, :, :, :],{t}[:, :, :, :])({t}[:, :, :, :])"
-           .format(t=floatX))
+intX = nb.typeof(int())
+far_4D = "{type}[:, :, :, :]".format(type=floatX)
+f4f4_f4 = ("f4({f4},{f4})"
+           .format(f4=far_4D))
 
 
-@nb.jit(nopython=True)
-def convvalid(A, F):
+@nb.jit(signature_or_function=f4f4_f4, nopython=True)
+def convvalid(A, Frsh, O):
     im, ic, iy, ix = A.shape
-    nf, fc, fy, fx = F.shape
-    recfield_size = fx * fy * fc
-    oy, ox = (iy - fy) + 1, (ix - fx) + 1
-    rfields = np.zeros((im, oy * ox, recfield_size))
+    nf, recfield_size = Frsh.shape
+    oy, ox = O.shape[-2:]
+    rfield = np.zeros((oy * ox, recfield_size))
+    # rfields = np.zeros((im, oy * ox, recfield_size))
+    output = np.zeros((im, nf, oy, ox))
 
-    if fc != ic:
-        err = "Supplied filter (F) is incompatible with supplied input! (X)\n" \
-              + "input depth: {} != {} :filter depth".format(ic, fc)
-        raise ValueError(err)
-
-    for i, pic in enumerate(A):
+    for m in range(im):
         for sy in range(oy):
             for sx in range(ox):
-                rfields[i][sy * ox + sx] = pic[:, sy:sy + fy, sx:sx + fx].ravel()
+                rfield[sy * ox + sx] = A[m, :, sy:sy + fy, sx:sx + fx].ravel()
+                # rfields[m, sy * ox + sx] = A[m, :, sy:sy + fy, sx:sx + fx].ravel()
+        output[m] = np.dot(rfield, Frsh.T)
 
-    return (np.matmul(rfields, F.reshape(nf, recfield_size).T)
-            .transpose(0, 2, 1).reshape(im, nf, oy, ox))
+    # mul = np.matmul(rfields, F.reshape(nf, recfield_size).T).transpose(0, 2, 1)
+    # out = mul.reshape(im, nf, oy, ox)
+    return output
 
 
-@nb.jit(nopython=True)
+@nb.jit(signature_or_function=f4f4_f4, nopython=True)
 def convfull(A, F):
     nf, fc, fy, fx = F.shape
     py, px = fy - 1, fx - 1
@@ -38,18 +39,19 @@ def convfull(A, F):
     return convvalid(pA, F)
 
 
-spec = "({t},int32)({t})".format(t="{}[:, :, :, :]".format(floatX))
-
-
-@nb.jit(nopython=True)
+@nb.jit(signature_or_function="{t}[:]({f4}, {ints})"
+        .format(f4=far_4D, t=floatX, ints=nb.typeof(int())),
+        nopython=True)
 def maxpool(A, fdim):
     m, ch, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
     output = np.zeros((m * ch * oy * ox,))
     filt = np.zeros_like(A)
     counter = 0
-    for i, pic in enumerate(A):
-        for c, sheet in enumerate(pic):
+    for i in range(len(A)):
+        pic = A[i]
+        for c in range(len(pic)):
+            sheet = pic[c]
             for y, sy in enumerate(range(0, iy, fdim)):
                 for x, sx in enumerate(range(0, ix, fdim)):
                     recfield = sheet[sy:sy + fdim, sx:sx + fdim]
@@ -60,7 +62,8 @@ def maxpool(A, fdim):
     return np.concatenate((output, filt.ravel()))
 
 
-@nb.jit(nopython=True)
+@nb.jit(signature_or_function=f4f4_f4,
+        nopython=True)
 def inflate(A, filt):
     em, ec, ey, ex = A.shape
     fm, fc, fy, fx = filt.shape
