@@ -216,7 +216,7 @@ class InputLayer(LayerBase, NoParamMixin):
 
     @property
     def outshape(self):
-        return self.neurons if isinstance(self.neurons, tuple) else (self.neurons,)
+        return self.neurons
 
     def __str__(self):
         return "Input-{}".format(self.neurons)
@@ -232,6 +232,7 @@ class DenseLayer(FFBase):
     def __init__(self, neurons, activation="linear", **kw):
         if isinstance(neurons, tuple):
             neurons = neurons[0]
+        neurons = int(neurons)
         FFBase.__init__(self, neurons=neurons, activation=activation, **kw)
 
     def connect(self, to, inshape):

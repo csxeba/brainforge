@@ -79,7 +79,8 @@ class ConvLayer(LayerBase):
         self.depth = depth
         self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
         self.biases = np.zeros((self.nfilters,))
-        self.nabla_b = np.zeros((self.nfilters,))
+        self.nabla_b = np.zeros_like(self.biases)
+        self.nabla_w = np.zeros_like(self.weights)
 
     def feedforward(self, X):
         self.inputs = X
