@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+from ..util import floatX, zX, zX_like
+
 
 # I hereby state that
 # this evolutionary algorithm is MINIMIZING the fitness value!
@@ -34,7 +36,7 @@ class Population:
         self.fitness = fitness_function
         self.limit = limit
 
-        self.grades = np.zeros((limit,))
+        self.grades = zX(limit)
         if grade_function is None:
             if fitness_weights is None:
                 fitness_weights = np.array([1.])
@@ -51,9 +53,9 @@ class Population:
                          if mutate_function is None
                          else mutate_function)
 
-        self.fitnesses = np.zeros((limit, len(fitness_weights)))
+        self.fitnesses = zX(limit, len(fitness_weights))
         self.fitness_w = fitness_weights
-        self.individuals = np.random.uniform(size=(limit, loci))
+        self.individuals = np.random.uniform(size=(limit, loci)).astype(floatX)
 
         self.age = 0
 
@@ -113,7 +115,7 @@ class Population:
                 counter += 1
 
         prbs = rescale(self.grades)
-        candidates = np.zeros_like(self.individuals)
+        candidates = zX_like(self.individuals)
         if survivors is None or survivors.size == 0:
             survivors = np.where(self.selection(0.3))[0]
         i = 0
@@ -130,7 +132,7 @@ class Population:
         return candidates
 
     def selection(self, rate):
-        survmask = np.zeros_like(self.grades)
+        survmask = zX_like(self.grades)
         if rate:
             survivors = np.argsort(self.grades)[:int(self.limit * rate)]
             survmask[survivors] = 1.

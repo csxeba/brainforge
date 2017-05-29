@@ -1,5 +1,7 @@
 import numpy as np
 
+from ..util import scalX
+
 
 class ActivationFunction:
 
@@ -19,11 +21,11 @@ class Sigmoid(ActivationFunction):
 
     type = "sigmoid"
 
-    def __call__(self, Z: np.ndarray) -> np.ndarray:
-        return np.divide(1.0, np.add(1, np.exp(-Z)))
+    def __call__(self, Z: np.ndarray):
+        return 1. / (1. + np.exp(-Z))
 
-    def derivative(self, A) -> np.ndarray:
-        return A * np.subtract(1.0, A)
+    def derivative(self, A: np.ndarray) -> np.ndarray:
+        return A * (1.0 - A)
 
 
 class Tanh(ActivationFunction):
@@ -33,8 +35,8 @@ class Tanh(ActivationFunction):
     def __call__(self, Z) -> np.ndarray:
         return np.tanh(Z)
 
-    def derivative(self, A) -> np.ndarray:
-        return np.subtract(1.0, np.square(A))
+    def derivative(self, A: np.ndarray) -> np.ndarray:
+        return 1.0 - A**2
 
 
 class Linear(ActivationFunction):
@@ -45,7 +47,7 @@ class Linear(ActivationFunction):
         return Z
 
     def derivative(self, Z) -> np.ndarray:
-        return np.ones_like(Z)
+        return scalX(1.)
 
 
 class ReLU(ActivationFunction):
@@ -71,7 +73,7 @@ class SoftMax(ActivationFunction):
         return eZ / np.sum(eZ, axis=1, keepdims=True)
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
-        return 1.
+        return scalX(1.)
 
     def true_derivative(self, A: np.ndarray):
         # TODO: test this with numerical gradient testing!

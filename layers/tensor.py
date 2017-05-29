@@ -1,7 +1,5 @@
-import numpy as np
-
 from .core import LayerBase, NoParamMixin
-from ..util import white
+from ..util import white, zX, zX_like
 
 
 class PoolLayer(LayerBase, NoParamMixin):
@@ -16,7 +14,7 @@ class PoolLayer(LayerBase, NoParamMixin):
     def connect(self, to, inshape):
         ic, iy, ix = inshape
         LayerBase.connect(self, to, inshape)
-        self.output = np.zeros((ic, iy // self.fdim, ix // self.fdim))
+        self.output = zX(ic, iy // self.fdim, ix // self.fdim)
 
     def feedforward(self, questions):
         """
@@ -77,10 +75,10 @@ class ConvLayer(LayerBase):
         self.op = ConvolutionOp()
         self.inshape = inshape
         self.depth = depth
-        self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
-        self.biases = np.zeros((self.nfilters,))
-        self.nabla_b = np.zeros_like(self.biases)
-        self.nabla_w = np.zeros_like(self.weights)
+        self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
+        self.biases = zX(self.nfilters)
+        self.nabla_b = zX_like(self.biases)
+        self.nabla_w = zX_like(self.weights)
 
     def feedforward(self, X):
         self.inputs = X
@@ -95,11 +93,15 @@ class ConvLayer(LayerBase):
         """
 
         error *= self.activation.derivative(self.output)
+        # ishp (im, ic, iy, ix)
+        # fshp (fx, fy, fc, nf)
+        # eshp (im, nf, oy, ox) = oshp
+        # er.T (ox, oy, nf, im)
         iT = self.inputs.transpose(1, 0, 2, 3)
-        eT = error.transpose(1, 0, 2, 3)
-        self.nabla_w = self.op.apply(iT, eT, mode="valid").transpose(1, 0, 2, 3)
+        eT = error.T.transpose(0, 1, 3, 2)
+        self.nabla_w = self.op.apply(iT, eT, mode="valid")
         # self.nabla_b = error.sum()  # TODO: why is this commented out???
-        rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
+        rW = self.weights[::-1, ::-1, :, :].transpose(0, 1, 3, 2)
         backpass = self.op.apply(error, rW, "full")
         return backpass
 

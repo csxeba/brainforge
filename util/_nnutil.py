@@ -1,6 +1,9 @@
 import numpy as np
 
 
+floatX = "float32"
+
+
 def numerical_gradients(network, X, y, epsilon=1e-5):
     ws = network.get_weights(unfold=True)
     numgrads = np.zeros_like(ws)
@@ -102,9 +105,21 @@ def gradient_check(network, X, y, epsilon=1e-5, display=True, verbose=1):
     return passed
 
 
+def scalX(scalar):
+    return np.asscalar(np.array([scalar], dtype=floatX))
+
+
+def zX(*dims):
+    return np.zeros(dims, dtype=floatX)
+
+
+def zX_like(array):
+    return zX(*array.shape)
+
+
 def white(*dims) -> np.ndarray:
     """Returns a white noise tensor"""
-    return np.random.randn(*dims) * np.sqrt(1. / dims[0])
+    return (np.random.randn(*dims) * np.sqrt(1. / dims[0])).astype(floatX)
 
 
 def white_like(array):

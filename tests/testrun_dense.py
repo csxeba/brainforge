@@ -10,15 +10,16 @@ logstring = ""
 
 def get_mnist_data(path):
     data = CData(mnist_tolearningtable(path, fold=False), headers=None)
+    data.transformation = "std"
     return data
 
 
 def get_dense_network(data):
     fanin, fanout = data.neurons_required
     nw = Network(fanin, name="TestDenseNet")
-    nw.add(DenseLayer(120, activation="sigmoid"))
-    nw.add(DenseLayer(fanout, activation="softmax"))
-    nw.finalize("xent", optimizer="adam")
+    nw.add(DenseLayer(60, activation="tanh", trainable=False))
+    nw.add(DenseLayer(fanout, activation="sigmoid"))
+    nw.finalize("mse", optimizer="sgd")
     return nw
 
 
@@ -54,9 +55,9 @@ def main():
     log(dsc)
     print(dsc)
 
-    # net.fit(*mnist.table("learning", m=20), batch_size=20, epochs=1, verbose=0, shuffle=False)
-    # if not net.gradient_check(*mnist.table("testing", shuff=False, m=20), verbose=1):
-    #     raise RuntimeError("GradCheck failed!")
+    net.fit(*mnist.table("learning", m=20), batch_size=20, epochs=1, verbose=0, shuffle=False)
+    if not net.gradient_check(*mnist.table("testing", shuff=False, m=20), verbose=1):
+        raise RuntimeError("GradCheck failed!")
 
     net.fit_csxdata(mnist, batch_size=20, epochs=30, verbose=1, monitor=["acc"])
     log(net.describe(0))
