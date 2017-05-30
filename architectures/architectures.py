@@ -224,6 +224,7 @@ class Network:
     def backpropagation(self, error):
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
+            assert error.dtype == "float32", "Backprop TypeCheck failed after " + str(layer)
         return error
 
     def learn_batch(self, X, Y, parameter_update=True):
@@ -264,6 +265,7 @@ class Network:
         self.m = X.shape[0]
         for layer in self.layers:
             X = layer.feedforward(X)
+            assert X.dtype == "float32", "Forward TypeCheck failed after " + str(layer)
         return X
 
     def predict_proba(self, X):

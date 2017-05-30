@@ -3,6 +3,9 @@ import numpy as np
 from ..util import scalX
 
 
+s1 = scalX(1.)
+
+
 class ActivationFunction:
 
     type = ""
@@ -22,10 +25,10 @@ class Sigmoid(ActivationFunction):
     type = "sigmoid"
 
     def __call__(self, Z: np.ndarray):
-        return 1. / (1. + np.exp(-Z))
+        return s1 / (s1 + np.exp(-Z))
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
-        return A * (1.0 - A)
+        return A * (s1 - A)
 
 
 class Tanh(ActivationFunction):
@@ -36,7 +39,7 @@ class Tanh(ActivationFunction):
         return np.tanh(Z)
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
-        return 1.0 - A**2
+        return s1 - A**2
 
 
 class Linear(ActivationFunction):
@@ -73,7 +76,7 @@ class SoftMax(ActivationFunction):
         return eZ / np.sum(eZ, axis=1, keepdims=True)
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
-        return scalX(1.)
+        return s1
 
     def true_derivative(self, A: np.ndarray):
         # TODO: test this with numerical gradient testing!

@@ -7,7 +7,7 @@ intX = nb.typeof(int())
 
 
 def Xd(X, t=floatX):
-    return "{t}[{0}]".format(",".join(":"*(X-1)) + ",::1", t=t)
+    return "{t}[{0}]".format(",".join([":"]*(X-1) + ["::1"]), t=t)
 
 
 @nb.jit("{f3}({f4},{f4})".format(f3=Xd(3), f4=Xd(4)),
@@ -41,12 +41,13 @@ def correlate(A, F):
     return output
 
 
-@nb.jit(nopython=True)
+@nb.jit("{f1}({f4},{i})".format(f1=Xd(1), f4=Xd(4), i=intX),
+        nopython=True)
 def maxpool(A, fdim):
     m, ch, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
-    output = np.zeros((m * ch * oy * ox,))
-    filt = np.zeros_like(A)
+    output = np.zeros((m * ch * oy * ox,), dtype=floatX)
+    filt = np.zeros_like(A, dtype=floatX)
     counter = 0
     for i in range(len(A)):
         pic = A[i]
@@ -120,6 +121,8 @@ class MaxPoolOp:
 
     @staticmethod
     def apply(A, fdim):
+        if not A.flags["C_CONTIGUOUS"]:
+            A = A.copy()
         m, ch, iy, ix = A.shape
         oy, ox = iy // fdim, ix // fdim
         outarr = maxpool(A, fdim)

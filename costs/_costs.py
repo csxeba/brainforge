@@ -2,6 +2,10 @@ import abc
 
 import numpy as np
 
+from ..util import scalX
+
+s1 = scalX(1.)
+s0 = scalX(0.)
 
 class CostFunction(abc.ABC):
 
@@ -18,11 +22,11 @@ class CostFunction(abc.ABC):
 class MSE(CostFunction):
 
     def __call__(self, outputs, targets):
-        return (0.5 * np.linalg.norm(outputs - targets) ** 2) / outputs.shape[0]
+        return (0.5 * np.linalg.norm(outputs - targets) ** 2) / scalX(outputs.shape[0])
 
     @staticmethod
     def derivative(outputs, targets):
-        return np.subtract(outputs, targets) / outputs.shape[0]
+        return np.subtract(outputs, targets) / scalX(outputs.shape[0])
 
     def __str__(self):
         return "MSE"
@@ -35,12 +39,12 @@ class Xent(CostFunction):
 
     @staticmethod
     def call_on_sigmoid(outputs: np.ndarray, targets: np.ndarray):
-        delta = (targets * np.log(outputs) + (1. - targets) * np.log(1. - outputs)).sum()
-        return -delta / outputs.shape[0]
+        delta = (targets * np.log(outputs) + (s1 - targets) * np.log(s1 - outputs)).sum()
+        return -delta / scalX(outputs.shape[0])
 
     @staticmethod
     def call_on_softmax(outputs, targets):
-        return -(targets * np.log(outputs)).sum() / outputs.shape[0]
+        return -(targets * np.log(outputs)).sum() / scalX(outputs.shape[0])
 
     @staticmethod
     def derivative(outputs, targets):
@@ -48,13 +52,13 @@ class Xent(CostFunction):
 
     @staticmethod
     def simplified_derivative(outputs, targets):
-        return (outputs - targets) / outputs.shape[0]
+        return (outputs - targets) / scalX(outputs.shape[0])
 
     @staticmethod
     def ugly_derivative(outputs, targets):
         enum = targets - outputs
-        denom = (outputs - 1.) * outputs
-        return (enum / denom) / outputs.shape[0]
+        denom = (outputs - s1) * outputs
+        return (enum / denom) / scalX(outputs.shape[0])
 
     def __str__(self):
         return "Xent"
@@ -63,7 +67,7 @@ class Xent(CostFunction):
 class Hinge(CostFunction):
 
     def __call__(self, outputs, targets):
-        return (np.maximum(0., 1. - targets * outputs)).sum() / outputs.shape[0]
+        return (np.maximum(s0, s1 - targets * outputs)).sum() / scalX(outputs.shape[0])
 
     def __str__(self):
         return "Hinge"
@@ -75,8 +79,8 @@ class Hinge(CostFunction):
         d/da = -y whenever output > 0
         """
         out = -targets
-        out[outputs > 1.] = 0.
-        return out / outputs.shape[0]
+        out[outputs > s1] = s0
+        return out / scalX(outputs.shape[0])
 
 
 class _CostFunctions:
