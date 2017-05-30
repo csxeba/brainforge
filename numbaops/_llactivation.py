@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 
-from ._llutil import nbfloatX, scalX, floatX
+from ._llutil import nbfloatX, scalX, floatX, Xd
 
 s0 = scalX(0., floatX)
 s1 = scalX(1., floatX)
@@ -62,15 +62,14 @@ def relu_p(A):
     return J
 
 
-@nb.jit("{t}[:,::1]({t}[:,::1])".format(t=nbfloatX), nopython=True)
+@nb.jit("{f2}({f2})".format(f2=Xd(2)), nopython=True)
 def softmax(Z):
     eZ = np.exp(Z)
     return eZ / np.sum(eZ, axis=1, keepdims=True)
 
 
-@nb.jit("{t}[:,::1]({t}[:,::1]".format(t=nbfloatX), nopython=True)
+@nb.jit("{f2}({f2})".format(f2=Xd(2)), nopython=True)
 def softmax_p(A):
     I = np.eye(A.shape[1], dtype=floatX)
     idx = np.arange(A.shape[1])
     return A * (A[..., None] - I[None, ...])[:, idx, idx]
-

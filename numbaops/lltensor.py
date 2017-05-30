@@ -1,14 +1,9 @@
 import numpy as np
 import numba as nb
 
-from brainforge.util import floatX
+from ._llutil import nbfloatX, Xd
 
-nbfloatX = nb.float32 if floatX == "float32" else nb.float64
 intX = nb.typeof(int())
-
-
-def Xd(X, t=nbfloatX):
-    return "{t}[{0}]".format(",".join([":"]*(X-1) + ["::1"]), t=t)
 
 
 @nb.jit("{f3}({f4},{f4})".format(f3=Xd(3), f4=Xd(4)),
@@ -84,7 +79,7 @@ class ConvolutionOp:
 
     @staticmethod
     def full(A, F):
-        nf, fc, fy, fx = F.shape
+        fx, fy, fc, nf = F.shape
         py, px = fy - 1, fx - 1
         pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
@@ -97,6 +92,7 @@ class ConvolutionOp:
             F = F.copy()
         Z = self.valid(A, F) if mode == "valid" else self.full(A, F)
         oc, oy, ox = self.outshape(A.shape, F.shape, mode=mode)
+        # Z: [im, oy*ox, nf]
         return Z.transpose((0, 2, 1)).reshape(A.shape[0], oc, oy, ox)
 
     @staticmethod
