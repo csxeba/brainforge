@@ -47,7 +47,7 @@ class PoolLayer(LayerBase, NoParamMixin):
         return cls(fdim=capsule[-1])
 
     def __str__(self):
-        return "MaxPool-{}x{}".format(self.fdim, self.fdim)
+        return "Pool-{}x{}".format(self.fdim, self.fdim)
 
 
 class ConvLayer(LayerBase):

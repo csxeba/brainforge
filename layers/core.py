@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from ..util import white, white_like
+from ..util import white, white_like, zX, zX_like
 
 
 class LayerBase(abc.ABC):
@@ -49,7 +49,7 @@ class LayerBase(abc.ABC):
 
     def shuffle(self) -> None:
         self.weights = white_like(self.weights)
-        self.biases = np.zeros_like(self.biases)
+        self.biases = zX_like(self.biases)
 
     def get_weights(self, unfold=True):
         if unfold:
@@ -120,8 +120,8 @@ class FFBase(LayerBase):
     @abc.abstractmethod
     def connect(self, to, inshape):
         LayerBase.connect(self, to, inshape)
-        self.nabla_w = np.zeros_like(self.weights)
-        self.nabla_b = np.zeros_like(self.biases)
+        self.nabla_w = zX_like(self.weights)
+        self.nabla_b = zX_like(self.biases)
 
     @property
     def outshape(self):
@@ -241,7 +241,7 @@ class DenseLayer(FFBase):
             err += "Maybe you should consider placing <Flatten> before <Dense>?"
             raise RuntimeError(err)
         self.weights = white(inshape[0], self.neurons)
-        self.biases = np.zeros((self.neurons,))
+        self.biases = zX(self.neurons)
         FFBase.connect(self, to, inshape)
 
     def feedforward(self, questions):
