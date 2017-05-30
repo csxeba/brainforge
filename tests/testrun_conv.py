@@ -46,10 +46,10 @@ def keras_run():
 def xperiment():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
-    # net.learn_batch(*mnist.table("learning", m=10))
-    # net.age += 1
-    # if not net.gradient_check(*mnist.table("testing", m=10)):
-    #     raise RuntimeError("Gradient Check Failed!")
+    net.learn_batch(*mnist.table("learning", m=10))
+    net.age += 1
+    if not net.gradient_check(*mnist.table("testing", m=10)):
+        raise RuntimeError("Gradient Check Failed!")
     X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=30, epochs=1, verbose=1)
 

@@ -202,8 +202,7 @@ class Evolution(Optimizer):
 
     def optimize(self, W, *args):
         self.population.run(force_update_at_every=3, verbosity=0,
-                            fitness_args=self.fitness_args,
-                            fitness_kwargs=self.fitness_kwargs,
+                            *self.fitness_args, **self.fitness_kwargs,
                             **self.run_params)
         return self.population.best * 10
 
