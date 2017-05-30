@@ -6,7 +6,7 @@ class PoolLayer(LayerBase, NoParamMixin):
 
     def __init__(self, fdim):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        from ..ops.numba_ops import MaxPoolOp
+        from ..ops import MaxPoolOp
         self.fdim = fdim
         self.filter = None
         self.op = MaxPoolOp()

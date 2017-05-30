@@ -2,46 +2,46 @@ import numpy as np
 import numba as nb
 
 
-floatX = nb.typeof(float())
+floatX = nb.float32
 intX = nb.typeof(int())
-far_4D = "{type}[:, :, :, :]".format(type=floatX)
-f4f4_f4 = ("f4({f4},{f4})"
-           .format(f4=far_4D))
 
 
-@nb.jit(signature_or_function=f4f4_f4, nopython=True)
-def convvalid(A, Frsh, O):
+def Xd(X, t=floatX):
+    return "{t}[{0}]".format(",".join(":"*(X-1)) + ",::1", t=t)
+
+
+@nb.jit("{f3}({f4},{f4})".format(f3=Xd(3), f4=Xd(4)),
+        nopython=True)
+def _reshape_receptive_fields(A, F):
     im, ic, iy, ix = A.shape
-    nf, recfield_size = Frsh.shape
-    oy, ox = O.shape[-2:]
-    rfield = np.zeros((oy * ox, recfield_size))
-    # rfields = np.zeros((im, oy * ox, recfield_size))
-    output = np.zeros((im, nf, oy, ox))
-
+    fx, fy, fc, nf = F.shape
+    oy, ox = iy - fy + 1, ix - fx + 1
+    recfield_size = fx*fy*fc
+    rfields = np.zeros((im, oy * ox, recfield_size), dtype=floatX)
     for m in range(im):
         for sy in range(oy):
             for sx in range(ox):
-                rfield[sy * ox + sx] = A[m, :, sy:sy + fy, sx:sx + fx].ravel()
-                # rfields[m, sy * ox + sx] = A[m, :, sy:sy + fy, sx:sx + fx].ravel()
-        output[m] = np.dot(rfield, Frsh.T)
+                rfields[m, sy * ox + sx] = A[m, :, sy:sy + fy, sx:sx + fx].ravel()
+    return rfields
 
-    # mul = np.matmul(rfields, F.reshape(nf, recfield_size).T).transpose(0, 2, 1)
-    # out = mul.reshape(im, nf, oy, ox)
+
+@nb.jit("{f3}({f4},{f4})".format(f3=Xd(3), f4=Xd(4)),
+        nopython=True)
+def correlate(A, F):
+    im, ic, iy, ix = A.shape
+    fx, fy, fc, nf = F.shape
+    oy, ox = iy - fy + 1, ix - fx + 1
+    rfields = _reshape_receptive_fields(A, F)
+    output = np.zeros((im, oy*ox, nf), dtype=floatX)
+    Frsh = F.reshape(fx*fy*fc, nf)
+
+    for m in range(im):
+        output[m] = np.dot(rfields[m], Frsh)
+
     return output
 
 
-@nb.jit(signature_or_function=f4f4_f4, nopython=True)
-def convfull(A, F):
-    nf, fc, fy, fx = F.shape
-    py, px = fy - 1, fx - 1
-    pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
-                mode="constant", constant_values=0.)
-    return convvalid(pA, F)
-
-
-@nb.jit(signature_or_function="{t}[:]({f4}, {ints})"
-        .format(f4=far_4D, t=floatX, ints=nb.typeof(int())),
-        nopython=True)
+@nb.jit(nopython=True)
 def maxpool(A, fdim):
     m, ch, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
@@ -62,8 +62,7 @@ def maxpool(A, fdim):
     return np.concatenate((output, filt.ravel()))
 
 
-@nb.jit(signature_or_function=f4f4_f4,
-        nopython=True)
+@nb.jit(nopython=True)
 def inflate(A, filt):
     em, ec, ey, ex = A.shape
     fm, fc, fy, fx = filt.shape
@@ -79,22 +78,33 @@ def inflate(A, filt):
 class ConvolutionOp:
 
     def __init__(self):
-        self.valid = convvalid
-        self.full = convfull
+        self.valid = correlate
+
+    @staticmethod
+    def full(A, F):
+        nf, fc, fy, fx = F.shape
+        py, px = fy - 1, fx - 1
+        pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
+                    mode="constant", constant_values=0.)
+        return correlate(pA, F)
 
     def apply(self, A, F, mode="valid"):
-        if mode == "valid":
-            return self.valid(A, F)
-        return self.full(A, F)
+        if not A.flags["C_CONTIGUOUS"]:
+            A = A.copy()
+        if not F.flags["C_CONTIGUOUS"]:
+            F = F.copy()
+        Z = self.valid(A, F) if mode == "valid" else self.full(A, F)
+        oc, oy, ox = self.outshape(A.shape, F.shape, mode=mode)
+        return Z.transpose((0, 2, 1)).reshape(A.shape[0], oc, oy, ox)
 
     @staticmethod
     def outshape(inshape, fshape, mode="valid"):
+        ic, iy, ix = inshape[-3:]
+        fx, fy, fc, nf = fshape
         if mode == "valid":
-            return tuple(ix - fx + 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
-        elif mode == "full":
-            return tuple(ix + fx - 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
+            return nf, iy - fy + 1, ix - fx + 1
         else:
-            raise RuntimeError("Unsupported mode:", mode)
+            return nf, iy + fy - 1, ix + fx - 1
 
     def __str__(self):
         return "Convolution"
