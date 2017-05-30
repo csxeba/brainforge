@@ -4,9 +4,12 @@ from ..util import white, zX, zX_like
 
 class PoolLayer(LayerBase, NoParamMixin):
 
-    def __init__(self, fdim):
+    def __init__(self, fdim, compiled=True):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        from ..numbaops.lltensor import MaxPoolOp
+        if compiled:
+            from ..numbaops.lltensor import MaxPoolOp
+        else:
+            from ..ops import MaxPoolOp
         self.fdim = fdim
         self.filter = None
         self.op = MaxPoolOp()
@@ -52,10 +55,13 @@ class PoolLayer(LayerBase, NoParamMixin):
 
 class ConvLayer(LayerBase):
 
-    def __init__(self, nfilters, filterx, filtery, activation="linear", mode="valid", **kw):
+    def __init__(self, nfilters, filterx, filtery,
+                 mode="valid", activation="linear",
+                 compiled=True, **kw):
 
         LayerBase.__init__(self, activation=activation, **kw)
 
+        self.compiled = compiled
         self.nfilters = nfilters
         self.fx = filterx
         self.fy = filtery
@@ -68,8 +74,10 @@ class ConvLayer(LayerBase):
         self.op = None
 
     def connect(self, to, inshape):
-        from ..numbaops.lltensor import ConvolutionOp
-
+        if self.compiled:
+            from ..numbaops.lltensor import ConvolutionOp
+        else:
+            from ..ops import ConvolutionOp
         LayerBase.connect(self, to, inshape)
         depth, iy, ix = inshape
         self.op = ConvolutionOp()
@@ -98,8 +106,8 @@ class ConvLayer(LayerBase):
         # eshp (im, nf, oy, ox) = oshp
         # er.T (ox, oy, nf, im)
         iT = self.inputs.transpose(1, 0, 2, 3)
-        eT = error.T.transpose(0, 1, 3, 2)
-        self.nabla_w = self.op.apply(iT, eT, mode="valid")
+        eT = error.transpose(1, 0, 2, 3)
+        self.nabla_w = self.op.apply(iT, eT.T, mode="valid")
         # self.nabla_b = error.sum()  # TODO: why is this commented out???
         rW = self.weights[::-1, ::-1, :, :].transpose(0, 1, 3, 2)
         backpass = self.op.apply(error, rW, "full")

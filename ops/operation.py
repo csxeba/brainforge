@@ -37,6 +37,7 @@ class ReshapeOp:
 class ConvolutionOp:
 
     def valid(self, A, F):
+        F = F.T
         im, ic, iy, ix = A.shape
         nf, fc, fy, fx = F.shape
         recfield_size = fx * fy * fc
@@ -58,7 +59,7 @@ class ConvolutionOp:
         return output
 
     def full(self, A, F):
-        nf, fc, fy, fx = F.shape
+        fx, fy, fx, nf = F.shape
         py, px = fy - 1, fx - 1
         pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
@@ -70,10 +71,12 @@ class ConvolutionOp:
         return self.full(A, F)
 
     def outshape(self, inshape, fshape, mode="valid"):
+        ic, iy, ix = inshape[-3:]
+        fx, fy, fc, nf = fshape
         if mode == "valid":
-            return tuple(ix - fx + 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
+            return nf, iy - fy + 1, ix - fx + 1
         elif mode == "full":
-            return tuple(ix + fx - 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
+            return nf, iy + fy - 1, ix + fx - 1
         else:
             raise RuntimeError("Unsupported mode:", mode)
 

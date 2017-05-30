@@ -27,11 +27,11 @@ def build_keras_reference(data: CData):
 def build_cnn(data: CData):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestBrainforgeCNN")
-    net.add(ConvLayer(10, 5, 5))
-    # net.add(PoolLayer(3))
+    net.add(ConvLayer(3, 5, 5, compiled=False))
+    net.add(PoolLayer(3, compiled=False))
     net.add(Activation("tanh"))
-    # net.add(Flatten())
-    net.add(DenseLayer(outshape, activation="softmax", trainable=True))
+    net.add(Flatten())
+    net.add(DenseLayer(outshape, activation="softmax", trainable=False))
     net.finalize("xent", optimizer="adam")
     return net
 
@@ -46,10 +46,11 @@ def keras_run():
 def xperiment():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
-    net.learn_batch(*mnist.table("learning", m=10))
-    if not net.gradient_check(*mnist.table("testing", m=10)):
-        raise RuntimeError("Gradient Check Failed!")
-    X, Y = mnist.table("learning", m=1000)
+    # net.learn_batch(*mnist.table("learning", m=10))
+    # net.age += 1
+    # if not net.gradient_check(*mnist.table("testing", m=10)):
+    #     raise RuntimeError("Gradient Check Failed!")
+    X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=30, epochs=1, verbose=1)
 
 if __name__ == '__main__':

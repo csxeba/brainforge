@@ -66,7 +66,7 @@ def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
         from matplotlib import pyplot
 
         if mats.ndim > 2:
-            for mat in mats:
+            for mat in mats.T:
                 display_matrices(mat)
         else:
             pyplot.matshow(np.atleast_2d(mats))
