@@ -81,47 +81,6 @@ class ConvolutionOp:
         return "Convolution"
 
 
-class ScipySigConvOp:
-
-    def __init__(self):
-        from scipy.signal import convolve
-        self.op = convolve
-
-    def __str__(self):
-        return "scipy.signal.convolution"
-
-    def apply(self, A, F, mode="valid"):
-        m, ic, iy, ix = A.shape
-        nf, fc, fy, fx = F.shape
-        ox, oy = self.outshape(A.shape, F.shape, mode)
-
-        assert ic == fc, "Number of channels got messed up"
-
-        if mode == "valid":
-            out = np.zeros((m, nf, 1, ox, oy))
-            for i, pic in enumerate(A):
-                for j, filt in enumerate(F):
-                    conved = self.op(pic, filt, mode=mode)
-                    out[i, j] = conved
-            return out[:, :, 0, :, :]
-
-        out = np.zeros((m, nf, ox, oy))
-        for i, pic in enumerate(A):
-            for j, filt in enumerate(F):
-                for c in range(fc):
-                    out[i, j] += self.op(pic[c], filt[c], mode=mode)
-        return out
-
-    @staticmethod
-    def outshape(inshape, fshape, mode="valid"):
-        if mode == "valid":
-            return tuple(ix - fx + 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
-        elif mode == "full":
-            return tuple(ix + fx - 1 for ix, fx in zip(inshape[-2:], fshape[-2:]))
-        else:
-            raise RuntimeError("Unsupported mode: " + str(mode))
-
-
 class MaxPoolOp:
 
     def __init__(self):

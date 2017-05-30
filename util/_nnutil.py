@@ -1,13 +1,14 @@
 import numpy as np
 
 
-floatX = "float32"
+floatX = "float64"
 
 
 def numerical_gradients(network, X, y, epsilon=1e-5):
     ws = network.get_weights(unfold=True)
-    numgrads = np.zeros_like(ws)
+    numgrads = zX_like(ws)
     perturb = np.copy(numgrads)
+    s0 = scalX(0.)
 
     nparams = ws.size
     print("Calculating numerical gradients...")
@@ -23,9 +24,9 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
         cost2 = network.cost(pred2, y)
 
         numgrads[i] = (cost1 - cost2)
-        perturb[i] = 0.0
+        perturb[i] = s0
 
-    numgrads /= (2 * epsilon)
+    numgrads /= (scalX(2.) * epsilon)
     network.set_weights(ws, fold=True)
 
     print("Done!")
@@ -38,7 +39,7 @@ def analytical_gradients(network, X, y):
     return network.get_gradients()
 
 
-def gradient_check(network, X, y, epsilon=1e-5, display=True, verbose=1):
+def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
 
     def fold_difference_matrices(dvec):
         diffs = []
@@ -105,25 +106,25 @@ def gradient_check(network, X, y, epsilon=1e-5, display=True, verbose=1):
     return passed
 
 
-def scalX(scalar):
-    return np.asscalar(np.array([scalar], dtype=floatX))
+def scalX(scalar, dtype=floatX):
+    return np.asscalar(np.array([scalar], dtype=dtype))
 
 
-def zX(*dims):
-    return np.zeros(dims, dtype=floatX)
+def zX(*dims, dtype=floatX):
+    return np.zeros(dims, dtype=dtype)
 
 
-def zX_like(array):
-    return zX(*array.shape)
+def zX_like(array, dtype=floatX):
+    return zX(*array.shape, dtype=dtype)
 
 
-def white(*dims) -> np.ndarray:
+def white(*dims, dtype=floatX) -> np.ndarray:
     """Returns a white noise tensor"""
-    return (np.random.randn(*dims) * np.sqrt(1. / dims[0])).astype(floatX)
+    return (np.random.randn(*dims) * np.sqrt(1. / dims[0])).astype(dtype)
 
 
-def white_like(array):
-    return white(*array.shape)
+def white_like(array, dtype=floatX):
+    return white(*array.shape, dtype=dtype)
 
 
 def rtm(A):

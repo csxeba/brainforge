@@ -4,8 +4,11 @@ import numpy as np
 
 from ..util import scalX
 
-s1 = scalX(1.)
 s0 = scalX(0.)
+s05 = scalX(0.5)
+s1 = scalX(1.)
+s2 = scalX(2.)
+
 
 class CostFunction(abc.ABC):
 
@@ -22,7 +25,7 @@ class CostFunction(abc.ABC):
 class MSE(CostFunction):
 
     def __call__(self, outputs, targets):
-        return (0.5 * np.linalg.norm(outputs - targets) ** 2) / scalX(outputs.shape[0])
+        return (s05 * np.linalg.norm(outputs - targets) ** s2) / scalX(outputs.shape[0])
 
     @staticmethod
     def derivative(outputs, targets):

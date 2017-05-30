@@ -1,12 +1,13 @@
 import numpy as np
 import numba as nb
 
+from brainforge.util import floatX
 
-floatX = nb.float32
+nbfloatX = nb.float32 if floatX == "float32" else nb.float64
 intX = nb.typeof(int())
 
 
-def Xd(X, t=floatX):
+def Xd(X, t=nbfloatX):
     return "{t}[{0}]".format(",".join([":"]*(X-1) + ["::1"]), t=t)
 
 
@@ -17,7 +18,7 @@ def _reshape_receptive_fields(A, F):
     fx, fy, fc, nf = F.shape
     oy, ox = iy - fy + 1, ix - fx + 1
     recfield_size = fx*fy*fc
-    rfields = np.zeros((im, oy * ox, recfield_size), dtype=floatX)
+    rfields = np.zeros((im, oy * ox, recfield_size), dtype=nbfloatX)
     for m in range(im):
         for sy in range(oy):
             for sx in range(ox):
@@ -32,7 +33,7 @@ def correlate(A, F):
     fx, fy, fc, nf = F.shape
     oy, ox = iy - fy + 1, ix - fx + 1
     rfields = _reshape_receptive_fields(A, F)
-    output = np.zeros((im, oy*ox, nf), dtype=floatX)
+    output = np.zeros((im, oy*ox, nf), dtype=nbfloatX)
     Frsh = F.reshape(fx*fy*fc, nf)
 
     for m in range(im):
@@ -46,8 +47,8 @@ def correlate(A, F):
 def maxpool(A, fdim):
     m, ch, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
-    output = np.zeros((m * ch * oy * ox,), dtype=floatX)
-    filt = np.zeros_like(A, dtype=floatX)
+    output = np.zeros((m * ch * oy * ox,), dtype=nbfloatX)
+    filt = np.zeros_like(A, dtype=nbfloatX)
     counter = 0
     for i in range(len(A)):
         pic = A[i]
