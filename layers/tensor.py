@@ -84,6 +84,7 @@ class ConvLayer(LayerBase):
         self.inshape = inshape
         self.depth = depth
         self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
+        # self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
         self.biases = zX(self.nfilters)
         self.nabla_b = zX_like(self.biases)
         self.nabla_w = zX_like(self.weights)

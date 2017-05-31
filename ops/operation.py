@@ -36,13 +36,15 @@ class ReshapeOp:
 
 class ConvolutionOp:
 
-    def valid(self, A, F):
+    @staticmethod
+    def valid(A, F):
         F = F.T
         im, ic, iy, ix = A.shape
         nf, fc, fy, fx = F.shape
         recfield_size = fx * fy * fc
         oy, ox = (iy - fy) + 1, (ix - fx) + 1
         rfields = np.zeros((im, oy*ox, recfield_size))
+        Frsh = F.reshape(nf, recfield_size)
 
         if fc != ic:
             err = "Supplied filter (F) is incompatible with supplied input! (X)\n"
@@ -54,8 +56,12 @@ class ConvolutionOp:
                 for sx in range(ox):
                     rfields[i][sy*ox + sx] = pic[:, sy:sy+fy, sx:sx+fx].ravel()
 
-        output = np.matmul(rfields, F.reshape(nf, recfield_size).T)
-        output = output.transpose(0, 2, 1).reshape(im, nf, oy, ox)
+        output = np.zeros((im, oy*ox, nf))
+        for m in range(im):
+            output[m] = np.dot(rfields[m], Frsh.T)
+
+        # output = np.matmul(rfields, F.reshape(nf, recfield_size).T)
+        output = output.transpose((0, 2, 1)).reshape(im, nf, oy, ox)
         return output
 
     def full(self, A, F):

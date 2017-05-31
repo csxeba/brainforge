@@ -28,9 +28,10 @@ def correlate(A, F):
     fx, fy, fc, nf = F.shape
     oy, ox = iy - fy + 1, ix - fx + 1
     rfields = _reshape_receptive_fields(A, F)
-    output = np.zeros((im, oy*ox, nf), dtype=nbfloatX)
+    # output = np.zeros((im, oy*ox, nf), dtype=nbfloatX)
     Frsh = F.reshape(fx*fy*fc, nf)
 
+    output = np.zeros((im, oy*ox, nf))
     for m in range(im):
         output[m] = np.dot(rfields[m], Frsh)
 
@@ -74,8 +75,9 @@ def inflate(A, filt):
 
 class ConvolutionOp:
 
-    def __init__(self):
-        self.valid = correlate
+    @staticmethod
+    def valid(A, F):
+        return correlate(A, F)
 
     @staticmethod
     def full(A, F):
