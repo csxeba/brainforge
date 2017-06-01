@@ -55,6 +55,8 @@ def build_cnn(data: CData):
 def keras_run():
     mnist = pull_mnist_data()
     net = build_keras_reference(mnist)
+    print("Initial cost: {}, initial acc: {}"
+          .format(*net.evaluate(*mnist.testing)))
     X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=50, epochs=10,
             validation_data=mnist.table("testing"))
@@ -64,6 +66,8 @@ def keras_run():
 def brainforge_run():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
+    print("Initial cost: {}, initial acc: {}"
+          .format(*net.evaluate(*mnist.testing)))
     X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=50, epochs=10,
             validation=mnist.table("learning"))
@@ -72,16 +76,16 @@ def brainforge_run():
 
 def xperiment():
     start = time.time()
-    print("Running BRAINFORGE...")
+    print("Running BRAINFORGE...", end=" ")
     score = brainforge_run()
     print("BRAINFORGE took {} seconds!".format(time.time() - start))
-    print("Cost: {}, Acc: {}".format(*score))
+    print("Final cost: {}, acc: {}".format(*score))
     print("\n")
     start = time.time()
-    print("Running KERAS...")
+    print("Running KERAS...", end=" ")
     score = keras_run()
     print("KERAS took {} seconds!".format(time.time() - start))
-    print("Cost: {}, Acc: {}".format(*score))
+    print("Final cost: {}, acc: {}".format(*score))
 
 
 if __name__ == '__main__':

@@ -141,29 +141,19 @@ class Network:
     # ---- Methods for model fitting ----
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
-        if not self._finalized:
-            raise RuntimeError("Architecture not finalized!")
-
         self.N = X.shape[0]
 
         costs = []
         lstr = len(str(epochs))
         for epoch in range(1, epochs+1):
-            if shuffle:
-                arg = np.arange(X.shape[0])
-                np.random.shuffle(arg)
-                X, Y = X[arg], Y[arg]
             if verbose:
                 print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
-            batches = (((X[start:start+batch_size], Y[start:start+batch_size])
-                        for start in range(0, self.N, batch_size)))
+            batches = self._batch_stream(X, Y, batch_size, shuffle)
             costs += self.epoch(batches, monitor, validation, verbose)
         self.age += epochs
         return costs
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
-        if not self._finalized:
-            raise RuntimeError("Architecture not finalized!")
         self.N = epochs * lessons_per_epoch
 
         epcosts = []
@@ -180,8 +170,6 @@ class Network:
         return epcosts
 
     def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
-        if not self._finalized:
-            raise RuntimeError("Architecture not finalized!")
         fanin, outshape = frame.neurons_required
         if fanin != self.layers[0].outshape or outshape != self.layers[-1].outshape:
             errstring = "Network configuration incompatible with supplied dataframe!\n"
@@ -197,6 +185,9 @@ class Network:
 
     def epoch(self, generator, monitor, validation, verbose):
 
+        if not self._finalized:
+            raise RuntimeError("Architecture not finalized!")
+
         costs = []
         done = 0.
 
@@ -208,7 +199,6 @@ class Network:
             done += self.m / self.N
             if verbose:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(done, np.mean(costs)), end="")
-
         self.learning = False
 
         if verbose:
@@ -220,12 +210,6 @@ class Network:
             print()
 
         return costs
-
-    def backpropagation(self, error):
-        for layer in self.layers[-1:0:-1]:
-            error = layer.backpropagate(error)
-            assert error.dtype == "float64", "Backprop TypeCheck failed after " + str(layer)
-        return error
 
     def learn_batch(self, X, Y, parameter_update=True):
         self.X, self.Y = X, Y
@@ -256,7 +240,7 @@ class Network:
             accchain = ""
         print(chain.format(tcost) + accchain, end="")
 
-    # ---- Methods for forward propagation ----
+    # ---- Methods for forward/backward propagation ----
 
     def classify(self, X):
         return np.argmax(self.prediction(X), axis=1)
@@ -271,18 +255,40 @@ class Network:
     def predict_proba(self, X):
         return self.prediction(X)
 
-    def evaluate(self, X, Y, classify=True):
-        predictions = self.prediction(X)
-        cost = self.cost(predictions, Y) / Y.shape[0]
+    def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False):
+        if not batch_size or batch_size == "full":
+            batch_size = len(X)
+        batches = self._batch_stream(X, Y, batch_size, shuffle)
+
+        cost = []
+        acc = []
+        for x, y in batches:
+            pred = self.prediction(x)
+            cost.append(self.cost(pred, y) / y.shape[0])
+            if classify:
+                pred_classes = np.argmax(pred, axis=1)
+                trgt_classes = np.argmax(y, axis=1)
+                eq = np.equal(pred_classes, trgt_classes)
+                acc.append(eq.mean())
         if classify:
-            pred_classes = np.argmax(predictions, axis=1)
-            trgt_classes = np.argmax(Y, axis=1)
-            eq = np.equal(pred_classes, trgt_classes)
-            acc = np.mean(eq)
-            return cost, acc
-        return cost
+            return np.mean(cost), np.mean(acc)
+        return np.mean(cost)
+
+    def backpropagation(self, error):
+        for layer in self.layers[-1:0:-1]:
+            error = layer.backpropagate(error)
+        return error
 
     # ---- Some utilities ----
+
+    @staticmethod
+    def _batch_stream(X, Y, m, shuffle=True):
+        if shuffle:
+            arg = np.arange(X.shape[0])
+            np.random.shuffle(arg)
+            X, Y = X[arg], Y[arg]
+        return (((X[start:start + m], Y[start:start + m])
+                 for start in range(0, X.shape[0], m)))
 
     def shuffle(self):
         for layer in self.layers:
