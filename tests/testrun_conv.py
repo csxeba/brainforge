@@ -56,7 +56,7 @@ def keras_run():
     mnist = pull_mnist_data()
     net = build_keras_reference(mnist)
     print("Initial cost: {}, initial acc: {}"
-          .format(*net.evaluate(*mnist.testing)))
+          .format(*net.evaluate(*mnist.table("testing"))))
     X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=50, epochs=10,
             validation_data=mnist.table("testing"))
@@ -67,7 +67,7 @@ def brainforge_run():
     mnist = pull_mnist_data()
     net = build_cnn(mnist)
     print("Initial cost: {}, initial acc: {}"
-          .format(*net.evaluate(*mnist.testing)))
+          .format(*net.evaluate(*mnist.table("testing"))))
     X, Y = mnist.table("learning")
     net.fit(X, Y, batch_size=50, epochs=10,
             validation=mnist.table("learning"))

@@ -1,10 +1,76 @@
 """Wrappers for vector-operations and other functions"""
+import abc
+
 import numpy as np
 
 from ..util import zX, zX_like
+from .activation import Sigmoid
 
 
-class FlattenOp:
+sig = Sigmoid()
+
+
+class Op(abc.ABC):
+
+    @abc.abstractmethod
+    def outshape(self, inshape):
+        raise NotImplementedError
+
+
+class DenseOp(Op):
+
+    def __init__(self, neurons):
+        self.neurons = neurons
+
+    @staticmethod
+    def forward(X, W, b):
+        return np.dot(X, W) + b
+
+    @staticmethod
+    def backward(X, E, W):
+        gW = np.dot(X.T, E)
+        # gb = np.sum(E, axis=1)
+        gX = np.dot(E, W.T)
+        return gW, gX
+
+    def outshape(self, inshape):
+        return self.neurons,
+
+
+class LSTMOp(Op):
+
+    @staticmethod
+    def forward(Xrsh, W, b):
+        time, im, idim = Xrsh.shape
+        neu = b.shape[0]
+        output = zX()
+        state = np.zeros_like(output)
+
+        for t in range(self.time):
+            Z = np.concatenate((self.inputs[t], output), axis=1)
+
+            preact = Z @ self.weights + self.biases
+            preact[:, :self.G] = sigmoid(preact[:, :self.G])
+            preact[:, self.G:] = self.activation(preact[:, self.G:])
+
+            f, i, o, cand = np.split(preact, 4, axis=-1)
+
+            state = state * f + i * cand
+            state_a = self.activation(state)
+            output = state_a * o
+
+            self.Zs.append(Z)
+            self.gates.append(preact)
+            self.cache.append([output, state_a, state, preact])
+
+        if self.return_seq:
+            self.output = np.stack([cache[0] for cache in self.cache], axis=1)
+        else:
+            self.output = self.cache[-1][0]
+        return self.output
+
+
+class FlattenOp(Op):
 
     def __init__(self):
         from ..util import rtm
@@ -20,7 +86,7 @@ class FlattenOp:
         return np.prod(inshape),  # return as tuple!
 
 
-class ReshapeOp:
+class ReshapeOp(Op):
 
     def __init__(self, shape):
         self.shape = shape
@@ -32,11 +98,11 @@ class ReshapeOp:
         m = A.shape[0]
         return A.reshape(m, *self.shape)
 
-    def outshape(self, inshape=None):
+    def outshape(self, *args):
         return self.shape
 
 
-class ConvolutionOp:
+class ConvolutionOp(Op):
 
     @staticmethod
     def valid(A, F):
@@ -66,19 +132,22 @@ class ConvolutionOp:
         output = output.transpose((0, 2, 1)).reshape(im, nf, oy, ox)
         return output
 
-    def full(self, A, F):
+    @staticmethod
+    def full(A, F):
         nf, fc, fy, fx = F.shape
         py, px = fy - 1, fx - 1
         pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
-        return self.valid(pA, F)
+        return ConvolutionOp.valid(pA, F)
 
-    def apply(self, A, F, mode="valid"):
+    @staticmethod
+    def apply(A, F, mode="valid"):
         if mode == "valid":
-            return self.valid(A, F)
-        return self.full(A, F)
+            return ConvolutionOp.valid(A, F)
+        return ConvolutionOp.full(A, F)
 
-    def outshape(self, inshape, fshape, mode="valid"):
+    @staticmethod
+    def outshape(inshape, fshape, mode="valid"):
         ic, iy, ix = inshape[-3:]
         fx, fy, fc, nf = fshape
         if mode == "valid":
@@ -92,15 +161,13 @@ class ConvolutionOp:
         return "Convolution"
 
 
-class MaxPoolOp:
-
-    def __init__(self):
-        pass
+class MaxPoolOp(Op):
 
     def __str__(self):
         return "MaxPool"
 
-    def apply(self, A, fdim):
+    @staticmethod
+    def apply(A, fdim):
         im, ic, iy, ix = A.shape
         oy, ox = iy // fdim, ix // fdim
         output = zX(im, ic, oy, ox)
@@ -116,7 +183,8 @@ class MaxPoolOp:
                         filt[m, c, sy:sy+fdim, sx:sx+fdim] += ffield
         return output, filt
 
-    def backward(self, E, filt):
+    @staticmethod
+    def backward(E, filt):
         em, ec, ey, ex = E.shape
         fm, fc, fy, fx = filt.shape
         fdim = fy // ey
@@ -127,7 +195,8 @@ class MaxPoolOp:
                         filt[m, c, y:y+fdim, x:x+fdim] *= E[m, c, i, j]
         return filt
 
-    def outshape(self, inshape, fdim):
+    @staticmethod
+    def outshape(inshape, fdim):
         if len(inshape) == 3:
             m, iy, ix = inshape
             return m, iy // fdim, ix // fdim

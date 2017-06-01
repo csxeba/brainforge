@@ -147,7 +147,7 @@ class _Op(LayerBase, NoParamMixin):
 
     @classmethod
     def from_capsule(cls, capsule):
-        return cls()
+        return cls(*capsule)
 
     @property
     def outshape(self):

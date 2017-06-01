@@ -2,7 +2,7 @@ import numpy as np
 
 from .core import LayerBase, FFBase, NoParamMixin
 from ..ops import Sigmoid
-from ..util import white, rtm
+from ..util import white, rtm, zX, floatX, scalX
 
 sigmoid = Sigmoid()
 
@@ -26,7 +26,7 @@ class HighwayLayer(FFBase):
     def connect(self, to, inshape):
         self.neurons = int(np.prod(inshape))
         self.weights = white(self.neurons, self.neurons*3)
-        self.biases = np.zeros((self.neurons*3,))
+        self.biases = zX(self.neurons*3,)
         FFBase.connect(self, to, inshape)
 
     def feedforward(self, stimuli) -> np.ndarray:
@@ -74,7 +74,7 @@ class DropOut(LayerBase, NoParamMixin):
 
     def __init__(self, dropchance):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        self.dropchance = 1. - dropchance
+        self.dropchance = scalX(1. - dropchance)
         self.mask = None
         self.neurons = None
         self.training = True
@@ -85,13 +85,14 @@ class DropOut(LayerBase, NoParamMixin):
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.inputs = stimuli
-        self.mask = np.random.uniform(0, 1, self.neurons) < self.dropchance
+        self.mask = np.random.uniform(0, 1, self.neurons) < self.dropchance  # type: np.ndarray
+        self.mask.astype(floatX)
         self.output = stimuli * (self.mask if self.brain.learning else self.dropchance)
         return self.output
 
     def backpropagate(self, error: np.ndarray) -> np.ndarray:
         output = error * self.mask
-        self.mask = np.ones_like(self.mask) * self.dropchance
+        self.mask = np.ones_like(self.mask, dtype=floatX) * self.dropchance
         return output
 
     @property
@@ -107,49 +108,3 @@ class DropOut(LayerBase, NoParamMixin):
 
     def __str__(self):
         return "DropOut({})".format(self.dropchance)
-
-
-class Experimental:
-
-    class AboLayer(LayerBase):
-
-        def __init__(self, brain, position, activation):
-            LayerBase.__init__(self, brain, position, activation)
-            self.brain = brain
-            self.fanin = brain.layers[-1].fanout
-            self.neurons = []
-
-        @classmethod
-        def from_capsule(cls, capsule):
-            pass
-
-        def add_minion(self, empty_network):
-            minion = empty_network
-            minion.add_fc(10)
-            minion.finalize_architecture()
-            self.neurons.append(minion)
-
-        def feedforward(self, inputs):
-            """this ain't so simple after all O.O"""
-            pass
-
-        def receive_error(self, error_vector: np.ndarray) -> None:
-            pass
-
-        def shuffle(self) -> None:
-            pass
-
-        def backpropagate(self, error) -> np.ndarray:
-            pass
-
-        def weight_update(self) -> None:
-            pass
-
-        def predict(self, stimuli: np.ndarray) -> np.ndarray:
-            pass
-
-        def outshape(self):
-            return ...
-
-        def __str__(self):
-            pass

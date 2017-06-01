@@ -49,18 +49,17 @@ class Network:
                     raise RuntimeError("Supplied layer is not an instance of LayerBase!\n"+str(layer))
                 self.add(layer)
 
-    def encapsulate(self, dumppath=None):
+    def encapsulate(self, path=None):
         from ..util.persistance import Capsule
         capsule = Capsule(**{
-            "flpath": dumppath,
             "name": self.name,
             "cost": self.cost,
-            "optimizers": self.optimizer,
-            "architectures": self.architecture[:],
+            "optimizer": self.optimizer,
+            "architecture": self.architecture[:],
             "layers": [layer.capsule() for layer in self.layers]})
 
-        if dumppath is not None:
-            capsule.dump()
+        if path is not None:
+            capsule.dump(path)
         return capsule
 
     @classmethod
@@ -74,21 +73,21 @@ class Network:
             capsule = Capsule.read(capsule)
         c = capsule
 
-        net = Network(input_shape=c["layers"][0][0], name=c["name"])
+        net = Network(input_shape=c["vlayers"][0][0], name=c["vname"])
 
-        for layer_name, layer_capsule in zip(c["architectures"], c["layers"]):
+        for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
             if layer_name[:5] == "Input":
                 continue
             layer_cls = trsl(layer_name)
             layer = layer_cls.from_capsule(layer_capsule)
             net.add(layer)
 
-        opti = c["optimizers"]
+        opti = c["voptimizer"]
         if isinstance(opti, str):
             opti = optimizers[opti]()
-        net.finalize(cost=c["cost"], optimizer=opti)
+        net.finalize(cost=c["vcost"], optimizer=opti)
 
-        for layer, lcaps in zip(net.layers, c["layers"]):
+        for layer, lcaps in zip(net.layers, c["vlayers"]):
             if layer.weights is not None:
                 layer.set_weights(lcaps[-1], fold=False)
 
@@ -178,7 +177,7 @@ class Network:
             raise RuntimeError(errstring)
 
         validation = frame.table("testing") if frame.n_testing else ()
-        batch_stream = frame.batchgen(batch_size, "learning", weigh=False, infinite=True)
+        batch_stream = frame.batchgen(batch_size, "learning", infinite=True)
 
         return self.fit_generator(batch_stream, frame.N // batch_size,
                                   epochs, monitor, validation, verbose)
@@ -211,14 +210,12 @@ class Network:
 
         return costs
 
-    def learn_batch(self, X, Y, parameter_update=True):
+    def learn_batch(self, X, Y):
         self.X, self.Y = X, Y
-        preds = self.prediction(self.X)
+        preds = self.prediction(X)
         delta = self.cost.derivative(preds, Y)
         self.backpropagation(delta)
-        if parameter_update:
-            self._parameter_update()
-
+        self._parameter_update()
         return self.cost(self.output, self.Y)
 
     def _parameter_update(self):
@@ -231,10 +228,10 @@ class Network:
         classificaton = "acc" in monitor
         results = self.evaluate(*validation, classify=classificaton)
 
-        chain = "testing cost: {0:.5f}"
+        chain = "Testing cost: {0:.5f}"
         if classificaton:
             tcost, tacc = results
-            accchain = "\taccuracy: {0:.2%}".format(tacc)
+            accchain = " accuracy: {0:.2%}".format(tacc)
         else:
             tcost = results
             accchain = ""
@@ -249,11 +246,7 @@ class Network:
         self.m = X.shape[0]
         for layer in self.layers:
             X = layer.feedforward(X)
-            assert X.dtype == "float64", "Forward TypeCheck failed after " + str(layer)
         return X
-
-    def predict_proba(self, X):
-        return self.prediction(X)
 
     def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False):
         if not batch_size or batch_size == "full":
@@ -264,7 +257,7 @@ class Network:
         acc = []
         for x, y in batches:
             pred = self.prediction(x)
-            cost.append(self.cost(pred, y) / y.shape[0])
+            cost.append(self.cost(pred, y))
             if classify:
                 pred_classes = np.argmax(pred, axis=1)
                 trgt_classes = np.argmax(y, axis=1)
@@ -277,7 +270,6 @@ class Network:
     def backpropagation(self, error):
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
-        return error
 
     # ---- Some utilities ----
 
@@ -291,9 +283,8 @@ class Network:
                  for start in range(0, X.shape[0], m)))
 
     def shuffle(self):
-        for layer in self.layers:
-            if layer.trainable:
-                layer.shuffle()
+        for layer in (l for l in self.layers if l.trainable):
+            layer.shuffle()
 
     def describe(self, verbose=0):
         if not self.name:
@@ -311,22 +302,22 @@ class Network:
             return chain
 
     def get_weights(self, unfold=True):
-        ws = [layer.get_weights(unfold=unfold) for layer in self.layers if layer.trainable]
+        ws = [
+            layer.get_weights(unfold=unfold) for
+            layer in self.layers if layer.trainable
+        ]
         return np.concatenate(ws) if unfold else ws
 
     def set_weights(self, ws, fold=True):
+        trl = (l for l in self.layers if l.trainable)
         if fold:
             start = 0
-            for layer in self.layers:
-                if not layer.trainable:
-                    continue
+            for layer in trl:
                 end = start + layer.nparams
                 layer.set_weights(ws[start:end])
                 start = end
         else:
-            for w, layer in zip(ws, self.layers):
-                if not layer.trainable:
-                    continue
+            for w, layer in zip(ws, trl):
                 layer.set_weights(w)
 
     def get_gradients(self, unfold=True):
@@ -362,6 +353,9 @@ class Network:
     def nparams(self):
         return sum(layer.nparams for layer in self.layers if layer.trainable)
 
+    predict_proba = prediction
+    backpropagate = backpropagation
+
 
 class Autoencoder(Network):
 
@@ -390,8 +384,8 @@ class Autoencoder(Network):
         self.encoder_end -= 1
         self._finalized = False
 
-    def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns
+    def finalize(self, cost="mse", optimizer="sgd"):
+        from ..costs import cost_functions
         from ..optimizers import optimizers
         from ..layers import DenseLayer
 
@@ -408,7 +402,7 @@ class Autoencoder(Network):
                 if isinstance(optimizer, str):
                     optimizer = optimizers[optimizer](layer)
                 layer.optimizer = optimizer
-        self.cost = cost_fns[cost] if isinstance(cost, str) else cost
+        self.cost = cost_functions[cost] if isinstance(cost, str) else cost
         self._finalized = True
 
     def encode(self, X):

@@ -1,16 +1,16 @@
 def translate_architecture(arch):
-    from layers.core import (
+    from ..layers.core import (
         InputLayer, DenseLayer, Activation, Flatten, Reshape
     )
 
-    from layers.fancy import (
+    from ..layers.fancy import (
         DropOut, HighwayLayer
     )
 
-    from layers.recurrent import (
+    from ..layers.recurrent import (
         Reservoir, LSTM, RLayer, ClockworkLayer
     )
-    from layers.tensor import (
+    from ..layers.tensor import (
         ConvLayer, PoolLayer
     )
 
@@ -25,8 +25,8 @@ def translate_architecture(arch):
         "RLay": RLayer,
         "Cloc": ClockworkLayer,
         "LSTM": LSTM,
-        "Echo": Reservoir,
-        "MaxP": PoolLayer,
+        "Rese": Reservoir,
+        "Pool": PoolLayer,
         "Conv": ConvLayer
     }
 

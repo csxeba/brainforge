@@ -1,34 +1,32 @@
 class Capsule:
-    def __init__(self, dirpath, name=None, cost=None,
-                 optimizer=None, architecture=None,
-                 layers=None):
-        self.name = name
-        self.cost = cost
-        self.optimizer = optimizer
-        self.architecture = architecture
-        self.layers = layers
-        self.flpath = dirpath + ("/" if dirpath[-1] not in ("/", "\\") else "") + self.name + ".cps"
 
-    def dump(self):
+    def __init__(self, name=None, cost=None, optimizer=None, architecture=None, layers=None):
+        self.vname = name
+        self.vcost = cost
+        self.voptimizer = optimizer
+        self.varchitecture = architecture
+        self.vlayers = layers
+
+    def dump(self, path):
         import pickle
         import gzip
 
-        with gzip.open(self.flpath, "wb") as handle:
-            pickle.dump({k: v for k, v in self.__dict__.items() if k[0] != "_"},
+        with gzip.open(path, "wb") as handle:
+            pickle.dump({k: v for k, v in self.__dict__.items() if k[0] == "v"},
                         handle)
 
     @classmethod
-    def read(cls, flpath):
+    def read(cls, path):
         import pickle
         import gzip
         from os.path import exists
 
-        if not exists(flpath):
-            raise RuntimeError("No such capsule:", flpath)
+        if not exists(path):
+            raise RuntimeError("No such capsule:", path)
 
         new = cls()
-        with gzip.open(flpath) as handle:
-            new.__dict__ = pickle.load(handle)
+        with gzip.open(path) as handle:
+            new.__dict__.update(pickle.load(handle))
 
         return new
 

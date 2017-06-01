@@ -35,7 +35,9 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
 
 
 def analytical_gradients(network, X, y):
-    network.learn_batch(X, y, parameter_update=False)
+    preds = network.prediction(X)
+    delta = network.cost.derivative(preds, y)
+    network.backpropagation(delta)
     return network.get_gradients()
 
 
@@ -104,6 +106,10 @@ def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
         analyze_difference_matrices(diff)
 
     return passed
+
+
+def ctx1(*arrays):
+    return np.concatenate(arrays, axis=1)
 
 
 def scalX(scalar, dtype=floatX):
