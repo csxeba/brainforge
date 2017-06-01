@@ -1,5 +1,5 @@
 from .core import LayerBase, NoParamMixin
-from ..util import white, zX, zX_like
+from ..util import white, zX, zX_like, errors
 
 
 class PoolLayer(LayerBase, NoParamMixin):
@@ -15,7 +15,11 @@ class PoolLayer(LayerBase, NoParamMixin):
         self.op = MaxPoolOp()
 
     def connect(self, to, inshape):
-        ic, iy, ix = inshape
+        ic, iy, ix = inshape[-3:]
+        if any((iy % self.fdim, ix % self.fdim)):
+            raise errors.ShapeError(
+                "Incompatible shapes: {} % {}".format((ix, iy), self.fdim)
+            )
         LayerBase.connect(self, to, inshape)
         self.output = zX(ic, iy // self.fdim, ix // self.fdim)
 
@@ -78,13 +82,18 @@ class ConvLayer(LayerBase):
             from ..numbaops.lltensor import ConvolutionOp
         else:
             from ..ops import ConvolutionOp
+        depth, iy, ix = inshape[-3:]
+        if any((iy < self.fy, ix < self.fx)):
+            raise errors.ShapeError(
+                "Incompatible shapes: iy ({}) < fy ({}) OR ix ({}) < fx ({})"
+                .format(iy, self.fy, ix, self.fx)
+            )
         LayerBase.connect(self, to, inshape)
-        depth, iy, ix = inshape
         self.op = ConvolutionOp()
         self.inshape = inshape
         self.depth = depth
-        self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
-        # self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
+        # self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
+        self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
         self.biases = zX(self.nfilters)
         self.nabla_b = zX_like(self.biases)
         self.nabla_w = zX_like(self.weights)
@@ -108,10 +117,9 @@ class ConvLayer(LayerBase):
         # er.T (ox, oy, nf, im)
         iT = self.inputs.transpose(1, 0, 2, 3)
         eT = error.transpose(1, 0, 2, 3)
-        gW = self.op.apply(iT, eT.T, mode="valid").transpose(1, 0, 2, 3)
-        self.nabla_w = gW.T
+        self.nabla_w = self.op.apply(iT, eT, mode="valid").transpose(1, 0, 2, 3)
         # self.nabla_b = error.sum()  # TODO: why is this commented out???
-        rW = self.weights[::-1, ::-1, :, :].transpose(0, 1, 3, 2)
+        rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
         backpass = self.op.apply(error, rW, "full")
         return backpass
 
@@ -130,4 +138,4 @@ class ConvLayer(LayerBase):
         return cls(nF, fx, fy, activation=capsule[-2], mode=capsule[-3], trainable=capsule[1])
 
     def __str__(self):
-        return "Conv({}x{}x{})-{}".format(self.nfilters, self.fx, self.fy, str(self.activation)[:4])
+        return "Conv({}x{}x{})-{}".format(self.nfilters, self.fy, self.fx, str(self.activation)[:4])

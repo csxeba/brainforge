@@ -1,6 +1,8 @@
 """Wrappers for vector-operations and other functions"""
 import numpy as np
 
+from ..util import zX, zX_like
+
 
 class FlattenOp:
 
@@ -38,11 +40,11 @@ class ConvolutionOp:
 
     @staticmethod
     def valid(A, F):
-        F = F.T
         im, ic, iy, ix = A.shape
         nf, fc, fy, fx = F.shape
+        # fx, fy, fc, nf = F.shape
         recfield_size = fx * fy * fc
-        oy, ox = (iy - fy) + 1, (ix - fx) + 1
+        oy, ox = iy - fy + 1, ix - fx + 1
         rfields = np.zeros((im, oy*ox, recfield_size))
         Frsh = F.reshape(nf, recfield_size)
 
@@ -65,7 +67,7 @@ class ConvolutionOp:
         return output
 
     def full(self, A, F):
-        fx, fy, fx, nf = F.shape
+        nf, fc, fy, fx = F.shape
         py, px = fy - 1, fx - 1
         pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
@@ -99,19 +101,19 @@ class MaxPoolOp:
         return "MaxPool"
 
     def apply(self, A, fdim):
-        m, ch, iy, ix = A.shape
+        im, ic, iy, ix = A.shape
         oy, ox = iy // fdim, ix // fdim
-        output = np.zeros((m, ch, oy, ox))
-        filt = np.zeros((m, ch, iy, ix))
-        for i, pic in enumerate(A):
-            for c, sheet in enumerate(pic):
+        output = zX(im, ic, oy, ox)
+        filt = zX_like(A)
+        for m in range(im):
+            for c in range(ic):
                 for y, sy in enumerate(range(0, iy, fdim)):
                     for x, sx in enumerate(range(0, ix, fdim)):
-                        recfield = sheet[sy:sy+fdim, sx:sx+fdim]
+                        recfield = A[m, c, sy:sy+fdim, sx:sx+fdim]
                         value = recfield.max()
-                        output[i, c, y, x] = value
+                        output[m, c, y, x] = value
                         ffield = np.equal(recfield, value)
-                        filt[i, c, sy:sy+fdim, sx:sx+fdim] += ffield
+                        filt[m, c, sy:sy+fdim, sx:sx+fdim] += ffield
         return output, filt
 
     def backward(self, E, filt):

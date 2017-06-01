@@ -10,7 +10,8 @@ intX = nb.typeof(int())
         nopython=True)
 def _reshape_receptive_fields(A, F):
     im, ic, iy, ix = A.shape
-    fx, fy, fc, nf = F.shape
+    # fx, fy, fc, nf = F.shape
+    nf, fc, fy, fx = F.shape
     oy, ox = iy - fy + 1, ix - fx + 1
     recfield_size = fx*fy*fc
     rfields = np.zeros((im, oy * ox, recfield_size), dtype=nbfloatX)
@@ -25,15 +26,16 @@ def _reshape_receptive_fields(A, F):
         nopython=True)
 def correlate(A, F):
     im, ic, iy, ix = A.shape
-    fx, fy, fc, nf = F.shape
+    nf, fc, fy, fx = F.shape
+    # fx, fy, fc, nf = F.shape
     oy, ox = iy - fy + 1, ix - fx + 1
     rfields = _reshape_receptive_fields(A, F)
     # output = np.zeros((im, oy*ox, nf), dtype=nbfloatX)
-    Frsh = F.reshape(fx*fy*fc, nf)
+    Frsh = F.reshape(nf, fx * fy * fc)
 
     output = np.zeros((im, oy*ox, nf))
     for m in range(im):
-        output[m] = np.dot(rfields[m], Frsh)
+        output[m] = np.dot(rfields[m], Frsh.T)
 
     return output
 
@@ -41,23 +43,20 @@ def correlate(A, F):
 @nb.jit("{f1}({f4},{i})".format(f1=Xd(1), f4=Xd(4), i=intX),
         nopython=True)
 def maxpool(A, fdim):
-    m, ch, iy, ix = A.shape
+    im, ic, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
-    output = np.zeros((m * ch * oy * ox,), dtype=nbfloatX)
+    output = np.zeros((im, ic, oy, ox), dtype=nbfloatX)
     filt = np.zeros_like(A, dtype=nbfloatX)
-    counter = 0
-    for i in range(len(A)):
-        pic = A[i]
-        for c in range(len(pic)):
-            sheet = pic[c]
+    for m in range(im):
+        for c in range(ic):
             for y, sy in enumerate(range(0, iy, fdim)):
                 for x, sx in enumerate(range(0, ix, fdim)):
-                    recfield = sheet[sy:sy + fdim, sx:sx + fdim]
+                    recfield = A[m, c, sy:sy + fdim, sx:sx + fdim]
                     value = recfield.max()
-                    output[counter] = value
-                    ffield = np.equal(recfield, value)
-                    filt[i, c, sy:sy + fdim, sx:sx + fdim] += ffield
-    return np.concatenate((output, filt.ravel()))
+                    output[m, c, y, x] = value
+                    filterfield = np.equal(recfield, value)
+                    filt[m, c, sy:sy + fdim, sx:sx + fdim] += filterfield
+    return np.concatenate((output.ravel(), filt.ravel()))
 
 
 @nb.jit(nopython=True)
@@ -81,7 +80,8 @@ class ConvolutionOp:
 
     @staticmethod
     def full(A, F):
-        fx, fy, fc, nf = F.shape
+        # fx, fy, fc, nf = F.shape
+        nf, fc, fy, fx = F.shape
         py, px = fy - 1, fx - 1
         pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
@@ -100,7 +100,8 @@ class ConvolutionOp:
     @staticmethod
     def outshape(inshape, fshape, mode="valid"):
         ic, iy, ix = inshape[-3:]
-        fx, fy, fc, nf = fshape
+        # fx, fy, fc, nf = fshape
+        nf, fc, fy, fx = fshape
         if mode == "valid":
             return nf, iy - fy + 1, ix - fx + 1
         else:
@@ -122,10 +123,10 @@ class MaxPoolOp:
     def apply(A, fdim):
         if not A.flags["C_CONTIGUOUS"]:
             A = A.copy()
-        m, ch, iy, ix = A.shape
+        im, ic, iy, ix = A.shape
         oy, ox = iy // fdim, ix // fdim
         outarr = maxpool(A, fdim)
-        output = outarr[:-A.size].reshape(m, ch, oy, ox)
+        output = outarr[:-A.size].reshape(im, ic, oy, ox)
         filt = outarr[-A.size:].reshape(A.shape)
         return output, filt
 
