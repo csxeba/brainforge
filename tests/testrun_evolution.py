@@ -27,18 +27,18 @@ TARGET = np.array([3., 3.])
 pop = Population(
     loci=2,
     fitness_function=fitness,
-    mate_function=matefn1,
+    mate_function=matefn2,
     limit=100)
 
 plt.ion()
-obj = plt.plot(*upscale(pop.individuals.T), "ro", markersize=2)[0]
+obj = plt.plot(*upscale(pop.individuals.T), "bo", markersize=2)[0]
 plt.xlim([-1, 11])
 plt.ylim([-1, 11])
 
 X, Y = np.linspace(-1, 11, 50), np.linspace(-1, 11, 50)
 X, Y = np.meshgrid(X, Y)
 Z = np.array([fitness(np.array([x, y])/10.) for x, y in zip(X.ravel(), Y.ravel())]).reshape(X.shape)
-CS = plt.contour(X, Y, Z)
+CS = plt.contour(X, Y, Z, cmap="hot")
 plt.clabel(CS, inline=1, fontsize=10)
 plt.show()
 means, stds, bests = [], [], []

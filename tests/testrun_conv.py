@@ -13,11 +13,12 @@ def build_keras_reference(data: CData):
     from keras.layers import Conv2D, Flatten, MaxPooling2D, Activation
     inshape, outshape = data.neurons_required
     net = Sequential([
-        Conv2D(filters=24, kernel_size=(3, 3), input_shape=inshape, activation="relu"),
-        Conv2D(filters=12, kernel_size=(3, 3)),
+        Conv2D(filters=15, kernel_size=(3, 3), activation="relu",
+               data_format="channels_first", input_shape=inshape),
+        Conv2D(filters=15, kernel_size=(3, 3)),
         MaxPooling2D(pool_size=(2, 2)),
         Activation("relu"),
-        Conv2D(filters=12, kernel_size=(3, 3), activation="relu"),
+        Conv2D(filters=15, kernel_size=(3, 3), activation="relu"),
         Conv2D(filters=10, kernel_size=(3, 3)),
         MaxPooling2D(pool_size=(2, 2)),
         Activation("relu"),
@@ -30,62 +31,65 @@ def build_keras_reference(data: CData):
     return net
 
 
-def build_cnn(data: CData):
+def build_cnn(data: CData, gradcheck=False):
     from brainforge import Network
     from brainforge.layers import ConvLayer, Flatten, Activation, PoolLayer
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestBrainforgeCNN", layers=(
-        ConvLayer(24, 3, 3, compiled=True, activation="relu"),
-        ConvLayer(12, 3, 3, compiled=True),
+        ConvLayer(15, 3, 3, compiled=False, activation="relu"),
+        ConvLayer(15, 3, 3, compiled=False),
         PoolLayer(2, compiled=True),
         Activation("relu"),
-        ConvLayer(12, 3, 3, compiled=True, activation="relu"),
-        ConvLayer(10, 3, 3, compiled=True),
-        PoolLayer(2, compiled=True),
+        ConvLayer(15, 3, 3, compiled=False, activation="relu"),
+        ConvLayer(10, 3, 3, compiled=False),
+        PoolLayer(2, compiled=False),
         Activation("relu"),
-        ConvLayer(10, 3, 3, compiled=True, activation="tanh"),
+        ConvLayer(10, 3, 3, compiled=False, activation="tanh"),
         ConvLayer(10, 2, 2, compiled=True),
         Flatten(),
         Activation("softmax"),
     ))
     net.finalize("xent", optimizer="adam")
+    if gradcheck:
+        net.gradient_check(*data.table("testing", m=10))
     return net
 
 
 def keras_run():
+    start = time.time()
+    print("Running KERAS...")
+
     mnist = pull_mnist_data()
     net = build_keras_reference(mnist)
-    print("Initial cost: {}, initial acc: {}"
+    print("Initial cost: {:>7.3f}, initial acc: {:>7.2%}"
           .format(*net.evaluate(*mnist.table("testing"))))
     X, Y = mnist.table("learning")
-    net.fit(X, Y, batch_size=50, epochs=10,
+    net.fit(X, Y, batch_size=50, epochs=1,
             validation_data=mnist.table("testing"))
-    return net.evaluate(*mnist.table("testing"))
+    score = net.evaluate(*mnist.table("testing"))
+    print("Final cost: {}, acc: {}".format(*score))
+    print("KERAS took {} seconds!".format(time.time() - start))
 
 
 def brainforge_run():
+    start = time.time()
+    print("Running BRAINFORGE...")
+
     mnist = pull_mnist_data()
-    net = build_cnn(mnist)
-    print("Initial cost: {}, initial acc: {}"
+    net = build_cnn(mnist, gradcheck=True)
+    print("Initial cost: {:>7.3f}, initial acc: {:>7.2%}"
           .format(*net.evaluate(*mnist.table("testing"))))
     X, Y = mnist.table("learning")
-    net.fit(X, Y, batch_size=50, epochs=10,
-            validation=mnist.table("learning"))
-    return net.evaluate(*mnist.table("learning"))
+    net.fit(X, Y, batch_size=50, epochs=1)
+    score = net.evaluate(*mnist.table("testing"))
+    print("Final cost: {}, acc: {}".format(*score))
+    print("BRAINFORGE took {} seconds!".format(time.time() - start))
 
 
 def xperiment():
-    start = time.time()
-    print("Running BRAINFORGE...", end=" ")
-    score = brainforge_run()
-    print("BRAINFORGE took {} seconds!".format(time.time() - start))
-    print("Final cost: {}, acc: {}".format(*score))
-    print("\n")
-    start = time.time()
-    print("Running KERAS...", end=" ")
-    score = keras_run()
-    print("KERAS took {} seconds!".format(time.time() - start))
-    print("Final cost: {}, acc: {}".format(*score))
+    # keras_run()
+    # print("\n")
+    brainforge_run()
 
 
 if __name__ == '__main__':

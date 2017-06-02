@@ -248,14 +248,17 @@ class Network:
             X = layer.feedforward(X)
         return X
 
-    def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False):
+    def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False, verbose=False):
         if not batch_size or batch_size == "full":
             batch_size = len(X)
+        N = X.shape[0]
         batches = self._batch_stream(X, Y, batch_size, shuffle)
 
         cost = []
         acc = []
-        for x, y in batches:
+        for m, (x, y) in enumerate(batches, start=1):
+            if verbose:
+                print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
             pred = self.prediction(x)
             cost.append(self.cost(pred, y))
             if classify:
@@ -263,6 +266,8 @@ class Network:
                 trgt_classes = np.argmax(y, axis=1)
                 eq = np.equal(pred_classes, trgt_classes)
                 acc.append(eq.mean())
+        if verbose:
+            print("\rEvaluating: {:>7.2%}".format(1.))
         if classify:
             return np.mean(cost), np.mean(acc)
         return np.mean(cost)

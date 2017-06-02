@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 
@@ -8,7 +10,8 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
     ws = network.get_weights(unfold=True)
     numgrads = zX_like(ws)
     perturb = np.copy(numgrads)
-    s0 = scalX(0.)
+    epsilon = scalX(epsilon, "float64")
+    s0 = scalX(0., "float64")
 
     nparams = ws.size
     print("Calculating numerical gradients...")
@@ -26,7 +29,7 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
         numgrads[i] = (cost1 - cost2)
         perturb[i] = s0
 
-    numgrads /= (scalX(2.) * epsilon)
+    numgrads /= (scalX(2., "float64") * epsilon)
     network.set_weights(ws, fold=True)
 
     print("Done!")
@@ -35,13 +38,21 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
 
 
 def analytical_gradients(network, X, y):
+    print("Calculating analytical gradients...")
+    print("Forward pass:", end=" ")
     preds = network.prediction(X)
+    print("done! Backward pass:", end=" ")
     delta = network.cost.derivative(preds, y)
     network.backpropagation(delta)
+    print("done!")
     return network.get_gradients()
 
 
 def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
+
+    if "float64" != X.dtype != y.dtype:
+        warnings.warn("Performing gradient check on 32bit precision float!",
+                      RuntimeWarning)
 
     def fold_difference_matrices(dvec):
         diffs = []
@@ -68,10 +79,10 @@ def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
         from matplotlib import pyplot
 
         if mats.ndim > 2:
-            for mat in mats.T:
+            for mat in mats:
                 display_matrices(mat)
         else:
-            pyplot.matshow(np.atleast_2d(mats))
+            pyplot.imshow(np.atleast_2d(mats), cmap="hot")
             pyplot.show()
 
     def get_results(er):
@@ -92,7 +103,7 @@ def gradient_check(network, X, y, epsilon=1e-4, display=True, verbose=1):
                    "Fatal fail in gradient check, error {} > 1e-3"
                    ][errcode].format("({0:.1e})".format(er)))
 
-        return True if errcode < 3 else False
+        return True if errcode < 2 else False
 
     norm = np.linalg.norm
     analytic = analytical_gradients(network, X, y)

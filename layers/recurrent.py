@@ -273,16 +273,16 @@ class GRU(RecurrentBase):
             dZk = dO @ Wo.T
             dK = dZk[:, -neu:]
             dR = prevout * dsig(R) * dK
-            dZ = ct((dU, dR)) @ ct(Wu, Wr).T
+            dZ = ct((dU, dR), axis=1) @ ct((Wu, Wr), axis=1).T
 
-            nWur = Z.T @ ct((dU, dR))
+            nWur = Z.T @ ct((dU, dR), axis=1)
             nWo = Zk.T @ dO
 
             dh = dZ[:, -neu:] + R * dK + U * dh
             dX[t] = dZ[:, :-neu] + dZk[:, :-neu]
 
-            self.nabla_w += ct(nWur, nWo)
-            self.nabla_b += ct((dU, dR, dO)).sum(axis=0)
+            self.nabla_w += ct((nWur, nWo), axis=1)
+            self.nabla_b += ct((dU, dR, dO), axis=1).sum(axis=0)
 
         return dX.transpose(1, 0, 2)
 

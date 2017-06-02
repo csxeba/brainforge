@@ -22,7 +22,7 @@ def build_keras_net(data: Sequence):
     ]).compile(optimizer="sgd", loss="xent")
 
 
-def build(data, what):
+def build(data, what, gradcheck=False):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestRNN")
     rl1 = 180
@@ -37,13 +37,15 @@ def build(data, what):
     net.add(LayerType(rl2, act))
     net.add(DenseLayer(120, activation="tanh"))
     net.add(DenseLayer(outshape, activation="softmax"))
-    net.finalize("xent", optimizer="rmsprop")
+    net.finalize("xent", optimizer="adam")
+    if gradcheck:
+        net.gradient_check(*data.table("testing", m=10))
     return net
 
 
 def xperiment():
     petofi = pull_petofi_data()
-    net = build(petofi, what="GRU")
+    net = build(petofi, what="GRU", gradcheck=True)
     net.describe(verbose=1)
     print("Initial cost: {} acc: {}".format(*net.evaluate(*petofi.table("testing"))))
     print(speak_to_me(net, petofi))
