@@ -153,8 +153,9 @@ class _Op(LayerBase, NoParamMixin):
     def outshape(self):
         return self.opf.outshape(self.inshape)
 
+    @abc.abstractmethod
     def __str__(self):
-        return str(self.opf)
+        raise NotImplementedError
 
 
 class Activation(LayerBase, NoParamMixin):
@@ -296,13 +297,19 @@ class Reshape(_Op):
         if self.position > 1:
             return super().backpropagate(error)
 
+    def __str__(self):
+        return "Reshape-{}".format(self.shape)
+
 
 class Flatten(Reshape):
 
-    def __init__(self):
-        super().__init__(None)
+    def __init__(self, shape=None):
+        super().__init__(shape)
 
     def connect(self, to, inshape):
         from brainforge.ops import ReshapeOp
         super().connect(to, inshape)
         self.opf = ReshapeOp((np.prod(inshape),))
+
+    def __str__(self):
+        return "Flatten"

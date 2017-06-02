@@ -70,22 +70,6 @@ class LSTMOp(Op):
         return self.output
 
 
-class FlattenOp(Op):
-
-    def __init__(self):
-        from ..util import rtm
-        self.op = rtm
-
-    def __str__(self):
-        return "Flatten"
-
-    def __call__(self, A):
-        return self.op(A)
-
-    def outshape(self, inshape=None):
-        return np.prod(inshape),  # return as tuple!
-
-
 class ReshapeOp(Op):
 
     def __init__(self, shape):
