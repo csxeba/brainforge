@@ -62,7 +62,7 @@ class AgentBase(abc.ABC):
         raise NotImplementedError
 
     def learn_batch(self):
-        X, Y = self.xp.get_batch(self.bsize)
+        X, Y = self.xp.get_batch(self.cfg.bsize)
         N = len(X)
         if N == 0:
             return
@@ -70,8 +70,8 @@ class AgentBase(abc.ABC):
         self.push_weights()
 
     def push_weights(self):
-        self.shadow_net *= (1. - self.tau)
-        self.shadow_net += self.tau * self.net.get_weights(unfold=True)
+        self.shadow_net *= (1. - self.cfg.tau)
+        self.shadow_net += self.cfg.tau * self.net.get_weights(unfold=True)
 
     def pull_weights(self):
         self.net.set_weights(self.shadow_net, fold=True)
