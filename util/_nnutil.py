@@ -20,10 +20,10 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
         perturb[i] += epsilon
 
         network.set_weights(ws + perturb, fold=True)
-        pred1 = network.prediction(X)
+        pred1 = network.predict(X)
         cost1 = network.cost(pred1, y)
         network.set_weights(ws - perturb, fold=True)
-        pred2 = network.prediction(X)
+        pred2 = network.predict(X)
         cost2 = network.cost(pred2, y)
 
         numgrads[i] = (cost1 - cost2)
@@ -40,10 +40,10 @@ def numerical_gradients(network, X, y, epsilon=1e-5):
 def analytical_gradients(network, X, y):
     print("Calculating analytical gradients...")
     print("Forward pass:", end=" ")
-    preds = network.prediction(X)
+    preds = network.predict(X)
     print("done! Backward pass:", end=" ")
     delta = network.cost.derivative(preds, y)
-    network.backpropagation(delta)
+    network.backpropagate(delta)
     print("done!")
     return network.get_gradients()
 

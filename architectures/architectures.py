@@ -212,9 +212,9 @@ class Network:
 
     def learn_batch(self, X, Y):
         self.X, self.Y = X, Y
-        preds = self.prediction(X)
+        preds = self.predict(X)
         delta = self.cost.derivative(preds, Y)
-        self.backpropagation(delta)
+        self.backpropagate(delta)
         self._parameter_update()
         return self.cost(self.output, self.Y)
 
@@ -240,9 +240,9 @@ class Network:
     # ---- Methods for forward/backward propagation ----
 
     def classify(self, X):
-        return np.argmax(self.prediction(X), axis=1)
+        return np.argmax(self.predict(X), axis=1)
 
-    def prediction(self, X):
+    def predict(self, X):
         self.m = X.shape[0]
         for layer in self.layers:
             X = layer.feedforward(X)
@@ -259,7 +259,7 @@ class Network:
         for m, (x, y) in enumerate(batches, start=1):
             if verbose:
                 print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
-            pred = self.prediction(x)
+            pred = self.predict(x)
             cost.append(self.cost(pred, y))
             if classify:
                 pred_classes = np.argmax(pred, axis=1)
@@ -272,7 +272,7 @@ class Network:
             return np.mean(cost), np.mean(acc)
         return np.mean(cost)
 
-    def backpropagation(self, error):
+    def backpropagate(self, error):
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
 
@@ -287,9 +287,9 @@ class Network:
         return (((X[start:start + m], Y[start:start + m])
                  for start in range(0, X.shape[0], m)))
 
-    def shuffle(self):
+    def reset(self):
         for layer in (l for l in self.layers if l.trainable):
-            layer.shuffle()
+            layer.reset()
 
     def describe(self, verbose=0):
         if not self.name:
@@ -358,8 +358,8 @@ class Network:
     def nparams(self):
         return sum(layer.nparams for layer in self.layers if layer.trainable)
 
-    predict_proba = prediction
-    backpropagate = backpropagation
+    predict_proba = predict
+    train_on_batch = learn_batch
 
 
 class Autoencoder(Network):
