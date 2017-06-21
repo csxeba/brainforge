@@ -1,1 +1,1 @@
-from .agent import PolicyGradient, DeepQLearning, AgentConfig
+from .agent import PolicyGradient, DeepQLearning, AgentConfig, HillClimbing
