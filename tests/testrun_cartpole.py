@@ -13,7 +13,7 @@ brain = Network(env.observation_space.shape, layers=[
     DenseLayer(env.action_space.n, activation="softmax")
 ])
 brain.finalize("xent", "adam")
-agent = DeepQLearning(brain, env.action_space.n, discount_factor=0.)
+agent = DeepQLearning(brain, env.action_space.n, discount_factor=0.9)
 
 reward_running = None
 episode = 1
@@ -32,7 +32,7 @@ while 1:
         reward_sum += reward
         steps += 1
     # print()
-    agent.accumulate(-1)
+    agent.accumulate(-10)
     reward_running = reward_sum if reward_running is None else \
         (0.1 * reward_sum + 0.9 * reward_running)
     print(f"\rEpisode {episode:>6}, running reward: {reward_running:.2f}", end="")
@@ -40,3 +40,7 @@ while 1:
         print(" Performed knowledge transfer!")
         agent.update()
     episode += 1
+    if reward_running >= 145:
+        break
+
+print("Environment solved!")

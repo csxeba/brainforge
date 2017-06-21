@@ -152,12 +152,10 @@ class DeepQLearning(AgentBase):
 
     def accumulate(self, reward):
         R = np.array(self.rewards[1:] + [reward])
-        if self.cfg.gamma > 0.:
-            R = discount_rewards(R, self.cfg.gamma)
         X = np.stack(self.X[:-1], axis=0)
         Y = np.stack(self.Q[1:], axis=0)
         ix = tuple(self.A[1:])
-        Y[:, ix] = R + Y.max(axis=1)
+        Y[:, ix] = R + np.array([self.cfg.gamma * q for q in Y.max(axis=1)])
         self.xp.remember(X, Y)
         self.reset()
         self.learn_batch()
