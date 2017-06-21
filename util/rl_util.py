@@ -34,7 +34,7 @@ class Experience:
             self.X = self.X[narg]
             self.Y = self.Y[narg]
 
-    def accumulate(self, X, Y):
+    def remember(self, X, Y):
         assert len(X) == len(Y)
         if len(self.X) < 1:
             self.initialize(X, Y)
@@ -45,13 +45,13 @@ class Experience:
             arg = np.arange(self.N)
             np.random.shuffle(arg)
 
-    def get_batch(self, m):
+    def replay(self, batch_size):
         narg = np.arange(self.N)
         np.random.shuffle(narg)
-        marg = narg[:m]
-        if len(marg) == 0:
+        batch_args = narg[:batch_size]
+        if len(batch_args) == 0:
             return [], []
-        return self.X[marg], self.Y[marg]
+        return self.X[batch_args], self.Y[batch_args]
 
 
 def discount_rewards(rwd, gamma=0.99):

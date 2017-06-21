@@ -47,8 +47,6 @@ class AgentBase(abc.ABC):
         self.net = network
         self.shadow_net = network.get_weights()
         self.xp = Experience(agentconfig.xpsize)
-        self.dc_fn = lambda rwd: discount_rewards(rwd, agentconfig.gamma) \
-            if agentconfig.gamma > 0. else lambda rwd: rwd
         self.cfg = agentconfig
 
     @abc.abstractmethod
@@ -64,12 +62,12 @@ class AgentBase(abc.ABC):
         raise NotImplementedError
 
     def learn_batch(self):
-        X, Y = self.xp.get_batch(self.cfg.bsize)
+        X, Y = self.xp.replay(self.cfg.bsize)
         N = len(X)
         if N == 0:
             return
         cost = self.net.train_on_batch(X, Y)
-        print("Cost:", cost)
+        # print("Cost:", cost)
         self.push_weights()
 
     def push_weights(self):
@@ -111,13 +109,15 @@ class PolicyGradient(AgentBase):
         return action
 
     def accumulate(self, reward):
-        R = discount_rewards(np.array(self.rewards[1:] + [reward]), self.cfg.gamma)
-        R -= R.mean()
-        R /= R.std()
+        R = np.array(self.rewards[1:] + [reward])
+        if self.cfg.gamma > 0.:
+            R = discount_rewards(R, self.cfg.gamma)
+            R -= R.mean()
+            R /= R.std()
         X = np.stack(self.X, axis=0)
         Y = np.stack(self.Y, axis=0)
         Y[Y > 0.] *= R
-        self.xp.accumulate(X, Y)
+        self.xp.remember(X, Y)
         self.reset()
         self.learn_batch()
 
@@ -151,11 +151,13 @@ class DeepQLearning(AgentBase):
         return action
 
     def accumulate(self, reward):
+        R = np.array(self.rewards[1:] + [reward])
+        if self.cfg.gamma > 0.:
+            R = discount_rewards(R, self.cfg.gamma)
         X = np.stack(self.X[:-1], axis=0)
-        R = discount_rewards(np.array(self.R[1:]), self.cfg.gamma)
-        Y = np.stack(self.Q[:-1], axis=0)
+        Y = np.stack(self.Q[1:], axis=0)
         ix = tuple(self.A[1:])
         Y[:, ix] = R + Y.max(axis=1)
-        self.xp.accumulate(X, Y)
+        self.xp.remember(X, Y)
         self.reset()
         self.learn_batch()
