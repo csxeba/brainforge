@@ -47,6 +47,8 @@ class AgentBase(abc.ABC):
         self.net = network
         self.shadow_net = network.get_weights()
         self.xp = Experience(agentconfig.xpsize)
+        self.dc_fn = lambda rwd: discount_rewards(rwd, agentconfig.gamma) \
+            if agentconfig.gamma > 0. else lambda rwd: rwd
         self.cfg = agentconfig
 
     @abc.abstractmethod
@@ -66,7 +68,8 @@ class AgentBase(abc.ABC):
         N = len(X)
         if N == 0:
             return
-        self.net.train_on_batch(X, Y)
+        cost = self.net.train_on_batch(X, Y)
+        print("Cost:", cost)
         self.push_weights()
 
     def push_weights(self):
@@ -94,6 +97,7 @@ class PolicyGradient(AgentBase):
 
     def reset(self):
         self.X = []
+        self.Y = []
         self.rewards = []
 
     def sample(self, state, reward):
@@ -108,9 +112,13 @@ class PolicyGradient(AgentBase):
 
     def accumulate(self, reward):
         R = discount_rewards(np.array(self.rewards[1:] + [reward]), self.cfg.gamma)
+        R -= R.mean()
+        R /= R.std()
         X = np.stack(self.X, axis=0)
         Y = np.stack(self.Y, axis=0)
-        self.xp.accumulate(X, Y*R)
+        Y[Y > 0.] *= R
+        self.xp.accumulate(X, Y)
+        self.reset()
         self.learn_batch()
 
 
@@ -149,3 +157,5 @@ class DeepQLearning(AgentBase):
         ix = tuple(self.A[1:])
         Y[:, ix] = R + Y.max(axis=1)
         self.xp.accumulate(X, Y)
+        self.reset()
+        self.learn_batch()

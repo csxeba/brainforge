@@ -290,7 +290,7 @@ class GRU(RecurrentBase):
         return "GRU-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
-class ClockworkLayer(RLayer):
+class ClockworkLayer(RecurrentBase):
 
     def __init__(self, neurons, activaton, blocksizes=None, ticktimes=None, return_seq=False):
         super().__init__(neurons, activaton, return_seq)
@@ -397,9 +397,14 @@ class Reservoir(RLayer):
 
     def connect(self, to, inshape):
         RLayer.connect(self, to, inshape)
-        self.weights = np.random.binomial(1, self.p, size=self.weights.shape).astype(float)
-        self.weights *= np.random.randn(*self.weights.shape)
-        self.biases = white_like(self.biases)
+        wx, wy = self.weights.shape
+        # Create a sparse weight matrix (biases are included)
+        W = np.random.binomial(1, self.p, size=(wx, wy+1)).astype(float)
+        W *= np.random.randn(wx, wy+1)
+        S = np.linalg.svd(W, compute_uv=False)  # compute singular values
+        W /= S[0]**2  # scale to unit spectral radius
+        self.weights = W[:, :-1]
+        self.biases = W[:, -1]
 
     def backpropagate(self, error):
         if self.position > 1:

@@ -112,11 +112,7 @@ class Network:
         self.layers.append(inl)
         self.architecture.append(str(inl))
 
-    def add(self, layer, input_dim=()):
-        if len(self.layers) == 0:
-            self._add_input_layer(input_dim)
-            self.architecture.append(str(self.layers[-1]))
-
+    def add(self, layer):
         layer.connect(self, inshape=self.layers[-1].outshape)
         self.layers.append(layer)
         self.architecture.append(str(layer))
@@ -435,6 +431,13 @@ class Autoencoder(Network):
     # noinspection PyMethodOverriding
     def gradient_check(self, X, verbose=1, epsilon=1e-5):
         return Network.gradient_check(self, X, X, verbose, epsilon)
+
+
+class Reservoir(Network):
+
+    def add(self, layer):
+        from ..layers.recurrent import RecurrentBase
+        layer.we
 
 
 def _xent_hackaround(networkobj, xentobj):
