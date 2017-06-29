@@ -67,23 +67,28 @@ class AgentBase(abc.ABC):
         if N == 0:
             return
         cost = self.net.train_on_batch(X, Y)
-        # print("Cost:", cost)
-        self.push_weights()
+        D = self.push_weights()
+        return cost, D
 
     def push_weights(self):
+        W = self.net.get_weights(unfold=True)
+        D = np.linalg.norm(self.shadow_net - W)
         self.shadow_net *= (1. - self.cfg.tau)
         self.shadow_net += self.cfg.tau * self.net.get_weights(unfold=True)
+        return D / len(W)
 
     def pull_weights(self):
         self.net.set_weights(self.shadow_net, fold=True)
 
     def update(self):
-        self.pull_weights()
+        pass
 
 
-class PolicyGradient(AgentBase):
+class PG(AgentBase):
 
-    type = "PolicyGradient"
+    """Policy Gradient"""
+
+    type = "PG"
 
     def __init__(self, network, nactions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)
@@ -119,10 +124,14 @@ class PolicyGradient(AgentBase):
         Y[Y > 0.] *= R
         self.xp.remember(X, Y)
         self.reset()
-        self.learn_batch()
+        cost, D = self.learn_batch()
+        print("Learned batch. Cost: {:.2f}, D: {.2f}"
+              .format(cost, D))
 
 
-class DeepQLearning(AgentBase):
+class DQN(AgentBase):
+
+    """Deep Q Network"""
 
     type = "DeepQLearning"
 
@@ -158,7 +167,9 @@ class DeepQLearning(AgentBase):
         Y[:, ix] = R + np.array([self.cfg.gamma * q for q in Y.max(axis=1)])
         self.xp.remember(X, Y)
         self.reset()
-        self.learn_batch()
+        cost, D = self.learn_batch()
+        # print("Learned batch. Cost: {:.2f}, D: {:.2f}"
+        #       .format(cost, D))
 
 
 class HillClimbing(AgentBase):
@@ -184,3 +195,17 @@ class HillClimbing(AgentBase):
             self.shadow_net = W
         self.net.set_weights(W + np.random.randn(*W.shape)*0.1)
         self.reset()
+
+
+class DDPG(AgentBase):
+
+    """Deep Deterministic Policy Gradient"""
+
+    def accumulate(self, reward):
+        pass
+
+    def sample(self, state, reward):
+        pass
+
+    def reset(self):
+        pass
