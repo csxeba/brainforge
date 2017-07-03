@@ -30,7 +30,7 @@ def keras_reference_network(data):
 def get_dense_network(data):
     fanin, fanout = data.neurons_required
     nw = Network(fanin, name="TestDenseNet")
-    nw.add(DenseLayer(60, activation="tanh", trainable=True))
+    nw.add(DenseLayer(30, activation="tanh", trainable=True))
     nw.add(DenseLayer(fanout, activation="softmax"))
     nw.finalize("xent", optimizer="sgd")
     return nw
@@ -63,8 +63,9 @@ def main():
     mnist = get_mnist_data(mnistpath)
     mnist.transformation = "std"
 
-    # net = get_dense_network(mnist)
-    net = keras_reference_network(mnist)
+    net = get_dense_network(mnist)
+    net.gradient_check(*mnist.table("testing", m=50))
+    # net = keras_reference_network(mnist)
     net.fit(*mnist.table("learning"), batch_size=20, epochs=30, verbose=1,
             validation_data=mnist.table("testing"))
 

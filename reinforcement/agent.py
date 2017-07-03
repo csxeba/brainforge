@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from ..util.rl_util import discount_rewards, Experience
+from ..util.rl_util import discount_rewards, Experience, LameXP
 
 
 class AgentConfig:
@@ -43,7 +43,6 @@ class AgentBase(abc.ABC):
     def __init__(self, network, agentconfig, **kw):
         if agentconfig is None:
             agentconfig = AgentConfig(**kw)
-        self.rewards = []
         self.net = network
         self.shadow_net = network.get_weights()
         self.xp = Experience(agentconfig.xpsize)
@@ -58,7 +57,7 @@ class AgentBase(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def accumulate(self, reward):
+    def accumulate(self, state, reward):
         raise NotImplementedError
 
     def learn_batch(self):
@@ -67,8 +66,8 @@ class AgentBase(abc.ABC):
         if N == 0:
             return
         cost = self.net.train_on_batch(X, Y)
-        D = self.push_weights()
-        return cost, D
+        # D = self.push_weights()
+        return cost
 
     def push_weights(self):
         W = self.net.get_weights(unfold=True)
@@ -97,6 +96,7 @@ class PG(AgentBase):
         self.X = []
         self.Y = []
         self.rewards = []
+        self.grad = np.zeros_like(network.get_gradients(unfold=True))
 
     def reset(self):
         self.X = []
@@ -113,7 +113,7 @@ class PG(AgentBase):
         self.Y.append(self.action_labels[action])
         return action
 
-    def accumulate(self, reward):
+    def accumulate(self, state, reward):
         R = np.array(self.rewards[1:] + [reward])
         if self.cfg.gamma > 0.:
             R = discount_rewards(R, self.cfg.gamma)
@@ -121,12 +121,18 @@ class PG(AgentBase):
             R /= R.std()
         X = np.stack(self.X, axis=0)
         Y = np.stack(self.Y, axis=0)
-        Y[Y > 0.] *= R
-        self.xp.remember(X, Y)
+        pred = self.net.predict(X)
+        cost = self.net.cost(pred, Y)
+        delta = self.net.cost.derivative(pred, Y)
+        self.net.backpropagate(delta * R[:, None])
+        self.grad += self.net.get_gradients(unfold=True)
         self.reset()
-        cost, D = self.learn_batch()
-        print("Learned batch. Cost: {:.2f}, D: {.2f}"
-              .format(cost, D))
+        return cost
+
+    def update(self):
+        W = self.net.get_weights(unfold=True)
+        self.net.set_weights(self.net.optimizer.optimize(W, self.grad))
+        self.grad = np.zeros_like(self.grad)
 
 
 class DQN(AgentBase):
@@ -159,17 +165,61 @@ class DQN(AgentBase):
         self.A.append(action)
         return action
 
-    def accumulate(self, reward):
-        R = np.array(self.rewards[1:] + [reward])
-        X = np.stack(self.X[:-1], axis=0)
-        Y = np.stack(self.Q[1:], axis=0)
-        ix = tuple(self.A[1:])
-        Y[:, ix] = R + np.array([self.cfg.gamma * q for q in Y.max(axis=1)])
+    def accumulate(self, state, reward):
+        q = self.net.predict(state[None, ...])[0]
+        X = np.stack(self.X, axis=0)
+        Y = np.stack(self.Q[1:] + [q], axis=0)
+        R = np.array(self.R[1:] + [reward])
+        ix = tuple(self.A)
+        Y[range(len(Y)), ix] = R + self.cfg.gamma * Y.max(axis=1)
+        Y[-1, ix[-1]] = reward
         self.xp.remember(X, Y)
         self.reset()
-        cost, D = self.learn_batch()
-        # print("Learned batch. Cost: {:.2f}, D: {:.2f}"
-        #       .format(cost, D))
+        cost = self.learn_batch()
+        return cost
+
+
+class LameDQN(AgentBase):
+
+    type = "DeepQLearning"
+
+    def __init__(self, network, nactions, agentconfig=None, **kw):
+        super().__init__(network, agentconfig, **kw)
+        self.xp = LameXP()
+        self.X = []
+        self.Y = []
+        self.transition = [None, None]
+        self.nactions = nactions
+
+    def reset(self):
+        self.X = []
+        self.Y = []
+        self.transition = [None, None]
+
+    def sample(self, state, reward):
+        transition = self.transition + [reward, state]
+        self.xp.remember(*transition)
+        Q = self.net.predict(state[None, ...])[0]
+        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
+                  else np.random.randint(0, self.nactions))
+        self.transition = [state, action]
+        return action
+
+    def accumulate(self, state, reward):
+        self.xp.remember(*(self.transition + [reward, None]))
+        batch = self.xp.replay(self.cfg.bsize)
+        Xs, Ys = [], []
+        for s, a, r, s_ in batch:
+            y_j = r
+            if s_ is not None:
+                y_j += self.net.predict(s_[None, ...])[0].max()
+            action = np.zeros(self.nactions)
+            action[a] = 1.
+            Xs.append(s)
+            Ys.append(action)
+        self.reset()
+        cost = self.net.train_on_batch(np.array(Xs), np.array(Ys))
+        return cost
 
 
 class HillClimbing(AgentBase):

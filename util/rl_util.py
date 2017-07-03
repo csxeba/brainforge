@@ -59,6 +59,23 @@ class Experience:
         return self.X[batch_args], self.Y[batch_args]
 
 
+class LameXP:
+
+    def __init__(self, limit=3000):
+        from collections import deque
+        self.xp = deque(maxlen=limit)
+
+    def remember(self, s, a, r, s_):
+        if s is None:
+            return
+        self.xp.append((s, a, r, s_))
+
+    def replay(self, batch_size):
+        arg = np.arange(len(self.xp))
+        np.random.shuffle(arg)
+        return [self.xp[i] for i in arg[:batch_size]]
+
+
 def discount_rewards(rwd, gamma=0.99):
     """
     Compute the discounted reward backwards in time
