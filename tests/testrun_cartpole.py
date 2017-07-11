@@ -77,10 +77,33 @@ def run(agent):
             wins += 1
         else:
             wins = 0
-        if wins >= 100:
-            print("Environment solved!")
-            env.render()
+        if wins > 100:
             break
+        if episode % 1000 == 0:
+            agent.update()
+            print(" Updated agent!")
+        episode += 1
+    print("\n\n")
+    print("-" * 50)
+    print("Environment solved!")
+
+
+def plotrun(agent):
+    rewards = []
+    for episode in range(1, 1001):
+        state = env.reset()
+        reward_sum = 0.
+        reward = 0.
+        done = False
+        while not done:
+            action = agent.sample(state, reward)
+            state, reward, done, info = env.step(action)
+            reward_sum += reward
+        rewards.append(reward_sum)
+        agent.accumulate(state, -10.)
+        print(f"\r{episode / 1000:.2%}", end="")
+    print()
+    return rewards
 
 
 if __name__ == '__main__':

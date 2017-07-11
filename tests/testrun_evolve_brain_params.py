@@ -17,7 +17,7 @@ def fitness(W, *args, **kw):
 
 data = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=False,
              floatX="float64")
-net = Network.from_csxdata(data, layers=(
+net = Network(data.neurons_required[0], layers=(
     DenseLayer(60, activation="sigmoid"),
     DenseLayer(data.neurons_required[1], activation="softmax")
 ))

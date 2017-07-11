@@ -117,21 +117,23 @@ class PG(AgentBase):
         if self.cfg.gamma > 0.:
             R = discount_rewards(R, self.cfg.gamma)
             R -= R.mean()
-            R /= R.std()
+            R /= (R.std() + 1e-7)
         X = np.stack(self.X, axis=0)
         Y = np.stack(self.Y, axis=0)
         pred = self.net.predict(X)
         cost = self.net.cost(pred, Y)
         delta = self.net.cost.derivative(pred, Y)
         self.net.backpropagate(delta * R[:, None])
-        self.grad += self.net.get_gradients(unfold=True)
+        # self.grad += self.net.get_gradients(unfold=True)
+        self.net.set_weights(self.net.optimizer.optimize(
+            self.net.get_weights(unfold=True), self.net.get_gradients(unfold=True), len(X)),
+            fold=True)
         self.reset()
         return cost
 
     def update(self):
-        W = self.net.get_weights(unfold=True)
-        self.net.set_weights(self.net.optimizer.optimize(W, self.grad, m=1))
-        self.grad = np.zeros_like(self.grad)
+        self.shadow_net *= self.cfg.tau
+        self.shadow_net += self.net.get_weights(unfold=True)
 
 
 class DQN(AgentBase):
@@ -159,10 +161,9 @@ class DQN(AgentBase):
         self.R.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.Q.append(Q)
-        predact = np.argmax(Q)
-        action = (predact if np.random.uniform() > self.cfg.epsilon
+        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
-        self.A.append(predact)
+        self.A.append(action)
         return action
 
     def accumulate(self, state, reward):
@@ -202,10 +203,9 @@ class LameDQN(AgentBase):
         transition = self.transition + [reward, state]
         self.xp.remember(*transition)
         Q = self.net.predict(state[None, ...])[0]
-        predact = np.argmax(Q)
-        action = (predact if np.random.uniform() < self.cfg.epsilon
+        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
-        self.transition = [state, predact]
+        self.transition = [state, action]
         return action
 
     def accumulate(self, state, reward):

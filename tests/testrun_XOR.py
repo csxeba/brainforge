@@ -2,7 +2,7 @@ import numpy as np
 
 from brainforge import Network
 from brainforge.layers import DenseLayer
-from brainforge.optimizers import RMSprop as Opt
+from brainforge.optimizers import SGD as Opt
 
 from matplotlib import pyplot as plt
 
