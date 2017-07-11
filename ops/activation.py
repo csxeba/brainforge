@@ -97,5 +97,17 @@ class SoftMax(ActivationFunction):
         return A * (A[..., None] - I[None, ...])[:, idx, idy]
 
 
+class OnePlus(ActivationFunction):
+
+    type = "softplus"
+
+    def __call__(self, Z):
+        return 1. + np.log(1. + np.exp(Z))
+
+    def derivative(self, Z: np.ndarray):
+        eZ = np.exp(Z)
+        return eZ / (eZ + 1.)
+
+
 act_fns = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
            "linear": Linear, "relu": ReLU, "softmax": SoftMax}

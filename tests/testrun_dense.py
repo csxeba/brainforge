@@ -3,6 +3,7 @@ from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge import Network
 from brainforge.layers import DenseLayer, DropOut, HighwayLayer
+from brainforge.optimizers import SGD
 
 mnistpath = roots["misc"] + "mnist.pkl.gz"
 logstring = ""
@@ -10,19 +11,20 @@ logstring = ""
 
 def get_mnist_data(path):
     data = CData(mnist_tolearningtable(path, fold=False), headers=None)
-    data.transformation = "std"
+    # data.transformation = "std"
     return data
 
 
 def keras_reference_network(data):
     from keras.models import Sequential
     from keras.layers import Dense
+    from keras.optimizers import SGD
     inshape, outshape = data.neurons_required
     model = Sequential([
-        Dense(60, activation="tanh", input_shape=inshape),
-        Dense(outshape[0], activation="softmax")
+        Dense(30, activation="sigmoid", input_shape=inshape),
+        Dense(outshape[0], activation="sigmoid")
     ])
-    model.compile(optimizer="nadam", loss="categorical_crossentropy",
+    model.compile(optimizer="adam", loss="mse",
                   metrics=["acc"])
     return model
 
@@ -30,9 +32,9 @@ def keras_reference_network(data):
 def get_dense_network(data):
     fanin, fanout = data.neurons_required
     nw = Network(fanin, name="TestDenseNet")
-    nw.add(DenseLayer(30, activation="tanh", trainable=True))
-    nw.add(DenseLayer(fanout, activation="softmax"))
-    nw.finalize("xent", optimizer="sgd")
+    nw.add(DenseLayer(30, activation="sigmoid"))
+    nw.add(DenseLayer(fanout, activation="sigmoid"))
+    nw.finalize("mse", optimizer="adam")
     return nw
 
 
@@ -61,13 +63,15 @@ def main():
 
     log(" --- CsxNet Brainforge testrun ---")
     mnist = get_mnist_data(mnistpath)
-    mnist.transformation = "std"
 
     net = get_dense_network(mnist)
-    net.gradient_check(*mnist.table("testing", m=50))
-    # net = keras_reference_network(mnist)
-    net.fit(*mnist.table("learning"), batch_size=20, epochs=30, verbose=1,
-            validation_data=mnist.table("testing"))
+    knet = keras_reference_network(mnist)
+    # if not net.gradient_check(*mnist.table("testing", m=5)):
+    #     raise RuntimeError("Gradient Check failed!")
+    net.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
+            validation=mnist.table("testing"), monitor=["acc"])
+    knet.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
+             validation_data=mnist.table("testing"))
 
 
 if __name__ == '__main__':

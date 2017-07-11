@@ -135,9 +135,18 @@ def zX_like(array, dtype=floatX):
     return zX(*array.shape, dtype=dtype)
 
 
+def _densewhite(fanin, fanout):
+    return np.random.randn(fanin, fanout) * np.sqrt(2. / float(fanin + fanout))
+
+
+def _convwhite(nf, fc, fy, fx):
+    return np.random.randn(nf, fc, fy, fx) * np.sqrt(2. / float(nf*fy*fx + fc*fy*fx))
+
+
 def white(*dims, dtype=floatX) -> np.ndarray:
     """Returns a white noise tensor"""
-    return (np.random.randn(*dims) * np.sqrt(1. / dims[0])).astype(dtype)
+    tensor = _densewhite(*dims) if len(dims) == 2 else _convwhite(*dims)
+    return tensor.astype(dtype)
 
 
 def white_like(array, dtype=floatX):

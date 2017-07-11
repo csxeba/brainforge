@@ -190,7 +190,7 @@ class Population:
                 inds = np.append(inds, mutants)
                 inds = np.unique(inds)
 
-            self.update(inds, verbose=verbosity)
+            self.update(inds, verbose=verbosity, *fitness_args, **fitness_kwargs)
 
             if verbosity:
                 self.describe(verbosity-1)

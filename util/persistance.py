@@ -34,3 +34,33 @@ class Capsule:
         if item not in self.__dict__:
             raise AttributeError("No such item in capsule:", item)
         return self.__dict__[item]
+
+
+def load(capsule):
+    from ..architectures import Network
+    from ..optimizers import optimizers
+    from ..util.shame import translate_architecture as trsl
+
+    if not isinstance(capsule, Capsule):
+        capsule = Capsule.read(capsule)
+    c = capsule
+
+    net = Network(input_shape=c["vlayers"][0][0], name=c["vname"])
+
+    for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
+        if layer_name[:5] == "Input":
+            continue
+        layer_cls = trsl(layer_name)
+        layer = layer_cls.from_capsule(layer_capsule)
+        net.add(layer)
+
+    opti = c["voptimizer"]
+    if isinstance(opti, str):
+        opti = optimizers[opti]()
+    net.finalize(cost=c["vcost"], optimizer=opti)
+
+    for layer, lcaps in zip(net.layers, c["vlayers"]):
+        if layer.weights is not None:
+            layer.set_weights(lcaps[-1], fold=False)
+
+    return net

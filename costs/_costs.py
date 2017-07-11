@@ -25,11 +25,11 @@ class CostFunction(abc.ABC):
 class MSE(CostFunction):
 
     def __call__(self, outputs, targets):
-        return (s05 * np.linalg.norm(outputs - targets) ** s2) / scalX(outputs.shape[0])
+        return s05 * np.linalg.norm(outputs - targets) ** s2
 
     @staticmethod
     def derivative(outputs, targets):
-        return np.subtract(outputs, targets) / scalX(outputs.shape[0])
+        return outputs - targets
 
     def __str__(self):
         return "MSE"
@@ -42,12 +42,11 @@ class Xent(CostFunction):
 
     @staticmethod
     def call_on_sigmoid(outputs: np.ndarray, targets: np.ndarray):
-        delta = (targets * np.log(outputs) + (s1 - targets) * np.log(s1 - outputs)).sum()
-        return -delta / scalX(outputs.shape[0])
+        return -(targets * np.log(outputs) + (s1 - targets) * np.log(s1 - outputs)).sum()
 
     @staticmethod
     def call_on_softmax(outputs, targets):
-        return -(targets * np.log(outputs)).sum() / scalX(outputs.shape[0])
+        return -(targets * np.log(outputs)).sum()
 
     @staticmethod
     def derivative(outputs, targets):
@@ -55,13 +54,13 @@ class Xent(CostFunction):
 
     @staticmethod
     def simplified_derivative(outputs, targets):
-        return (outputs - targets) / scalX(outputs.shape[0])
+        return outputs - targets
 
     @staticmethod
     def ugly_derivative(outputs, targets):
         enum = targets - outputs
         denom = (outputs - s1) * outputs
-        return (enum / denom) / scalX(outputs.shape[0])
+        return enum / denom
 
     def __str__(self):
         return "Xent"
@@ -70,7 +69,7 @@ class Xent(CostFunction):
 class Hinge(CostFunction):
 
     def __call__(self, outputs, targets):
-        return (np.maximum(s0, s1 - targets * outputs)).sum() / scalX(outputs.shape[0])
+        return (np.maximum(s0, s1 - targets * outputs)).sum()
 
     def __str__(self):
         return "Hinge"
@@ -83,7 +82,7 @@ class Hinge(CostFunction):
         """
         out = -targets
         out[outputs > s1] = s0
-        return out / scalX(outputs.shape[0])
+        return out
 
 
 class _CostFunctions:

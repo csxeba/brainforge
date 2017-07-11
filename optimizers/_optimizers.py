@@ -3,6 +3,10 @@ import warnings
 
 import numpy as np
 
+from ..util import scalX
+
+s1 = scalX(1.)
+
 
 def _rms(X: np.ndarray):
     return np.sqrt((X**2).mean())
@@ -40,8 +44,7 @@ class SGD(GradientOptimizer):
         self.eta = eta
 
     def optimize(self, W, gW, m):
-        eta = self.eta / m
-        return W - gW * eta
+        return W - gW * (self.eta / m)
 
     def __str__(self):
         return "SGD"
@@ -170,7 +173,7 @@ class Adam(SGD):
 
     def optimize(self, W, gW, m):
         eta = self.eta / m
-        self.velocity = self.decay_velocity * self.velocity + (1 - self.decay_velocity) * gW
+        self.velocity = self.decay_velocity * self.velocity + (s1 - self.decay_velocity) * gW
         self.memory = (self.decay_memory * self.memory + (1 - self.decay_memory) * (gW ** 2))
         update = (eta * self.velocity) / np.sqrt(self.memory + self.epsilon)
         return W - update
@@ -186,30 +189,30 @@ class Evolution(Optimizer):
     Coordinates the differential evolution of weight learning.
     """
 
-    def __init__(self, population, evolution_epochs=1,
-                 survival_rate=0.3, mutation_rate=0.1,
-                 optimize_accuracy=False,
-                 *fitness_args, **fitness_kwargs):
+    def __init__(self, nparams=0, population=None, optimize_accuracy=False):
 
         super().__init__()
+        if population is None:
+            from ..evolution import Population
+            if not nparams:
+                raise RuntimeError("Please supply the number of weights to be optimized!")
+            population = Population(nparams, self.default_fitness, fitness_weights=[1], limit=50)
+
         self.population = population
         self.optimize_accuracy = optimize_accuracy
-        self.run_params = dict(epochs=evolution_epochs,
-                               survival_rate=survival_rate,
-                               mutation_rate=mutation_rate)
-        self.fitness_args = fitness_args
-        self.fitness_kwargs = fitness_kwargs
 
-    def optimize(self, W, *args):
-        self.population.run(force_update_at_every=3, verbosity=0,
-                            *self.fitness_args, **self.fitness_kwargs,
-                            **self.run_params)
-        return self.population.best * 10
+    def optimize(self, net, x, y, epochs=1, survival_rate=0.1, mutation_rate=0.1,
+                 force_update_at_every=0, verbosity=0):
+        self.population.run(epochs, survival_rate, mutation_rate,
+                            force_update_at_every, verbosity,
+                            net=net, x=x, y=y, opt_acc=self.optimize_accuracy)
+        best = self.population.best * 10.
+        grade = self.population.grades.min()
+        return best, grade
 
     def capsule(self, nosave=()):
         caps = {"optimize_accuracy": self.optimize_accuracy}
         caps.update(self.population.capsule())
-        caps.update(self.run_params)
         return caps
 
     def __str__(self):
@@ -223,4 +226,4 @@ class Evolution(Optimizer):
 
 
 optimizers = {key.lower(): cls for key, cls in locals().items()
-              if key.lower() not in ("np", "abc", "warnings", "evolution")}
+              if key.lower() not in ("np", "abc", "warnings", "scalx")}

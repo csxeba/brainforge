@@ -32,10 +32,10 @@ pop = Population(
 
 plt.ion()
 obj = plt.plot(*upscale(pop.individuals.T), "bo", markersize=2)[0]
-plt.xlim([-1, 11])
-plt.ylim([-1, 11])
+plt.xlim([-2, 11])
+plt.ylim([-2, 11])
 
-X, Y = np.linspace(-1, 11, 50), np.linspace(-1, 11, 50)
+X, Y = np.linspace(-2, 11, 50), np.linspace(-2, 11, 50)
 X, Y = np.meshgrid(X, Y)
 Z = np.array([fitness(np.array([x, y])/10.) for x, y in zip(X.ravel(), Y.ravel())]).reshape(X.shape)
 CS = plt.contour(X, Y, Z, cmap="hot")

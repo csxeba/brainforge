@@ -33,11 +33,10 @@ class Network:
         self.age = 0
         self.cost = None
         self.optimizer = None
+        self.learn_batch = None
 
-        self.X = None
-        self.Y = None
-        self.N = 0  # X's size goes here
-        self.m = 0  # Batch size goes here
+        self.N = 0
+        self.m = 0
         self._finalized = False
         self.learning = False
 
@@ -62,42 +61,6 @@ class Network:
             capsule.dump(path)
         return capsule
 
-    @classmethod
-    def from_capsule(cls, capsule):
-
-        from ..optimizers import optimizers
-        from ..util.persistance import Capsule
-        from ..util.shame import translate_architecture as trsl
-
-        if not isinstance(capsule, Capsule):
-            capsule = Capsule.read(capsule)
-        c = capsule
-
-        net = Network(input_shape=c["vlayers"][0][0], name=c["vname"])
-
-        for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
-            if layer_name[:5] == "Input":
-                continue
-            layer_cls = trsl(layer_name)
-            layer = layer_cls.from_capsule(layer_capsule)
-            net.add(layer)
-
-        opti = c["voptimizer"]
-        if isinstance(opti, str):
-            opti = optimizers[opti]()
-        net.finalize(cost=c["vcost"], optimizer=opti)
-
-        for layer, lcaps in zip(net.layers, c["vlayers"]):
-            if layer.weights is not None:
-                layer.set_weights(lcaps[-1], fold=False)
-
-        return net
-
-    @classmethod
-    def from_csxdata(cls, frame, layers=(), name=""):
-        inshp = frame.neurons_required[0]
-        return cls(inshp, layers, name)
-
     # ---- Methods for architecture building ----
 
     def _add_input_layer(self, input_shape):
@@ -120,12 +83,23 @@ class Network:
 
     def finalize(self, cost="mse", optimizer="sgd"):
         from ..costs import cost_functions
-        from ..optimizers import optimizers
+        from ..optimizers import optimizers, Evolution, GradientOptimizer
 
         self.cost = cost_functions[cost] \
             if isinstance(cost, str) else cost
-        self.optimizer = optimizers[optimizer](self.nparams) \
-            if isinstance(optimizer, str) else optimizer
+        if isinstance(optimizer, str):
+            self.optimizer = optimizers[optimizer.lower()](self.nparams)
+            self.learn_batch = self.learn_batch_evol \
+                if optimizer == "evolution" else self.learn_batch_grad
+        elif isinstance(optimizer, Evolution):
+            self.optimizer = optimizer
+            self.learn_batch = self.learn_batch_evol
+        elif isinstance(optimizer, GradientOptimizer):
+            self.optimizer = optimizer
+            self.learn_batch = self.learn_batch_grad
+        else:
+            self.optimizer = None
+            warnings.warn("No optimizer specified. Only prediction is supported!")
         self._finalized = True
 
     def pop(self):
@@ -136,25 +110,16 @@ class Network:
     # ---- Methods for model fitting ----
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
-        self.N = X.shape[0]
-
-        costs = []
-        lstr = len(str(epochs))
-        for epoch in range(1, epochs+1):
-            if verbose:
-                print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
-            batches = self._batch_stream(X, Y, batch_size, shuffle)
-            costs += self.epoch(batches, monitor, validation, verbose)
-        self.age += epochs
-        return costs
+        batch_stream = self._batch_stream(X, Y, batch_size, shuffle)
+        return self.fit_generator(batch_stream, lessons_per_epoch=len(X), epochs=epochs,
+                                  monitor=monitor, validation=validation, verbose=verbose)
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
-        self.N = epochs * lessons_per_epoch
+        self.N = lessons_per_epoch
 
         epcosts = []
         lstr = len(str(epochs))
-        epoch = 1
-        while epoch <= epochs:
+        for epoch in range(1, epochs+1):
             if verbose:
                 print("\nEpoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
 
@@ -163,20 +128,6 @@ class Network:
 
         self.age += epochs
         return epcosts
-
-    def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
-        fanin, outshape = frame.neurons_required
-        if fanin != self.layers[0].outshape or outshape != self.layers[-1].outshape:
-            errstring = "Network configuration incompatible with supplied dataframe!\n"
-            errstring += "fanin: {} <-> InputLayer: {}\n".format(fanin, self.layers[0].outshape)
-            errstring += "outshape: {} <-> Net outshape: {}\n".format(outshape, self.layers[-1].outshape)
-            raise RuntimeError(errstring)
-
-        validation = frame.table("testing") if frame.n_testing else ()
-        batch_stream = frame.batchgen(batch_size, "learning", infinite=True)
-
-        return self.fit_generator(batch_stream, frame.N // batch_size,
-                                  epochs, monitor, validation, verbose)
 
     def epoch(self, generator, monitor, validation, verbose):
 
@@ -189,6 +140,7 @@ class Network:
         self.learning = True
         while round(done, 5) < 1.:
             cost = self.learn_batch(*next(generator))
+            cost /= self.m
             costs.append(cost)
 
             done += self.m / self.N
@@ -206,19 +158,20 @@ class Network:
 
         return costs
 
-    def learn_batch(self, X, Y):
-        self.X, self.Y = X, Y
+    def learn_batch_grad(self, X, Y):
         preds = self.predict(X)
         delta = self.cost.derivative(preds, Y)
         self.backpropagate(delta)
-        self._parameter_update()
-        return self.cost(self.output, self.Y)
-
-    def _parameter_update(self):
         W = self.optimizer.optimize(
             self.get_weights(), self.get_gradients(), self.m
         )
         self.set_weights(W)
+        return self.cost(self.output, Y)
+
+    def learn_batch_evol(self, X, Y):
+        best, grade = self.optimizer.optimize(net=self, x=X, y=Y)
+        self.set_weights(best, fold=True)
+        return grade
 
     def _print_progress(self, validation, monitor):
         classificaton = "acc" in monitor
@@ -248,7 +201,7 @@ class Network:
         if not batch_size or batch_size == "full":
             batch_size = len(X)
         N = X.shape[0]
-        batches = self._batch_stream(X, Y, batch_size, shuffle)
+        batches = self._batch_stream(X, Y, batch_size, shuffle, infinite=False)
 
         cost = []
         acc = []
@@ -256,7 +209,7 @@ class Network:
             if verbose:
                 print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
             pred = self.predict(x)
-            cost.append(self.cost(pred, y))
+            cost.append(self.cost(pred, y) / len(x))
             if classify:
                 pred_classes = np.argmax(pred, axis=1)
                 trgt_classes = np.argmax(y, axis=1)
@@ -275,13 +228,16 @@ class Network:
     # ---- Some utilities ----
 
     @staticmethod
-    def _batch_stream(X, Y, m, shuffle=True):
-        if shuffle:
-            arg = np.arange(X.shape[0])
-            np.random.shuffle(arg)
-            X, Y = X[arg], Y[arg]
-        return (((X[start:start + m], Y[start:start + m])
-                 for start in range(0, X.shape[0], m)))
+    def _batch_stream(X, Y, m, shuffle=True, infinite=True):
+        while 1:
+            if shuffle:
+                arg = np.arange(X.shape[0])
+                np.random.shuffle(arg)
+                X, Y = X[arg], Y[arg]
+            for start in range(0, X.shape[0], m):
+                yield X[start:start+m], Y[start:start+m]
+            if not infinite:
+                break
 
     def reset(self):
         for layer in (l for l in self.layers if l.trainable):
@@ -289,9 +245,9 @@ class Network:
 
     def describe(self, verbose=0):
         if not self.name:
-            name = "BrainForge Artificial Neural Network."
+            name = "Brainforge Artificial Neural Network"
         else:
-            name = "{}, the Artificial Neural Network.".format(self.name)
+            name = "{}, the Brainforged Artificial Neural Network".format(self.name)
         chain = "----------\n"
         chain += name + "\n"
         chain += "Age: " + str(self.age) + "\n"
@@ -344,18 +300,17 @@ class Network:
 
     @weights.setter
     def weights(self, ws):
-        self.set_weights(ws, fold=(ws.ndim > 1))
+        self.set_weights(ws, fold=isinstance(ws, np.ndarray))
 
     @property
     def gradients(self):
-        return self.get_gradients(unfold=True)
+        return self.get_gradients(unfold=False)
 
     @property
     def nparams(self):
         return sum(layer.nparams for layer in self.layers if layer.trainable)
 
     predict_proba = predict
-    train_on_batch = learn_batch
 
 
 class Autoencoder(Network):
@@ -431,15 +386,3 @@ class Autoencoder(Network):
     # noinspection PyMethodOverriding
     def gradient_check(self, X, verbose=1, epsilon=1e-5):
         return Network.gradient_check(self, X, X, verbose, epsilon)
-
-
-class Reservoir(Network):
-
-    def add(self, layer):
-        from ..layers.recurrent import RecurrentBase
-        layer.we
-
-
-def _xent_hackaround(networkobj, xentobj):
-    xentobj.__call__ = [xentobj.call_on_sigmoid, xentobj.call_on_softmax][int(networkobj.layers[-1].activation.type == "softmax")]
-    return xentobj
