@@ -6,19 +6,19 @@ import gym
 from brainforge import Network
 from brainforge.layers import DenseLayer
 from brainforge.reinforcement import DQN as AgentType, AgentConfig
-from brainforge.optimizers import SGD as Opt
+from brainforge.optimizers import Adam as Opt
 
-env = gym.make("CartPole-v0")
+env = gym.make("CartPole-v1")
 nactions = env.action_space.n
 
 
 def Qann():
     brain = Network(env.observation_space.shape, layers=[
-        DenseLayer(30, activation="tanh"),
-        DenseLayer(10, activation="tanh"),
+        DenseLayer(24, activation="relu"),
+        DenseLayer(24, activation="relu"),
         DenseLayer(nactions, activation="linear")
     ])
-    brain.finalize("mse", Opt(brain.nparams, eta=0.01))
+    brain.finalize("mse", Opt(brain.nparams, eta=0.001))
     return brain
 
 
@@ -34,13 +34,13 @@ def PGann():
 def keras():
     from keras.models import Sequential
     from keras.layers import Dense
-    from keras.optimizers import SGD as Optm
+    from keras.optimizers import Adam as Optm
     brain = Sequential([
-        Dense(30, input_dim=env.observation_space.shape[0], activation="tanh"),
-        Dense(10, activation="tanh"),
+        Dense(24, input_dim=env.observation_space.shape[0], activation="relu"),
+        Dense(24, activation="relu"),
         Dense(nactions, activation="linear")
     ])
-    brain.compile(Optm(lr=0.01), "mse")
+    brain.compile(Optm(lr=0.001), "mse")
     return brain
 
 
@@ -84,5 +84,7 @@ def run(agent):
 
 
 if __name__ == '__main__':
-    run(AgentType(Qann(), nactions, AgentConfig(epsilon_greedy_rate=0.,
-                                                 discount_factor=0.9)))
+    run(AgentType(Qann(), nactions, AgentConfig(epsilon_greedy_rate=0.01,
+                                                discount_factor=0.95,
+                                                replay_memory_size=10000,
+                                                training_batch_size=1000)))

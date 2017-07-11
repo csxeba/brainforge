@@ -159,9 +159,10 @@ class DQN(AgentBase):
         self.R.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.Q.append(Q)
-        action = (np.argmax(Q) if np.random.uniform() > self.cfg.epsilon
+        predact = np.argmax(Q)
+        action = (predact if np.random.uniform() > self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
-        self.A.append(action)
+        self.A.append(predact)
         return action
 
     def accumulate(self, state, reward):
@@ -201,9 +202,10 @@ class LameDQN(AgentBase):
         transition = self.transition + [reward, state]
         self.xp.remember(*transition)
         Q = self.net.predict(state[None, ...])[0]
-        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
+        predact = np.argmax(Q)
+        action = (predact if np.random.uniform() < self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
-        self.transition = [state, action]
+        self.transition = [state, predact]
         return action
 
     def accumulate(self, state, reward):
