@@ -44,7 +44,8 @@ class SGD(GradientOptimizer):
         self.eta = eta
 
     def optimize(self, W, gW, m):
-        return W - gW * (self.eta / m)
+        updates = gW * (self.eta / m)
+        return W - updates
 
     def __str__(self):
         return "SGD"

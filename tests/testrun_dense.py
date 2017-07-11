@@ -34,7 +34,7 @@ def get_dense_network(data):
     nw = Network(fanin, name="TestDenseNet")
     nw.add(DenseLayer(30, activation="sigmoid"))
     nw.add(DenseLayer(fanout, activation="sigmoid"))
-    nw.finalize("mse", optimizer="adam")
+    nw.finalize("mse", optimizer=SGD(3.))
     return nw
 
 
@@ -61,17 +61,17 @@ def get_highway_net(data):
 
 def main():
 
-    log(" --- CsxNet Brainforge testrun ---")
+    log(" --- Brainforge testrun ---")
     mnist = get_mnist_data(mnistpath)
 
     net = get_dense_network(mnist)
-    knet = keras_reference_network(mnist)
+    # knet = keras_reference_network(mnist)
     # if not net.gradient_check(*mnist.table("testing", m=5)):
     #     raise RuntimeError("Gradient Check failed!")
     net.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
             validation=mnist.table("testing"), monitor=["acc"])
-    knet.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
-             validation_data=mnist.table("testing"))
+    # knet.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
+    #          validation_data=mnist.table("testing"))
 
 
 if __name__ == '__main__':

@@ -34,6 +34,7 @@ class Network:
         self.cost = None
         self.optimizer = None
         self.learn_batch = None
+        self.train_on_batch = None
 
         self.N = 0
         self.m = 0
@@ -100,6 +101,7 @@ class Network:
         else:
             self.optimizer = None
             warnings.warn("No optimizer specified. Only prediction is supported!")
+        self.train_on_batch = self.learn_batch
         self._finalized = True
 
     def pop(self):

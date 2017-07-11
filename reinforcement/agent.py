@@ -66,8 +66,7 @@ class AgentBase(abc.ABC):
         if N == 0:
             return
         cost = self.net.train_on_batch(X, Y)
-        # D = self.push_weights()
-        return cost
+        return cost / len(X)
 
     def push_weights(self):
         W = self.net.get_weights(unfold=True)
@@ -131,7 +130,7 @@ class PG(AgentBase):
 
     def update(self):
         W = self.net.get_weights(unfold=True)
-        self.net.set_weights(self.net.optimizer.optimize(W, self.grad))
+        self.net.set_weights(self.net.optimizer.optimize(W, self.grad, m=1))
         self.grad = np.zeros_like(self.grad)
 
 
@@ -160,7 +159,7 @@ class DQN(AgentBase):
         self.R.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.Q.append(Q)
-        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
+        action = (np.argmax(Q) if np.random.uniform() > self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
         self.A.append(action)
         return action
@@ -168,10 +167,12 @@ class DQN(AgentBase):
     def accumulate(self, state, reward):
         q = self.net.predict(state[None, ...])[0]
         X = np.stack(self.X, axis=0)
-        Y = np.stack(self.Q[1:] + [q], axis=0)
+        Q = np.stack(self.Q[1:] + [q], axis=0)
         R = np.array(self.R[1:] + [reward])
         ix = tuple(self.A)
-        Y[range(len(Y)), ix] = R + self.cfg.gamma * Y.max(axis=1)
+        Y = Q.copy()
+        Ym = Y.max(axis=1) * self.cfg.gamma
+        Y[range(len(Y)), ix] = R + Ym
         Y[-1, ix[-1]] = reward
         self.xp.remember(X, Y)
         self.reset()
@@ -213,18 +214,20 @@ class LameDQN(AgentBase):
             y_j = r
             if s_ is not None:
                 y_j += self.net.predict(s_[None, ...])[0].max()
-            action = np.zeros(self.nactions)
-            action[a] = 1.
+            else:
+                pass
+            action = self.net.predict(s[None, ...])[0]
+            action[a] = y_j
             Xs.append(s)
             Ys.append(action)
         self.reset()
         cost = self.net.train_on_batch(np.array(Xs), np.array(Ys))
-        return cost
+        return cost / len(Xs)
 
 
 class HillClimbing(AgentBase):
 
-    def __init__(self, network, agentconfig=None, **kw):
+    def __init__(self, network, nactions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)
         self.rewards = 0
         self.bestreward = 0
@@ -237,21 +240,23 @@ class HillClimbing(AgentBase):
         pred = self.net.predict(state[None, :])[0]
         return pred.argmax()
 
-    def accumulate(self, reward):
+    def accumulate(self, state, reward):
         W = self.net.get_weights(unfold=True)
         if self.rewards > self.bestreward:
-            print(" Improved by", self.rewards - self.bestreward)
+            # print(" Improved by", self.rewards - self.bestreward)
             self.bestreward = self.rewards
             self.shadow_net = W
         self.net.set_weights(W + np.random.randn(*W.shape)*0.1)
         self.reset()
+        self.bestreward *= 0.9999
+        return self.bestreward
 
 
 class DDPG(AgentBase):
 
     """Deep Deterministic Policy Gradient"""
 
-    def accumulate(self, reward):
+    def accumulate(self, state, reward):
         pass
 
     def sample(self, state, reward):
