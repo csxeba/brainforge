@@ -10,12 +10,16 @@ class AgentConfig:
     def __init__(self, training_batch_size=300,
                  discount_factor=0.99,
                  knowledge_transfer_rate=0.1,
-                 epsilon_greedy_rate=0.1,
+                 epsilon_greedy_rate=0.9,
+                 epsilon_min=0.01,
+                 epsilon_decay_factor=1.0,
                  replay_memory_size=9000):
         self.bsize = training_batch_size
         self.gamma = discount_factor
         self.tau = knowledge_transfer_rate
-        self.epsilon = epsilon_greedy_rate
+        self._epsilon = epsilon_greedy_rate
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay_factor
         self.xpsize = replay_memory_size
 
     @staticmethod
@@ -28,6 +32,14 @@ class AgentConfig:
                 "bsize": "bsize", "gamma": "gamma",
                 "tau": "tau", "xpsize": "xpsize",
                 "epsilon": "epsilon"}[item]
+
+    @property
+    def epsilon(self):
+        if self._epsilon > self.epsilon_min:
+            self._epsilon *= self.epsilon_decay
+            return self._epsilon
+        else:
+            return self.epsilon_min
 
     def __getitem__(self, item):
         return self.__dict__[self.alias(item)]
@@ -63,8 +75,8 @@ class AgentBase(abc.ABC):
     def learn_batch(self):
         X, Y = self.xp.replay(self.xp.limit)
         N = len(X)
-        if N == 0:
-            return
+        if N < self.xp.limit:
+            return 0.
         costs = self.net.fit(X, Y, verbose=0)
         # return np.mean(costs.history["loss"])
         return np.mean(costs)
@@ -107,9 +119,7 @@ class PG(AgentBase):
         self.X.append(state)
         self.rewards.append(reward)
         probabilities = self.net.predict(state[None, ...])[0]
-        action = (np.random.choice(self.actions, p=probabilities)
-                  if np.random.uniform() < self.cfg.epsilon else
-                  np.random.randint(0, len(self.actions)))
+        action = np.random.choice(self.actions, p=probabilities)
         self.Y.append(self.action_labels[action])
         return action
 
@@ -117,7 +127,7 @@ class PG(AgentBase):
         R = np.array(self.rewards[1:] + [reward])
         if self.cfg.gamma > 0.:
             R = discount_rewards(R, self.cfg.gamma)
-            R -= R.mean()
+            # R -= R.mean()
             R /= (R.std() + 1e-7)
         X = np.stack(self.X, axis=0)
         Y = np.stack(self.Y, axis=0)
@@ -131,10 +141,6 @@ class PG(AgentBase):
             fold=True)
         self.reset()
         return cost
-
-    def update(self):
-        self.shadow_net *= self.cfg.tau
-        self.shadow_net += self.net.get_weights(unfold=True)
 
 
 class DQN(AgentBase):
@@ -162,7 +168,7 @@ class DQN(AgentBase):
         self.R.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.Q.append(Q)
-        action = (np.argmax(Q) if np.random.uniform() < self.cfg.epsilon
+        action = (np.argmax(Q) if np.random.uniform() > self.cfg.epsilon
                   else np.random.randint(0, self.nactions))
         self.A.append(action)
         return action
@@ -250,7 +256,7 @@ class HillClimbing(AgentBase):
             self.shadow_net = W
         self.net.set_weights(W + np.random.randn(*W.shape)*0.1)
         self.reset()
-        self.bestreward *= 0.9999
+        self.bestreward *= 0.1
         return self.bestreward
 
 

@@ -32,11 +32,10 @@ class Experience:
         self.Y = np.concatenate((self.Y[m:], Y))
 
     def _add(self, X, Y):
-        N = self.N
         self.X = np.concatenate((self.X, X))
         self.Y = np.concatenate((self.Y, Y))
-        self.X = self.X[-N:]
-        self.Y = self.Y[-N:]
+        self.X = self.X[-self.limit:]
+        self.Y = self.Y[-self.limit:]
 
     def _incorporate(self, X, Y):
         if self.N < self.limit:
