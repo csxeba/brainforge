@@ -7,10 +7,9 @@ from brainforge import Network
 from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
-from csxdata import CData
+from csxdata import CData, roots
 
-dataroot = "/path/to/csv"
-frame = CData(dataroot, headers=1, indeps=3, feature="FeatureName")
+frame = CData(roots["misc"] + "mnist.pkl.gz", fold=False)
 
 inshape, outshape = frame.neurons_required
 
@@ -19,7 +18,7 @@ ranges = ((10, 300), (0, 0.75), (10, 300), (0, 0.75))
 # We determine 2 fitness values: the network's classification error and
 # the time required to run the net. These two values will both be minimized
 # and the accuracy will be considered with a 20x higher weight.
-fweights = (200, 1)
+fweights = (1, 1)
 
 
 def phenotype_to_ann(phenotype):
@@ -38,7 +37,7 @@ def phenotype_to_ann(phenotype):
 def fitness(genotype):
     start = time.time()
     net = phenotype_to_ann(to_phenotype(genotype, ranges))
-    net.fit_csxdata(frame, batch_size=20, epochs=30, verbose=0)
+    net.fit(*frame.table("learning", m=1000), batch_size=50, epochs=1, verbose=0)
     score = net.evaluate(*frame.table("testing", m=10), classify=True)[-1]
     error_rate = 1. - score
     time_req = time.time() - start

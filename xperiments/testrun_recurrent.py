@@ -1,13 +1,13 @@
 from csxdata import Sequence, roots
-from csxdata.utilities.helpers import speak_to_me
 
 from brainforge import Network
 from brainforge.layers import (LSTM, GRU, RLayer, ClockworkLayer,
                                DenseLayer)
+from brainforge.util.rnn_util import speak_to_me
 
 
 def pull_petofi_data():
-    return Sequence(roots["txt"] + "petofi.txt", n_gram=1, timestep=33,
+    return Sequence(roots["txt"] + "petofi.txt", n_gram=1, timestep=5,
                     cross_val=0.01, lower=True, dehungarize=True)
 
 
@@ -22,28 +22,30 @@ def build_keras_net(data: Sequence):
     ]).compile(optimizer="sgd", loss="xent")
 
 
-def build(data, what):
+def build(data, what, gradcheck=False):
     inshape, outshape = data.neurons_required
     net = Network(input_shape=inshape, name="TestRNN")
-    rl1 = 180
-    rl2 = 120
-    act = "relu"
+    rl1 = 10
+    rl2 = 10
+    act = "tanh"
 
     LayerType = {"lstm": LSTM, "gru": GRU,
                  "cwrnn": ClockworkLayer,
                  "rlayer": RLayer}[what.lower()]
 
-    LayerType(rl1, act, return_seq=True)
-    LayerType(rl2, act)
-    net.add(DenseLayer(120, activation="tanh"))
+    net.add(LayerType(rl1, act, return_seq=True))
+    net.add(LayerType(rl2, act))
+    net.add(DenseLayer(10, activation="tanh"))
     net.add(DenseLayer(outshape, activation="softmax"))
-    net.finalize("xent", optimizer="rmsprop")
+    net.finalize("xent", optimizer="adam")
+    if gradcheck:
+        net.gradient_check(*data.table("testing", m=5))
     return net
 
 
 def xperiment():
     petofi = pull_petofi_data()
-    net = build(petofi, what="GRU")
+    net = build(petofi, what="LSTM", gradcheck=True)
     net.describe(verbose=1)
     print("Initial cost: {} acc: {}".format(*net.evaluate(*petofi.table("testing"))))
     print(speak_to_me(net, petofi))

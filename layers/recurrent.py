@@ -4,7 +4,7 @@ import numpy as np
 
 from .core import FFBase
 from ..ops import Sigmoid
-from ..util import white, white_like
+from ..util import white, white_like, zX, zX_like, ctx1
 
 
 sigmoid = Sigmoid()
@@ -29,16 +29,16 @@ class RecurrentBase(FFBase):
         self.inputs = stimuli.transpose(1, 0, 2)
         self.time = self.inputs.shape[0]
         self.Zs, self.gates, self.cache = [], [], []
-        return np.zeros((self.brain.m, self.neurons))
+        return zX(self.brain.m, self.neurons)
 
     @abc.abstractmethod
     def backpropagate(self, error):
-        self.nabla_w = np.zeros_like(self.weights)
-        self.nabla_b = np.zeros_like(self.biases)
+        self.nabla_w = zX_like(self.weights)
+        self.nabla_b = zX_like(self.biases)
         if self.return_seq:
             return error.transpose(1, 0, 2)
         else:
-            error_tensor = np.zeros((self.time, self.brain.m, self.neurons))
+            error_tensor = zX(self.time, self.brain.m, self.neurons)
             error_tensor[-1] = error
             return error_tensor
 
@@ -63,11 +63,11 @@ class RLayer(RecurrentBase):
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons)
-        self.biases = np.zeros((self.neurons,))
+        self.biases = zX(self.neurons,)
 
         RecurrentBase.connect(self, to, inshape)
 
-    def feedforward(self, questions: np.ndarray):
+    def feedforward(self, questions):
 
         output = RecurrentBase.feedforward(self, questions)
 
@@ -95,9 +95,9 @@ class RLayer(RecurrentBase):
         error = RecurrentBase.backpropagate(self, error)
 
         # the gradient flowing backwards in time
-        dh = np.zeros_like(error[-1])
+        dh = zX_like(error[-1])
         # the gradient wrt the whole input tensor: dC/dX = dC/dY_{l-1}
-        dX = np.zeros_like(self.inputs)
+        dX = zX_like(self.inputs)
 
         for t in range(self.time-1, -1, -1):
             output = self.cache[t]
@@ -129,20 +129,20 @@ class LSTM(RecurrentBase):
         self.bias_init_factor = bias_init_factor
 
     def connect(self, to, inshape):
-        RecurrentBase.connect(self, to, inshape)
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
-        self.biases = np.ones((self.neurons * 4,)) * self.bias_init_factor
+        self.biases = zX(self.neurons * 4,) + self.bias_init_factor
+        RecurrentBase.connect(self, to, inshape)
 
-    def feedforward(self, X: np.ndarray):
+    def feedforward(self, X):
 
         output = RecurrentBase.feedforward(self, X)
-        state = np.zeros_like(output)
+        state = zX_like(output)
 
         for t in range(self.time):
             Z = np.concatenate((self.inputs[t], output), axis=1)
 
-            preact = Z @ self.weights + self.biases
+            preact = Z @ self.weights + self.biases  # type: np.ndarray
             preact[:, :self.G] = sigmoid(preact[:, :self.G])
             preact[:, self.G:] = self.activation(preact[:, self.G:])
 
@@ -169,9 +169,9 @@ class LSTM(RecurrentBase):
         actprime = self.activation.derivative
         sigprime = sigmoid.derivative
 
-        dC = np.zeros_like(error[-1])
-        dX = np.zeros_like(self.inputs)
-        dZ = np.zeros_like(self.Zs[0])
+        dC = zX_like(error[-1])
+        dX = zX_like(self.inputs)
+        dZ = zX_like(self.Zs[0])
 
         for t in range(-1, -(self.time+1), -1):
             output, Ca, state, preact = self.cache[t]
@@ -214,7 +214,7 @@ class GRU(RecurrentBase):
 
     def connect(self, to, inshape):
         self.weights = white(inshape[-1] + self.neurons, self.neurons * 3)
-        self.biases = np.zeros(self.neurons * 3)
+        self.biases = zX(self.neurons * 3)
         super().connect(to, inshape)
 
     def feedforward(self, X):
@@ -228,9 +228,7 @@ class GRU(RecurrentBase):
         Wur, Wo = self.weights[:, :-neu], self.weights[:, -neu:]
         bur, bo = self.biases[:-neu], self.biases[-neu:]
 
-        ctx1 = lambda *ar: np.concatenate(ar, axis=1)
-
-        cch = []
+        cache = []
 
         for t in range(self.time):
             Z = ctx1(self.inputs[t], output)
@@ -241,49 +239,50 @@ class GRU(RecurrentBase):
             O = self.activation(Zk @ Wo + bo)
             output = U * output + (1. - U) * O
 
-            cch.append(output)
+            cache.append(output)
             self.gates.append([U, R, O])
             self.Zs.append([Z, Zk])
 
         if self.return_seq:
-            self.output = np.stack(cch, axis=1)
+            self.output = np.stack(cache, axis=1)
         else:
-            self.output = cch[-1]
+            self.output = cache[-1]
 
         return self.output
 
     def backpropagate(self, error):
+        # alias these
+        ct = np.concatenate
+        dact = self.activation.derivative
+        dsig = sigmoid.derivative
+
         error = super().backpropagate(error)
 
-        actprime = self.activation.derivative
-        sigprime = sigmoid.derivative
-
-        dh = np.zeros_like(error[-1])
-        dX = np.zeros_like(self.inputs)
+        dh = zX_like(error[-1])
+        dX = zX_like(self.inputs)
 
         Wu, Wr, Wo = np.split(self.weights, 3, axis=1)
         neu = self.neurons
-        ct = lambda *ar, ax=1: np.concatenate(ar, axis=ax)
 
         for t in range(-1, -(self.time+1), -1):
             (U, R, O), (Z, Zk) = self.gates[t], self.Zs[t]
             prevout = Z[:, -neu:]
             dh += error[t]
-            dU = (prevout - O) * sigprime(U) * dh
-            dO = (1. - U) * actprime(O) * dh  # type: np.ndarray
+            dU = (prevout - O) * dsig(U) * dh
+            dO = (1. - U) * dact(O) * dh  # type: np.ndarray
             dZk = dO @ Wo.T
             dK = dZk[:, -neu:]
-            dR = prevout * sigprime(R) * dK
-            dZ = ct(dU, dR) @ ct(Wu, Wr).T
+            dR = prevout * dsig(R) * dK
+            dZ = ct((dU, dR), axis=1) @ ct((Wu, Wr), axis=1).T
 
-            nWur = Z.T @ ct(dU, dR)
+            nWur = Z.T @ ct((dU, dR), axis=1)
             nWo = Zk.T @ dO
 
             dh = dZ[:, -neu:] + R * dK + U * dh
             dX[t] = dZ[:, :-neu] + dZk[:, :-neu]
 
-            self.nabla_w += ct(nWur, nWo)
-            self.nabla_b += ct(dU, dR, dO).sum(axis=0)
+            self.nabla_w += ct((nWur, nWo), axis=1)
+            self.nabla_b += ct((dU, dR, dO), axis=1).sum(axis=0)
 
         return dX.transpose(1, 0, 2)
 
@@ -291,7 +290,7 @@ class GRU(RecurrentBase):
         return "GRU-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
-class ClockworkLayer(RLayer):
+class ClockworkLayer(RecurrentBase):
 
     def __init__(self, neurons, activaton, blocksizes=None, ticktimes=None, return_seq=False):
         super().__init__(neurons, activaton, return_seq)
@@ -317,7 +316,7 @@ class ClockworkLayer(RLayer):
                 msg += "Please also consider that timesteps < 0 are invalid!"
                 raise RuntimeError(msg)
         self.ticks = np.array(ticktimes)
-        self.tick_array = np.zeros((self.neurons,))
+        self.tick_array = zX(self.neurons,)
         print("CW blocks:", self.blocksizes)
         print("CW ticks :", self.ticks)
 
@@ -325,7 +324,7 @@ class ClockworkLayer(RLayer):
 
         self.Z = inshape[-1] + self.neurons
 
-        W = np.zeros((self.neurons, self.neurons))
+        W = zX(self.neurons, self.neurons)
         U = white(inshape[-1], self.neurons)
 
         for i, bls in enumerate(self.blocksizes):
@@ -335,7 +334,7 @@ class ClockworkLayer(RLayer):
             self.tick_array[start:end] = self.ticks[i]
 
         self.weights = np.concatenate((W, U), axis=0)
-        self.biases = np.zeros((self.neurons,))
+        self.biases = zX(self.neurons,)
 
         RecurrentBase.connect(self, to, inshape)
 
@@ -364,9 +363,9 @@ class ClockworkLayer(RLayer):
         error = RecurrentBase.backpropagate(self, error)
 
         # the gradient flowing backwards in time
-        dh = np.zeros_like(error[-1])
+        dh = zX_like(error[-1])
         # the gradient wrt the whole input tensor: dC/dX = dC/dY_{l-1}
-        dX = np.zeros_like(self.inputs)
+        dX = zX_like(self.inputs)
 
         for t in range(self.time-1, -1, -1):
             output = self.cache[t]
@@ -398,9 +397,14 @@ class Reservoir(RLayer):
 
     def connect(self, to, inshape):
         RLayer.connect(self, to, inshape)
-        self.weights = np.random.binomial(1., self.p, size=self.weights.shape).astype(float)
-        self.weights *= np.random.randn(*self.weights.shape)
-        self.biases = white_like(self.biases)
+        wx, wy = self.weights.shape
+        # Create a sparse weight matrix (biases are included)
+        W = np.random.binomial(1, self.p, size=(wx, wy+1)).astype(float)
+        W *= np.random.randn(wx, wy+1)
+        S = np.linalg.svd(W, compute_uv=False)  # compute singular values
+        W /= S[0]**2  # scale to unit spectral radius
+        self.weights = W[:, :-1]
+        self.biases = W[:, -1]
 
     def backpropagate(self, error):
         if self.position > 1:

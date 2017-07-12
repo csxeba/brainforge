@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from ..util import white, white_like
+from ..util import white, white_like, zX, zX_like
 
 
 class LayerBase(abc.ABC):
@@ -49,7 +49,7 @@ class LayerBase(abc.ABC):
 
     def shuffle(self) -> None:
         self.weights = white_like(self.weights)
-        self.biases = np.zeros_like(self.biases)
+        self.biases = zX_like(self.biases)
 
     def get_weights(self, unfold=True):
         if unfold:
@@ -120,8 +120,8 @@ class FFBase(LayerBase):
     @abc.abstractmethod
     def connect(self, to, inshape):
         LayerBase.connect(self, to, inshape)
-        self.nabla_w = np.zeros_like(self.weights)
-        self.nabla_b = np.zeros_like(self.biases)
+        self.nabla_w = zX_like(self.weights)
+        self.nabla_b = zX_like(self.biases)
 
     @property
     def outshape(self):
@@ -147,14 +147,15 @@ class _Op(LayerBase, NoParamMixin):
 
     @classmethod
     def from_capsule(cls, capsule):
-        return cls()
+        return cls(*capsule)
 
     @property
     def outshape(self):
         return self.opf.outshape(self.inshape)
 
+    @abc.abstractmethod
     def __str__(self):
-        return str(self.opf)
+        raise NotImplementedError
 
 
 class Activation(LayerBase, NoParamMixin):
@@ -216,7 +217,7 @@ class InputLayer(LayerBase, NoParamMixin):
 
     @property
     def outshape(self):
-        return self.neurons if isinstance(self.neurons, tuple) else (self.neurons,)
+        return self.neurons
 
     def __str__(self):
         return "Input-{}".format(self.neurons)
@@ -232,6 +233,7 @@ class DenseLayer(FFBase):
     def __init__(self, neurons, activation="linear", **kw):
         if isinstance(neurons, tuple):
             neurons = neurons[0]
+        neurons = int(neurons)
         FFBase.__init__(self, neurons=neurons, activation=activation, **kw)
 
     def connect(self, to, inshape):
@@ -240,7 +242,7 @@ class DenseLayer(FFBase):
             err += "Maybe you should consider placing <Flatten> before <Dense>?"
             raise RuntimeError(err)
         self.weights = white(inshape[0], self.neurons)
-        self.biases = np.zeros((self.neurons,))
+        self.biases = zX(self.neurons)
         FFBase.connect(self, to, inshape)
 
     def feedforward(self, questions):
@@ -295,13 +297,19 @@ class Reshape(_Op):
         if self.position > 1:
             return super().backpropagate(error)
 
+    def __str__(self):
+        return "Reshape-{}".format(self.shape)
+
 
 class Flatten(Reshape):
 
-    def __init__(self):
-        super().__init__(None)
+    def __init__(self, shape=None):
+        super().__init__(shape)
 
     def connect(self, to, inshape):
         from brainforge.ops import ReshapeOp
         super().connect(to, inshape)
         self.opf = ReshapeOp((np.prod(inshape),))
+
+    def __str__(self):
+        return "Flatten"

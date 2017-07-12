@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+from ..util import floatX, zX, zX_like
+
 
 # I hereby state that
 # this evolutionary algorithm is MINIMIZING the fitness value!
@@ -34,11 +36,10 @@ class Population:
         self.fitness = fitness_function
         self.limit = limit
 
-        self.fitnesses = np.zeros((limit, len(fitness_weights)))
-        self.grades = np.zeros((limit,))
+        self.grades = zX(limit)
         if grade_function is None:
             if fitness_weights is None:
-                raise RuntimeError("Either supply grade_function or fitness_weights!")
+                fitness_weights = np.array([1.])
             self.grade_function = self._default_grade_function
         else:
             if fitness_weights is not None:
@@ -52,14 +53,32 @@ class Population:
                          if mutate_function is None
                          else mutate_function)
 
+        self.fitnesses = zX(limit, len(fitness_weights))
         self.fitness_w = fitness_weights
-        self.individuals = np.random.uniform(size=(limit, loci))
+        self.individuals = np.random.uniform(size=(limit, loci)).astype(floatX)
 
         self.age = 0
 
         self.initialized = False
 
-    def update(self, inds=None, verbose=0):
+    @classmethod
+    def from_capsule(cls, capsule, fitness_fn,
+                     grade_fn=None, mate_fn=None,
+                     mutate_fn=None):
+        indiv = capsule["individuals"]
+        grades = capsule["grades"]
+        fitness_w = capsule["fitness_w"]
+        age = capsule["age"]
+
+        limit, loci = indiv.shape
+        pop = cls(loci, fitness_fn, fitness_w, limit,
+                  grade_fn, mate_fn, mutate_fn)
+        pop.individuals = indiv
+        pop.grades = grades
+        pop.age = age
+        return pop
+
+    def update(self, inds=None, verbose=0, *fitness_args, **fitness_kw):
         if inds is None:
             inds = np.arange(self.individuals.shape[0])
         else:
@@ -70,7 +89,7 @@ class Population:
             gen = self.individuals[ind]
             if verbose:
                 print("\rUpdating {0:>{w}}/{1}".format(int(ind)+1, lim, w=strlen), end="")
-            self.fitnesses[ind] = self.fitness(gen)
+            self.fitnesses[ind] = self.fitness(gen, *fitness_args, **fitness_kw)
             self.grades[ind] = self.grade_function(self.fitnesses[ind])
         if verbose:
             print("\rUpdating {0}/{1}".format(lim, lim))
@@ -96,7 +115,7 @@ class Population:
                 counter += 1
 
         prbs = rescale(self.grades)
-        candidates = np.zeros_like(self.individuals)
+        candidates = zX_like(self.individuals)
         if survivors is None or survivors.size == 0:
             survivors = np.where(self.selection(0.3))[0]
         i = 0
@@ -113,7 +132,7 @@ class Population:
         return candidates
 
     def selection(self, rate):
-        survmask = np.zeros_like(self.grades)
+        survmask = zX_like(self.grades)
         if rate:
             survivors = np.argsort(self.grades)[:int(self.limit * rate)]
             survmask[survivors] = 1.
@@ -123,7 +142,8 @@ class Population:
             survival_rate: float=0.5,
             mutation_rate: float=0.1,
             force_update_at_every: int=0,
-            verbosity: int=1):
+            verbosity: int=1,
+            *fitness_args, **fitness_kwargs):
         """
         Runs the algorithm, optimizing the individuals.
 
@@ -132,13 +152,15 @@ class Population:
         :param mutation_rate: 0-1, rate of mutation at each epoch
         :param force_update_at_every: complete reupdate at specified intervals
         :param verbosity: 1 is verbose, < 1 also prints out v - 1 individuals
+        :param fitness_args: additional arguments for the fitness function
+        :param fitness_kwargs: keyword arguments for the fitness function
         :return: means, stds, bests (grades at each epoch)
         """
 
         if not self.initialized:
             if verbosity:
                 print("EVOLUTION: initial update...")
-            self.update(verbose=verbosity)
+            self.update(verbose=verbosity, *fitness_args, **fitness_kwargs)
             if verbosity:
                 print("EVOLUTION: initial mean grade :", self.grades.mean())
                 print("EVOLUTION: initial std of mean:", self.grades.std())
@@ -168,7 +190,7 @@ class Population:
                 inds = np.append(inds, mutants)
                 inds = np.unique(inds)
 
-            self.update(inds, verbose=verbosity)
+            self.update(inds, verbose=verbosity, *fitness_args, **fitness_kwargs)
 
             if verbosity:
                 self.describe(verbosity-1)
@@ -235,6 +257,10 @@ class Population:
         else:
             mutants = np.array([], dtype=int)
         return individuals, mutants
+
+    def capsule(self):
+        return dict(age=self.age, individuals=self.individuals,
+                    grades=self.grades, fitness_w=self.fitness_w)
 
 
 def to_phenotype(ind, ranges):

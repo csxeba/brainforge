@@ -1,22 +1,27 @@
-import numpy as np
-
 from .core import LayerBase, NoParamMixin
-from ..util import white
+from ..util import white, zX, zX_like, errors
 
 
 class PoolLayer(LayerBase, NoParamMixin):
 
-    def __init__(self, fdim):
+    def __init__(self, fdim, compiled=True):
         LayerBase.__init__(self, activation="linear", trainable=False)
-        from ..ops.numba_ops import MaxPoolOp
+        if compiled:
+            from ..numbaops.lltensor import MaxPoolOp
+        else:
+            from ..ops import MaxPoolOp
         self.fdim = fdim
         self.filter = None
         self.op = MaxPoolOp()
 
     def connect(self, to, inshape):
-        ic, iy, ix = inshape
+        ic, iy, ix = inshape[-3:]
+        if any((iy % self.fdim, ix % self.fdim)):
+            raise errors.ShapeError(
+                "Incompatible shapes: {} % {}".format((ix, iy), self.fdim)
+            )
         LayerBase.connect(self, to, inshape)
-        self.output = np.zeros((ic, iy // self.fdim, ix // self.fdim))
+        self.output = zX(ic, iy // self.fdim, ix // self.fdim)
 
     def feedforward(self, questions):
         """
@@ -49,15 +54,18 @@ class PoolLayer(LayerBase, NoParamMixin):
         return cls(fdim=capsule[-1])
 
     def __str__(self):
-        return "MaxPool-{}x{}".format(self.fdim, self.fdim)
+        return "Pool-{}x{}".format(self.fdim, self.fdim)
 
 
 class ConvLayer(LayerBase):
 
-    def __init__(self, nfilters, filterx, filtery, activation="linear", mode="valid", **kw):
+    def __init__(self, nfilters, filterx, filtery,
+                 mode="valid", activation="linear",
+                 compiled=True, **kw):
 
         LayerBase.__init__(self, activation=activation, **kw)
 
+        self.compiled = compiled
         self.nfilters = nfilters
         self.fx = filterx
         self.fy = filtery
@@ -70,16 +78,25 @@ class ConvLayer(LayerBase):
         self.op = None
 
     def connect(self, to, inshape):
-        from ..ops import ConvolutionOp
-
+        if self.compiled:
+            from ..numbaops.lltensor import ConvolutionOp
+        else:
+            from ..ops import ConvolutionOp
+        depth, iy, ix = inshape[-3:]
+        if any((iy < self.fy, ix < self.fx)):
+            raise errors.ShapeError(
+                "Incompatible shapes: iy ({}) < fy ({}) OR ix ({}) < fx ({})"
+                .format(iy, self.fy, ix, self.fx)
+            )
         LayerBase.connect(self, to, inshape)
-        depth, iy, ix = inshape
         self.op = ConvolutionOp()
         self.inshape = inshape
         self.depth = depth
+        # self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
         self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
-        self.biases = np.zeros((self.nfilters,))
-        self.nabla_b = np.zeros((self.nfilters,))
+        self.biases = zX(self.nfilters)
+        self.nabla_b = zX_like(self.biases)
+        self.nabla_w = zX_like(self.weights)
 
     def feedforward(self, X):
         self.inputs = X
@@ -94,6 +111,10 @@ class ConvLayer(LayerBase):
         """
 
         error *= self.activation.derivative(self.output)
+        # ishp (im, ic, iy, ix)
+        # fshp (fx, fy, fc, nf)
+        # eshp (im, nf, oy, ox) = oshp
+        # er.T (ox, oy, nf, im)
         iT = self.inputs.transpose(1, 0, 2, 3)
         eT = error.transpose(1, 0, 2, 3)
         self.nabla_w = self.op.apply(iT, eT, mode="valid").transpose(1, 0, 2, 3)
@@ -117,4 +138,4 @@ class ConvLayer(LayerBase):
         return cls(nF, fx, fy, activation=capsule[-2], mode=capsule[-3], trainable=capsule[1])
 
     def __str__(self):
-        return "Conv({}x{}x{})-{}".format(self.nfilters, self.fx, self.fy, str(self.activation)[:4])
+        return "Conv({}x{}x{})-{}".format(self.nfilters, self.fy, self.fx, str(self.activation)[:4])

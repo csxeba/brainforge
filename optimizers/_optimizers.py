@@ -3,6 +3,10 @@ import warnings
 
 import numpy as np
 
+from ..util import scalX
+
+s1 = scalX(1.)
+
 
 def _rms(X: np.ndarray):
     return np.sqrt((X**2).mean())
@@ -10,12 +14,6 @@ def _rms(X: np.ndarray):
 
 class Optimizer(abc.ABC):
 
-    def __init__(self):
-        self.brain = None
-
-    def connect(self, brain):
-        self.brain = brain
-
     @abc.abstractmethod
     def optimize(self, *args):
         raise NotImplementedError
@@ -24,199 +22,165 @@ class Optimizer(abc.ABC):
     def __str__(self):
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def capsule(self):
-        raise NotImplementedError
+    def capsule(self, nosave=()):
+        nosave = ["self"] + list(nosave)
+        return {k: v for k, v in self.__dict__ if k not in nosave}
 
 
 class GradientOptimizer(Optimizer):
 
+    def __init__(self, nparams):
+        self.nparams = nparams
+
     @abc.abstractmethod
-    def optimize(self, *args):
-        self.brain.backpropagate()
-        return self.brain.get_weights(unfold=True), self.brain.gradients
+    def optimize(self, W, gW, m):
+        raise NotImplementedError
 
 
 class SGD(GradientOptimizer):
 
-    def __init__(self, eta):
-        super().__init__()
+    def __init__(self, nparams, eta=0.01):
+        super().__init__(nparams)
         self.eta = eta
 
-    def optimize(self, m, *args):
-        W, gW = super().optimize(m)
-        eta = self.eta / m
-        self.brain.set_weights(W - gW * eta)
+    def optimize(self, W, gW, m):
+        updates = gW * (self.eta / m)
+        return W - updates
 
     def __str__(self):
         return "SGD"
 
-    def capsule(self):
-        return [self.eta]
-
 
 class Momentum(SGD):
 
-    def __init__(self, eta=0.1, mu=0.9, nesterov=False, *args):
-        super().__init__(eta)
+    def __init__(self, nparams, eta=0.1, mu=0.9, velocity=None):
+        super().__init__(nparams, eta)
         self.mu = mu
-        self.nesterov = nesterov
-        if not args:
-            self.velocity = None
-        else:
-            if len(args) != 1:
-                msg = "Invalid number of params for Momentum! Got this:\n"
-                msg += str(args)
-                raise RuntimeError(msg)
-            self.velocity = args[0]
+        self.velocity = np.zeros((nparams,)) if velocity is None else velocity
 
-    def connect(self, brain):
-        super().connect(brain)
-        if self.velocity is None:
-            self.velocity = np.zeros((brain.nparams,))
-
-    def optimize(self, m, *args):
-        W, gW = self.brain.get_weights(unfold=True)
+    def optimize(self, W, gW, m):
         eta = self.eta / m
-        self.velocity *= self.mu
-        deltaW = W + self.velocity if self.nesterov else self.brain.gradients
-        self.velocity += deltaW * eta
-        self.brain.set_weights(W - self.velocity)
+        self.velocity = self.velocity * self.mu + gW * eta
+        return W - self.velocity
 
     def __str__(self):
-        return ("Nesterov " if self.nesterov else "") + "Momentum"
+        return "Momentum"
 
-    def capsule(self):
-        return [self.eta, self.mu, self.nesterov]  # , self.vW, self.vb]
+
+class Nesterov(Momentum):
+
+    def __init__(self, nparams, eta=0.1, mu=0.9, velocity=None, memory=None):
+        super().__init__(nparams, eta, mu, velocity)
+        self.memory = np.zeros_like(self.velocity) if memory is None else memory
+
+    def optimize(self, W, gW, m):
+        nabla = gW * (self.eta / m)
+        W_ = self.memory - self.velocity + nabla
+        self.memory = W
+        self.velocity *= self.mu
+        self.velocity += nabla
+        return W_
+
+    def __str__(self):
+        return "Nesterov"
 
 
 class Adagrad(SGD):
 
-    def __init__(self, eta=0.01, epsilon=1e-8, *args):
+    def __init__(self, nparams, eta=0.01, epsilon=1e-8,
+                 memory=None):
         warnings.warn("Adagrad is untested and possibly faulty!")
-        super().__init__(eta)
+        super().__init__(nparams, eta)
         self.epsilon = epsilon
-        if not args:
-            self.memory = None
-        else:
-            if len(args) != 1:
-                msg = "Invalid number of params for {}! Got this:\n".format(str(self))
-                msg += str(args)
-                raise RuntimeError(msg)
-            self.memory = args[0]
+        self.memory = np.zeros((nparams,)) if memory is None else memory
 
-    def connect(self, brain):
-        super().connect(brain)
-        if self.memory is None:
-            self.memory = np.zeros((brain.nparams,))
-
-    def optimize(self, m, *args):
-        W = self.brain.get_weights(unfold=True)
-        eta = self.eta / m
-        self.memory += self.brain.gradients ** 2
-        self.brain.set_weights(W - (eta / np.sqrt(self.memory + self.epsilon)) * self.brain.gradients)
+    def optimize(self, W, gW, m):
+        nabla = gW / m
+        self.memory += nabla**2
+        updates = (self.eta / np.sqrt(self.memory + self.epsilon)) * nabla
+        return W - updates
 
     def __str__(self):
         return "Adagrad"
 
-    def capsule(self):
-        return [self.eta, self.epsilon]  # , self.mW, self.mb]
-
 
 class RMSprop(Adagrad):
 
-    def __init__(self, eta=0.1, decay=0.9, epsilon=1e-8, *args):
-        super().__init__(eta, epsilon, *args)
+    def __init__(self, nparams, eta=0.1, decay=0.9, epsilon=1e-8,
+                 memory=None):
+        super().__init__(nparams, eta, epsilon, memory)
         self.decay = decay
 
-    def optimize(self, m, *args):
-        W = self.brain.get_weights(unfold=True)
-        gW = self.brain.gradients
-        eta = self.eta / m
-        self.memory = self.decay * self.memory + (1 - self.decay) * (gW ** 2)
-        self.brain.set_weights(W - ((eta * gW) / (np.sqrt(self.memory + self.epsilon))))
+    def optimize(self, W, gW, m):
+        nabla = gW / m
+        self.memory *= self.decay
+        self.memory += (1. - self.decay) * (nabla ** 2.)
+        updates = (self.eta * nabla) / np.sqrt(self.memory + self.epsilon)
+        return W - updates
 
     def __str__(self):
         return "RMSprop"
 
-    def capsule(self):
-        return [self.eta, self.decay, self.epsilon]  # , self.mW, self.mb]
 
-
-class Adadelta(SGD):
-
-    def __init__(self, rho=0.99, epsilon=1e-8, *args):
-        warnings.warn("Adadelta is untested and possibly faulty!", RuntimeWarning)
-        super().__init__(eta=0.0)
-        self.rho = rho
-        self.epsilon = epsilon
-        if not args:
-            self.gmemory = None
-            self.umemory = None
-        else:
-            if len(args) != 2:
-                msg = "Invalid number of params for Adadelta! Got this:\n"
-                msg += str(args)
-                raise RuntimeError(msg)
-            self.gmemory, self.umemory = args
-
-    def connect(self, brain):
-        super().connect(brain)
-        if self.gmemory is None:
-            self.gmemory = np.zeros((self.brain.nparams,))
-        if self.umemory is None:
-            self.umemory = np.zeros((self.brain.nparams,))
-
-    def optimize(self, m, *args):
-        W = self.brain.get_weights(unfold=True)
-        gW = self.brain.gradients
-        self.gmemory = self.rho * self.gmemory + (1. - self.rho) * gW**2
-        self.brain.set_weights(W - (self.umemory / self.gmemory) * gW)
-        update = (_rms(self.umemory) / _rms(gW)) * gW
-        self.umemory = self.rho * self.umemory + (1. - self.rho) * update**2
+# class Adadelta(SGD):
+#
+#     def __init__(self, rho=0.99, epsilon=1e-8, *args):
+#         warnings.warn("Adadelta is untested and possibly faulty!", RuntimeWarning)
+#         super().__init__(eta=0.0)
+#         self.rho = rho
+#         self.epsilon = epsilon
+#         if not args:
+#             self.gmemory = None
+#             self.umemory = None
+#         else:
+#             if len(args) != 2:
+#                 msg = "Invalid number of params for Adadelta! Got this:\n"
+#                 msg += str(args)
+#                 raise RuntimeError(msg)
+#             self.gmemory, self.umemory = args
+#         self._opt_coroutine = None
+#
+#     def connect(self, brain):
+#         super().connect(brain)
+#         if self.gmemory is None:
+#             self.gmemory = np.zeros((self.brain.nparams,))
+#         if self.umemory is None:
+#             self.umemory = np.zeros((self.brain.nparams,))
+#
+#     def _opt_coroutine(self, rho, epsilon, gmemory, umemory):
+#         update = np.zeros_like(gmemory)
+#         W, gW, m = yield update
+#         gmemory = rho * gmemory + (1. - rho) * gW**2
+#
+#     def optimize(self, W, gW, m):
+#         W = self.brain.get_weights(unfold=True)
+#         gW = self.brain.gradients
+#         self.gmemory = self.rho * self.gmemory + (1. - self.rho) * gW**2
+#         self.brain.set_weights(W - (self.umemory / self.gmemory) * gW)
+#         update = (_rms(self.umemory) / _rms(gW)) * gW
+#         self.umemory = self.rho * self.umemory + (1. - self.rho) * update**2
 
 
 class Adam(SGD):
 
-    def __init__(self, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8, *args):
-        super().__init__(eta)
+    def __init__(self, nparams, eta=0.1, decay_memory=0.9, decay_velocity=0.999,
+                 epsilon=1e-8, velocity=None, memory=None):
+        super().__init__(nparams, eta)
         self.decay_velocity = decay_velocity
         self.decay_memory = decay_memory
         self.epsilon = epsilon
+        self.velocity = np.zeros((self.nparams,)) if velocity is None else velocity
+        self.memory = np.zeros((self.nparams,)) if memory is None else memory
 
-        if not args:
-            self.velocity = None
-            self.memory = None
-        else:
-            if len(args) != 2:
-                raise RuntimeError("Invalid number of params for ADAM! Got this:\n"
-                                   + str(args))
-            self.velocity, self.memory = args
-
-    def connect(self, brain):
-        super().connect(brain)
-        if self.velocity is None:
-            self.velocity = np.zeros((brain.nparams,))
-        if self.memory is None:
-            self.memory = np.zeros((brain.nparams,))
-
-    def optimize(self, m, *args):
-        W = self.brain.get_weights(unfold=True)
-        gW = self.brain.gradients
+    def optimize(self, W, gW, m):
         eta = self.eta / m
-        self.velocity = self.decay_velocity * self.velocity + (1 - self.decay_velocity) * gW
-        self.memory = (self.decay_memory * self.memory +
-                       (1 - self.decay_memory) * (gW ** 2))
-        update = ((eta * self.velocity) / (np.sqrt(self.memory + self.epsilon)))
-        self.brain.set_weights(W - update)
+        self.velocity = self.decay_velocity * self.velocity + (s1 - self.decay_velocity) * gW
+        self.memory = (self.decay_memory * self.memory + (1 - self.decay_memory) * (gW ** 2))
+        update = (eta * self.velocity) / np.sqrt(self.memory + self.epsilon)
+        return W - update
 
     def __str__(self):
         return "Adam"
-
-    def capsule(self):
-        param = [self.eta, self.decay_velocity, self.decay_memory, self.epsilon]
-        # param += [self.mW, self.mb, self.vW, self.vb]
-        return param
 
 
 class Evolution(Optimizer):
@@ -226,65 +190,41 @@ class Evolution(Optimizer):
     Coordinates the differential evolution of weight learning.
     """
 
-    def __init__(self, survrate=0.3, mutrate=0.1, limit=100, evol_epoch_per_batch=1,
-                 optimize_accuracy=False, mate_function: callable=None,
-                 grade_function: callable=None, mutate_function: callable=None):
+    def __init__(self, nparams=0, population=None, optimize_accuracy=False):
 
         super().__init__()
-        self.survrate = survrate
-        self.mutrate = mutrate
-        self.limit = limit
+        if population is None:
+            from ..evolution import Population
+            if not nparams:
+                raise RuntimeError("Please supply the number of weights to be optimized!")
+            population = Population(nparams, self.default_fitness, fitness_weights=[1], limit=50)
+
+        self.population = population
         self.optimize_accuracy = optimize_accuracy
-        self.pop = None
-        self.pop_params = {kw: fn for kw, fn in locals().items() if "_fn" == kw[-3:]}
-        self.evolepochs = evol_epoch_per_batch
 
-    @classmethod
-    def from_population(cls, population, survrate=0.3, mutrate=0.1, limit=100,
-                        evol_epoch_per_batch=1, optimize_accuracy=False):
-        opti = cls(survrate, mutrate, limit, evol_epoch_per_batch, optimize_accuracy)
-        opti.pop = population
+    def optimize(self, net, x, y, epochs=1, survival_rate=0.1, mutation_rate=0.1,
+                 force_update_at_every=0, verbosity=0):
+        self.population.run(epochs, survival_rate, mutation_rate,
+                            force_update_at_every, verbosity,
+                            net=net, x=x, y=y, opt_acc=self.optimize_accuracy)
+        best = self.population.best * 10.
+        grade = self.population.grades.min()
+        return best, grade
 
-    def connect(self, brain):
-        from ..evolution import Population
-        super().connect(brain)
-        if self.pop is None:
-            self.pop = Population(self.brain.nparams,
-                                  self._fitness,
-                                  fitness_weights=[1.],
-                                  limit=self.limit,
-                                  **self.pop_params)
-        else:
-            inds, params = self.pop.individuals.shape
-            assert inds == self.limit and params == self.brain.nparams
-
-    def optimize(self, *args):
-        self.pop.run(self.evolepochs, self.survrate, self.mutrate,
-                     force_update_at_every=3, verbosity=0)
-        self.brain.set_weights(self.pop.best*10)
-
-    def _fitness(self, gen):
-        self.brain.set_weights(gen*10., fold=True)
-        if self.optimize_accuracy:
-            cost, acc = self.brain.evaluate(self.brain.X, self.brain.Y, classify=True)
-            grade = 1. - acc
-        else:
-            grade = self.brain.evaluate(self.brain.X, self.brain.Y, classify=False)
-        return grade
-
-    def capsule(self):
-        param = [self.survrate, self.mutrate, self.limit, self.evolepochs,
-                 self.optimize_accuracy]
-        pp = self.pop_params
-        param += [pp["mate_function"], pp["grade_function"], pp["mutate_function"]]
-        # param += [self.pop.individuals.ravel()]
-        return param
+    def capsule(self, nosave=()):
+        caps = {"optimize_accuracy": self.optimize_accuracy}
+        caps.update(self.population.capsule())
+        return caps
 
     def __str__(self):
         return "Evolution"
 
+    @staticmethod
+    def default_fitness(ind, net, x, y, opt_acc):
+        net.set_weights(ind)
+        result = net.evaluate(x, y, classify=opt_acc)
+        return (1. - result[-1]) if opt_acc else result
+
 
 optimizers = {key.lower(): cls for key, cls in locals().items()
-              if key not in ("np", "abc", "warnings")}
-
-
+              if key.lower() not in ("np", "abc", "warnings", "scalx")}

@@ -1,6 +1,6 @@
 """
 Neural Network Framework on top of NumPy
-Copyright (C) 2016  Csaba Gór
+Copyright (C) 2017  Csaba Gór
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -49,18 +49,17 @@ class Network:
                     raise RuntimeError("Supplied layer is not an instance of LayerBase!\n"+str(layer))
                 self.add(layer)
 
-    def encapsulate(self, dumppath=None):
+    def encapsulate(self, path=None):
         from ..util.persistance import Capsule
         capsule = Capsule(**{
-            "flpath": dumppath,
             "name": self.name,
             "cost": self.cost,
-            "optimizers": self.optimizer,
-            "architectures": self.architecture[:],
+            "optimizer": self.optimizer,
+            "architecture": self.architecture[:],
             "layers": [layer.capsule() for layer in self.layers]})
 
-        if dumppath is not None:
-            capsule.dump()
+        if path is not None:
+            capsule.dump(path)
         return capsule
 
     @classmethod
@@ -74,30 +73,25 @@ class Network:
             capsule = Capsule.read(capsule)
         c = capsule
 
-        net = Network(input_shape=c["layers"][0][0], name=c["name"])
+        net = Network(input_shape=c["vlayers"][0][0], name=c["vname"])
 
-        for layer_name, layer_capsule in zip(c["architectures"], c["layers"]):
+        for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
             if layer_name[:5] == "Input":
                 continue
             layer_cls = trsl(layer_name)
             layer = layer_cls.from_capsule(layer_capsule)
             net.add(layer)
 
-        opti = c["optimizers"]
+        opti = c["voptimizer"]
         if isinstance(opti, str):
             opti = optimizers[opti]()
-        net.finalize(cost=c["cost"], optimizer=opti)
+        net.finalize(cost=c["vcost"], optimizer=opti)
 
-        for layer, lcaps in zip(net.layers, c["layers"]):
+        for layer, lcaps in zip(net.layers, c["vlayers"]):
             if layer.weights is not None:
                 layer.set_weights(lcaps[-1], fold=False)
 
         return net
-
-    @classmethod
-    def from_csxdata(cls, frame, layers=(), name=""):
-        inshp = frame.neurons_required[0]
-        return cls(inshp, layers, name)
 
     # ---- Methods for architecture building ----
 
@@ -113,24 +107,23 @@ class Network:
         self.layers.append(inl)
         self.architecture.append(str(inl))
 
-    def add(self, layer, input_dim=()):
-        if len(self.layers) == 0:
-            self._add_input_layer(input_dim)
-            self.architecture.append(str(self.layers[-1]))
-
+    def add(self, layer):
         layer.connect(self, inshape=self.layers[-1].outshape)
         self.layers.append(layer)
         self.architecture.append(str(layer))
         layer.connected = True
+        self._finalized = False
 
-    def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns
+    def finalize(self, cost="mse", optimizer="sgd"):
+        from ..costs import cost_functions
         from ..optimizers import optimizers
 
-        self.cost = cost_fns[cost](self) if isinstance(cost, str) else cost
-        self.optimizer = optimizers[optimizer]() if isinstance(optimizer, str) else optimizer
-        self.optimizer.connect(self)
+        self.cost = cost_functions[cost] \
+            if isinstance(cost, str) else cost
+        self.optimizer = optimizers[optimizer](self.nparams) \
+            if isinstance(optimizer, str) else optimizer
         self._finalized = True
+        return self
 
     def pop(self):
         self.layers.pop()
@@ -140,36 +133,18 @@ class Network:
     # ---- Methods for model fitting ----
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
-
-        if not self._finalized:
-            raise RuntimeError("Architecture not finalized!")
-
-        self.N = X.shape[0]
-
-        costs = []
-        lstr = len(str(epochs))
-        for epoch in range(1, epochs+1):
-            if shuffle:
-                arg = np.arange(X.shape[0])
-                np.random.shuffle(arg)
-                X, Y = X[arg], Y[arg]
-            if verbose:
-                print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
-            batches = (((X[start:start+batch_size], Y[start:start+batch_size])
-                        for start in range(0, self.N, batch_size)))
-            costs += self.epoch(batches, monitor, validation, verbose)
-        self.age += epochs
-        return costs
+        datastream = self._batch_stream(X, Y, batch_size, shuffle)
+        return self.fit_generator(datastream, len(X), epochs, monitor, validation, verbose)
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
-        self.N = epochs * lessons_per_epoch
+        self.N = lessons_per_epoch
 
         epcosts = []
         lstr = len(str(epochs))
         epoch = 1
         while epoch <= epochs:
             if verbose:
-                print("\nEpoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
+                print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
 
             epcosts += self.epoch(generator, monitor, validation, verbose)
             epoch += 1
@@ -177,28 +152,20 @@ class Network:
         self.age += epochs
         return epcosts
 
-    def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
-        fanin, outshape = frame.neurons_required
-        if fanin != self.layers[0].outshape or outshape != self.layers[-1].outshape:
-            errstring = "Network configuration incompatible with supplied dataframe!\n"
-            errstring += "fanin: {} <-> InputLayer: {}\n".format(fanin, self.layers[0].outshape)
-            errstring += "outshape: {} <-> Net outshape: {}\n".format(outshape, self.layers[-1].outshape)
-            raise RuntimeError(errstring)
-
-        validation = frame.table("testing") if frame.n_testing else ()
-        batch_stream = frame.batchgen(batch_size, "learning", weigh=False, infinite=True)
-
-        return self.fit_generator(batch_stream, frame.N // batch_size,
-                                  epochs, monitor, validation, verbose)
-
     def epoch(self, generator, monitor, validation, verbose):
+
+        if not self._finalized:
+            raise RuntimeError("Architecture not finalized!")
 
         costs = []
         done = 0.
 
         self.learning = True
         while round(done, 5) < 1.:
-            costs.append(self._fit_batch(next(generator)))
+            cost = self.learn_batch(*next(generator))
+            cost /= self.m
+            costs.append(cost)
+
             done += self.m / self.N
             if verbose:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(done, np.mean(costs)), end="")
@@ -214,67 +181,90 @@ class Network:
 
         return costs
 
-    def backpropagation(self, Y):
-        last = self.layers[-1]
-        error = self.cost.derivative(last.output, Y)
-        for layer in self.layers[-1:0:-1]:
-            error = layer.backpropagate(error)
-
-    def _fit_batch(self, batch, parameter_update=True):
-        self.X, self.Y = batch
-        self.prediction(self.X)
-        if parameter_update:
-            self._parameter_update()
-
-        return self.cost(self.output, self.Y) / self.m
+    def learn_batch(self, X, Y):
+        self.X, self.Y = X, Y
+        preds = self.predict(X)
+        delta = self.cost.derivative(preds, Y)
+        self.backpropagate(delta)
+        self._parameter_update()
+        return self.cost(self.output, Y)
 
     def _parameter_update(self):
-        self.optimizer.optimize(self.m, self.X, self.Y)
+        W = self.optimizer.optimize(
+            self.get_weights(), self.get_gradients(), self.m
+        )
+        self.set_weights(W)
 
     def _print_progress(self, validation, monitor):
         classificaton = "acc" in monitor
         results = self.evaluate(*validation, classify=classificaton)
 
-        chain = "testing cost: {0:.5f}"
+        chain = "Testing cost: {0:.5f}"
         if classificaton:
             tcost, tacc = results
-            accchain = "\taccuracy: {0:.2%}".format(tacc)
+            accchain = " accuracy: {0:.2%}".format(tacc)
         else:
             tcost = results
             accchain = ""
         print(chain.format(tcost) + accchain, end="")
 
-    # ---- Methods for forward propagation ----
+    # ---- Methods for forward/backward propagation ----
 
     def classify(self, X):
-        return np.argmax(self.prediction(X), axis=1)
+        return np.argmax(self.predict(X), axis=1)
 
-    def prediction(self, X):
+    def predict(self, X):
         self.m = X.shape[0]
         for layer in self.layers:
             X = layer.feedforward(X)
         return X
 
-    def predict_proba(self, X):
-        return self.prediction(X)
+    def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False, verbose=False):
+        if not batch_size or batch_size == "full":
+            batch_size = len(X)
+        N = X.shape[0]
+        batches = self._batch_stream(X, Y, batch_size, shuffle, infinite=False)
 
-    def evaluate(self, X, Y, classify=True):
-        predictions = self.prediction(X)
-        cost = self.cost(predictions, Y) / Y.shape[0]
+        cost = []
+        acc = []
+        for m, (x, y) in enumerate(batches, start=1):
+            if verbose:
+                print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
+            pred = self.predict(x)
+            cost.append(self.cost(pred, y) / self.m)
+            if classify:
+                pred_classes = np.argmax(pred, axis=1)
+                trgt_classes = np.argmax(y, axis=1)
+                eq = np.equal(pred_classes, trgt_classes)
+                acc.append(eq.mean())
+        if verbose:
+            print("\rEvaluating: {:>7.2%}".format(1.))
         if classify:
-            pred_classes = np.argmax(predictions, axis=1)
-            trgt_classes = np.argmax(Y, axis=1)
-            eq = np.equal(pred_classes, trgt_classes)
-            acc = np.mean(eq)
-            return cost, acc
-        return cost
+            return np.mean(cost), np.mean(acc)
+        return np.mean(cost)
+
+    def backpropagate(self, error):
+        for layer in self.layers[-1:0:-1]:
+            error = layer.backpropagate(error)
 
     # ---- Some utilities ----
 
-    def shuffle(self):
-        for layer in self.layers:
-            if layer.trainable:
-                layer.shuffle()
+    @staticmethod
+    def _batch_stream(X, Y, m, shuffle=True, infinite=True):
+        arg = np.arange(X.shape[0])
+        while 1:
+            if shuffle:
+                np.random.shuffle(arg)
+                X, Y = X[arg], Y[arg]
+            for x, y in ((X[start:start + m], Y[start:start + m])
+                         for start in range(0, X.shape[0], m)):
+                yield x, y
+            if not infinite:
+                break
+
+    def reset(self):
+        for layer in (l for l in self.layers if l.trainable):
+            layer.reset()
 
     def describe(self, verbose=0):
         if not self.name:
@@ -292,22 +282,22 @@ class Network:
             return chain
 
     def get_weights(self, unfold=True):
-        ws = [layer.get_weights(unfold=unfold) for layer in self.layers if layer.trainable]
+        ws = [
+            layer.get_weights(unfold=unfold) for
+            layer in self.layers if layer.trainable
+        ]
         return np.concatenate(ws) if unfold else ws
 
     def set_weights(self, ws, fold=True):
+        trl = (l for l in self.layers if l.trainable)
         if fold:
             start = 0
-            for layer in self.layers:
-                if not layer.trainable:
-                    continue
+            for layer in trl:
                 end = start + layer.nparams
                 layer.set_weights(ws[start:end])
                 start = end
         else:
-            for w, layer in zip(ws, self.layers):
-                if not layer.trainable:
-                    continue
+            for w, layer in zip(ws, trl):
                 layer.set_weights(w)
 
     def get_gradients(self, unfold=True):
@@ -343,6 +333,9 @@ class Network:
     def nparams(self):
         return sum(layer.nparams for layer in self.layers if layer.trainable)
 
+    predict_proba = predict
+    train_on_batch = learn_batch
+
 
 class Autoencoder(Network):
 
@@ -354,12 +347,12 @@ class Autoencoder(Network):
         self.encoder_end = 1
         self.decoder = []
 
-    def add(self, layer, input_dim=()):
+    def add(self, layer):
         from ..layers import DenseLayer, HighwayLayer, LSTM, RLayer
 
         if type(layer) not in (DenseLayer, HighwayLayer, RLayer, LSTM):
             raise NotImplementedError(str(layer), "not yet implemented in autoencoder!")
-        Network.add(self, layer, input_dim)
+        Network.add(self, layer)
         self.encoder_end += 1
 
         if self.decoder_type == "learnable":
@@ -371,8 +364,8 @@ class Autoencoder(Network):
         self.encoder_end -= 1
         self._finalized = False
 
-    def finalize(self, cost, optimizer="sgd"):
-        from ..costs import cost_fns
+    def finalize(self, cost="mse", optimizer="sgd"):
+        from ..costs import cost_functions
         from ..optimizers import optimizers
         from ..layers import DenseLayer
 
@@ -389,7 +382,7 @@ class Autoencoder(Network):
                 if isinstance(optimizer, str):
                     optimizer = optimizers[optimizer](layer)
                 layer.optimizer = optimizer
-        self.cost = cost_fns[cost] if isinstance(cost, str) else cost
+        self.cost = cost_functions[cost] if isinstance(cost, str) else cost
         self._finalized = True
 
     def encode(self, X):
