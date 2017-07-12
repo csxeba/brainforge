@@ -134,8 +134,7 @@ class Network:
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
         datastream = self._batch_stream(X, Y, batch_size, shuffle)
-        return self.fit_generator(self._batch_stream(X, Y, batch_size, shuffle),
-                                  len(X) // batch_size, epochs, monitor, validation, verbose)
+        return self.fit_generator(datastream, len(X) // batch_size, epochs, monitor, validation, verbose)
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
         self.N = epochs * lessons_per_epoch
@@ -152,20 +151,6 @@ class Network:
 
         self.age += epochs
         return epcosts
-
-    def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
-        fanin, outshape = frame.neurons_required
-        if fanin != self.layers[0].outshape or outshape != self.layers[-1].outshape:
-            errstring = "Network configuration incompatible with supplied dataframe!\n"
-            errstring += "fanin: {} <-> InputLayer: {}\n".format(fanin, self.layers[0].outshape)
-            errstring += "outshape: {} <-> Net outshape: {}\n".format(outshape, self.layers[-1].outshape)
-            raise RuntimeError(errstring)
-
-        validation = frame.table("testing") if frame.n_testing else ()
-        batch_stream = frame.batchgen(batch_size, "learning", infinite=True)
-
-        return self.fit_generator(batch_stream, frame.N // batch_size,
-                                  epochs, monitor, validation, verbose)
 
     def epoch(self, generator, monitor, validation, verbose):
 
