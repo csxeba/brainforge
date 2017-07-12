@@ -40,7 +40,7 @@ def keras():
         Dense(24, activation="relu"),
         Dense(nactions, activation="linear")
     ])
-    brain.compile(Optm(lr=0.001), "mse")
+    brain.compile(Optm(lr=0.0001), "mse")
     return brain
 
 
@@ -48,17 +48,17 @@ def run(agent):
 
     episode = 1
     wins = 0
+    rewards = deque(maxlen=100)
 
     while 1:
         state = env.reset()
         done = False
         steps = 1
         reward = None
-        rewards = deque(maxlen=100)
         while not done:
             # env.render()
             # print(f"\rStep {steps:>4}", end="")
-            action = agent.sample(state, 0.)
+            action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
             steps += 1
 
@@ -71,7 +71,6 @@ def run(agent):
         if episode % 1000 == 0:
             print(" Pulled pork")
             # agent.pull_weights()
-        episode += 1
         if win:
             print(" Win!")
             wins += 1
@@ -107,7 +106,7 @@ def plotrun(agent):
 
 
 if __name__ == '__main__':
-    run(AgentType(Qann(), nactions, AgentConfig(epsilon_greedy_rate=0.01,
-                                                discount_factor=0.95,
-                                                replay_memory_size=10000,
+    run(AgentType(Qann(), nactions, AgentConfig(epsilon_greedy_rate=0.05,
+                                                discount_factor=0.9,
+                                                replay_memory_size=1000,
                                                 training_batch_size=1000)))

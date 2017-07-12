@@ -134,10 +134,10 @@ class Network:
 
     def fit(self, X, Y, batch_size=20, epochs=30, monitor=(), validation=(), verbose=1, shuffle=True):
         datastream = self._batch_stream(X, Y, batch_size, shuffle)
-        return self.fit_generator(datastream, len(X) // batch_size, epochs, monitor, validation, verbose)
+        return self.fit_generator(datastream, len(X), epochs, monitor, validation, verbose)
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, monitor=(), validation=(), verbose=1):
-        self.N = epochs * lessons_per_epoch
+        self.N = lessons_per_epoch
 
         epcosts = []
         lstr = len(str(epochs))
@@ -163,6 +163,7 @@ class Network:
         self.learning = True
         while round(done, 5) < 1.:
             cost = self.learn_batch(*next(generator))
+            cost /= self.m
             costs.append(cost)
 
             done += self.m / self.N
@@ -186,7 +187,7 @@ class Network:
         delta = self.cost.derivative(preds, Y)
         self.backpropagate(delta)
         self._parameter_update()
-        return self.cost(self.output, self.Y)
+        return self.cost(self.output, Y)
 
     def _parameter_update(self):
         W = self.optimizer.optimize(
@@ -222,7 +223,7 @@ class Network:
         if not batch_size or batch_size == "full":
             batch_size = len(X)
         N = X.shape[0]
-        batches = self._batch_stream(X, Y, batch_size, shuffle)
+        batches = self._batch_stream(X, Y, batch_size, shuffle, infinite=False)
 
         cost = []
         acc = []
@@ -230,7 +231,7 @@ class Network:
             if verbose:
                 print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
             pred = self.predict(x)
-            cost.append(self.cost(pred, y))
+            cost.append(self.cost(pred, y) / self.m)
             if classify:
                 pred_classes = np.argmax(pred, axis=1)
                 trgt_classes = np.argmax(y, axis=1)
@@ -249,8 +250,7 @@ class Network:
     # ---- Some utilities ----
 
     @staticmethod
-    def _batch_stream(X, Y, m, shuffle=True):
-        N = len(X)
+    def _batch_stream(X, Y, m, shuffle=True, infinite=True):
         arg = np.arange(X.shape[0])
         while 1:
             if shuffle:
@@ -259,6 +259,8 @@ class Network:
             for x, y in ((X[start:start + m], Y[start:start + m])
                          for start in range(0, X.shape[0], m)):
                 yield x, y
+            if not infinite:
+                break
 
     def reset(self):
         for layer in (l for l in self.layers if l.trainable):

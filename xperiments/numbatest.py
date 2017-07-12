@@ -13,6 +13,8 @@ from brainforge.numbaops.lltensor import (
 
 def visualize(A, d, O1, O2, supt=None):
     print("d.mean() =", d.mean())
+    if d.mean() == 0.:
+        print("Test passed!")
     vmax, vmin = max(O1.max(), O2.max()), min(O1.min(), O2.min())
     fig, axarr = plt.subplots(2, 2)
     axarr[0][0].imshow(A[0, 0], vmin=0, vmax=1, cmap="autumn")

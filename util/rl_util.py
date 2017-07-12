@@ -70,10 +70,13 @@ class LameXP:
             return
         self.xp.append((s, a, r, s_))
 
-    def replay(self, batch_size):
+    def replay_stream(self, batch_size=None):
+        if not batch_size:
+            batch_size = len(self.xp)
         arg = np.arange(len(self.xp))
         np.random.shuffle(arg)
-        return [self.xp[i] for i in arg[:batch_size]]
+        for i in arg[:batch_size]:
+            yield self.xp[i]
 
 
 def discount_rewards(rwd, gamma=0.99):

@@ -24,7 +24,7 @@ def keras_reference_network(data):
         Dense(30, activation="sigmoid", input_shape=inshape),
         Dense(outshape[0], activation="sigmoid")
     ])
-    model.compile(optimizer="adam", loss="mse",
+    model.compile(optimizer=SGD(3.), loss="mse",
                   metrics=["acc"])
     return model
 
@@ -34,7 +34,7 @@ def get_dense_network(data):
     nw = Network(fanin, name="TestDenseNet")
     nw.add(DenseLayer(30, activation="sigmoid"))
     nw.add(DenseLayer(fanout, activation="sigmoid"))
-    nw.finalize("mse", optimizer=SGD(3.))
+    nw.finalize("mse", optimizer=SGD(nw.nparams, 3.))
     return nw
 
 
@@ -65,13 +65,13 @@ def main():
     mnist = get_mnist_data(mnistpath)
 
     net = get_dense_network(mnist)
-    # knet = keras_reference_network(mnist)
+    knet = keras_reference_network(mnist)
     # if not net.gradient_check(*mnist.table("testing", m=5)):
     #     raise RuntimeError("Gradient Check failed!")
-    net.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
+    net.fit(*mnist.table("learning"), batch_size=20, epochs=3, verbose=1,
             validation=mnist.table("testing"), monitor=["acc"])
-    # knet.fit(*mnist.table("learning"), batch_size=20, epochs=5, verbose=1,
-    #          validation_data=mnist.table("testing"))
+    knet.fit(*mnist.table("learning"), batch_size=20, epochs=3, verbose=1,
+             validation_data=mnist.table("testing"))
 
 
 if __name__ == '__main__':

@@ -61,12 +61,13 @@ class AgentBase(abc.ABC):
         raise NotImplementedError
 
     def learn_batch(self):
-        X, Y = self.xp.replay(self.cfg.bsize)
+        X, Y = self.xp.replay(self.xp.limit)
         N = len(X)
         if N == 0:
             return
-        cost = self.net.train_on_batch(X, Y)
-        return cost / len(X)
+        costs = self.net.fit(X, Y, verbose=0)
+        # return np.mean(costs.history["loss"])
+        return np.mean(costs)
 
     def push_weights(self):
         W = self.net.get_weights(unfold=True)
@@ -174,8 +175,8 @@ class DQN(AgentBase):
         ix = tuple(self.A)
         Y = Q.copy()
         Ym = Y.max(axis=1) * self.cfg.gamma
-        Y[range(len(Y)), ix] = R + Ym
-        Y[-1, ix[-1]] = reward
+        Y[range(len(Y)), ix] = -(R + Ym)
+        Y[-1, ix[-1]] = -reward
         self.xp.remember(X, Y)
         self.reset()
         cost = self.learn_batch()
@@ -188,7 +189,7 @@ class LameDQN(AgentBase):
 
     def __init__(self, network, nactions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)
-        self.xp = LameXP()
+        self.xp = LameXP(limit=agentconfig.xpsize)
         self.X = []
         self.Y = []
         self.transition = [None, None]
@@ -210,21 +211,20 @@ class LameDQN(AgentBase):
 
     def accumulate(self, state, reward):
         self.xp.remember(*(self.transition + [reward, None]))
-        batch = self.xp.replay(self.cfg.bsize)
         Xs, Ys = [], []
-        for s, a, r, s_ in batch:
+        for s, a, r, s_ in self.xp.replay_stream():
             y_j = r
             if s_ is not None:
                 y_j += self.net.predict(s_[None, ...])[0].max()
             else:
                 pass
             action = self.net.predict(s[None, ...])[0]
-            action[a] = y_j
+            action[a] = -y_j
             Xs.append(s)
             Ys.append(action)
         self.reset()
-        cost = self.net.train_on_batch(np.array(Xs), np.array(Ys))
-        return cost / len(Xs)
+        cost = self.net.fit(np.array(Xs), np.array(Ys), epochs=1, verbose=0)
+        return np.mean(cost.history["loss"])
 
 
 class HillClimbing(AgentBase):
