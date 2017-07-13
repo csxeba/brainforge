@@ -10,7 +10,7 @@ class LayerBase(abc.ABC):
     def __init__(self, activation, **kw):
 
         from ..ops import act_fns
-        from ..costs import regularizers
+        from ..cost import regularizers
 
         self.position = 0
         self.brain = None

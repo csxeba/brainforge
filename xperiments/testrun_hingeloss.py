@@ -1,13 +1,13 @@
 import numpy as np
 
-from brainforge import Network
-from brainforge.layers import DenseLayer
+from brainforge import GradientLearner
+from brainforge.architecture import DenseLayer
 
 from csxdata import CData, roots
 
 frame = CData(roots["misc"] + "mnist.pkl.gz", fold=False)
 
-model = Network(input_shape=frame.neurons_required[0], layers=(
+model = GradientLearner(input_shape=frame.neurons_required[0], layers=(
     DenseLayer(30, activation="tanh"),
     DenseLayer(frame.neurons_required[-1], activation="linear")
 ))

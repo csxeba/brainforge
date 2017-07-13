@@ -3,8 +3,8 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge import Network
-from brainforge.layers import DenseLayer, DropOut
+from brainforge import GradientLearner
+from brainforge.architecture import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
 from csxdata import CData, roots
@@ -22,7 +22,7 @@ fweights = (1, 1)
 
 
 def phenotype_to_ann(phenotype):
-    net = Network(inshape, layers=[
+    net = GradientLearner(inshape, layers=[
         DenseLayer(int(phenotype[0]), activation="tanh"),
         DropOut(dropchance=phenotype[1]),
         DenseLayer(int(phenotype[2]), activation="tanh"),

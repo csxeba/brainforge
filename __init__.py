@@ -1,1 +1,1 @@
-from .architectures.architectures import Network
+from .model.backpropagation import GradientLearner

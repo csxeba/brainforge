@@ -1,11 +1,11 @@
 from sklearn.svm import SVR
 
-from brainforge import Network
-from brainforge.layers import Reservoir
+from brainforge import GradientLearner
+from brainforge.architecture import Reservoir
 
 
 def build_model(inputs):
-    net = Network(inputs, layers=[
+    net = GradientLearner(inputs, layers=[
         Reservoir(1000, "relu")
     ])
     net.finalize()

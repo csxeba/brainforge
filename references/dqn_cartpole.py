@@ -256,9 +256,9 @@ def parse_args():
     parser.add_argument('-l', default=DEFAULT_LEARNING_RATE, help='learning rate', type=float)
     parser.add_argument('-r', default=DEFAULT_REGULARIZATION, help='regularization', type=float)
     parser.add_argument('-num_hidden', default=DEFAULT_NUM_HIDDEN,
-                        help='the number of hidden layers in the deep network', type=int)
+                        help='the number of hidden architecture in the deep network', type=int)
     parser.add_argument('-hidden_size', default=DEFAULT_HIDDEN_SIZE,
-                        help='the hidden size of all layers in the network', type=int)
+                        help='the hidden size of all architecture in the network', type=int)
 
     args = parser.parse_args()
 

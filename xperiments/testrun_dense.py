@@ -1,9 +1,9 @@
 from csxdata import CData, roots, log
 from csxdata.utilities.parsers import mnist_tolearningtable
 
-from brainforge import Network
-from brainforge.layers import DenseLayer, DropOut, HighwayLayer
-from brainforge.optimizers import SGD
+from brainforge import GradientLearner
+from brainforge.architecture import DenseLayer, DropOut, HighwayLayer
+from brainforge.optimization import SGD
 
 mnistpath = roots["misc"] + "mnist.pkl.gz"
 logstring = ""
@@ -31,7 +31,7 @@ def keras_reference_network(data):
 
 def get_dense_network(data):
     fanin, fanout = data.neurons_required
-    nw = Network(fanin, name="TestDenseNet")
+    nw = GradientLearner(fanin, name="TestDenseNet")
     nw.add(DenseLayer(30, activation="sigmoid"))
     nw.add(DenseLayer(fanout, activation="sigmoid"))
     nw.finalize("mse", optimizer=SGD(nw.nparams, 3.))
@@ -40,7 +40,7 @@ def get_dense_network(data):
 
 def get_drop_net(data):
     fanin, fanout = data.neurons_required
-    nw = Network(fanin, name="TestDropoutNet")
+    nw = GradientLearner(fanin, name="TestDropoutNet")
     nw.add(DenseLayer(30, activation="sigmoid"))
     nw.add(DropOut(0.5))
     nw.add(DenseLayer(fanout, activation="sigmoid"))
@@ -50,7 +50,7 @@ def get_drop_net(data):
 
 def get_highway_net(data):
     fanin, fanout = data.neurons_required
-    nw = Network(fanin, name="TestHighwayNet")
+    nw = GradientLearner(fanin, name="TestHighwayNet")
     nw.add(DenseLayer(120, activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))
     nw.add(HighwayLayer(activation="tanh"))

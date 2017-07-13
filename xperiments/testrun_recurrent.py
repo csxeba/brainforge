@@ -1,8 +1,8 @@
 from csxdata import Sequence, roots
 
-from brainforge import Network
-from brainforge.layers import (LSTM, GRU, RLayer, ClockworkLayer,
-                               DenseLayer)
+from brainforge import GradientLearner
+from brainforge.architecture import (LSTM, GRU, RLayer, ClockworkLayer,
+                                     DenseLayer)
 from brainforge.util.rnn_util import speak_to_me
 
 
@@ -24,7 +24,7 @@ def build_keras_net(data: Sequence):
 
 def build(data, what, gradcheck=False):
     inshape, outshape = data.neurons_required
-    net = Network(input_shape=inshape, name="TestRNN")
+    net = GradientLearner(input_shape=inshape, name="TestRNN")
     rl1 = 10
     rl2 = 10
     act = "tanh"

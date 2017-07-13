@@ -1,8 +1,8 @@
 import numpy as np
 
-from brainforge import Network
-from brainforge.layers import DenseLayer
-from brainforge.optimizers import SGD as Opt
+from brainforge import GradientLearner
+from brainforge.architecture import DenseLayer
+from brainforge.optimization import SGD as Opt
 
 from matplotlib import pyplot as plt
 
@@ -19,7 +19,7 @@ def input_stream(m):
         yield Xs[arg], Ys[arg]
 
 
-net = Network(input_shape=(2,), layers=[
+net = GradientLearner(input_shape=(2,), layers=[
     DenseLayer(4, activation="sigmoid"),
     DenseLayer(2, activation="softmax")
 ])

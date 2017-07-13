@@ -1,7 +1,7 @@
 from collections import deque
 
-from brainforge import Network
-from brainforge.layers import DenseLayer, Flatten
+from brainforge import GradientLearner
+from brainforge.architecture import DenseLayer, Flatten
 from brainforge.reinforcement import DQN, PG, AgentConfig
 
 from grund.getout import GetOut
@@ -12,7 +12,7 @@ RENDER = 0
 
 
 def netbase(inshape):
-    return Network(inshape, layers=[Flatten(), DenseLayer(60, "tanh")])
+    return GradientLearner(inshape, layers=[Flatten(), DenseLayer(60, "tanh")])
 
 
 def get_qagent(environment):

@@ -78,7 +78,7 @@ class AgentBase(abc.ABC):
         if N < self.xp.limit:
             return 0.
         costs = self.net.fit(X, Y, verbose=0)
-        # return np.mean(costs.history["loss"])
+        # return np.mean(cost.history["loss"])
         return np.mean(costs)
 
     def push_weights(self):
