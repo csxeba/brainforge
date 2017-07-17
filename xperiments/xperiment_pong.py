@@ -38,7 +38,7 @@ brain = BackpropNetwork(stateshape, layers=[
 ])
 brain.finalize("mse", "momentum")
 agent = DQN(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
-                                         epsilon_greedy_rate=1., epsilon_decay_factor=0.999,
+                                         epsilon_greedy_rate=1., epsilon_decay=0.99,
                                          epsilon_min=0.01, replay_memory_size=3000))
 rwds = deque(maxlen=100)
 episode = 1
@@ -68,4 +68,4 @@ while 1:
     if episode % 10 == 0:
         agent.pull_weights()
     episode += 1
-    print(f"\nEpisode {episode:>5} Rwd: {rwd_mean:>5.2f}")
+    print(f"\nEpisode {episode:>5} Rwd: {rwd_mean:>5.2f} E: {agent.cfg.epsilon}")

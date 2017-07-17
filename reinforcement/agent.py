@@ -10,7 +10,8 @@ def _parameter_alias(item):
             "discount_factor": "gamma",
             "knowledge_transfer_rate": "tau",
             "epsilon_greedy_rate": "epsilon",
-            "epsilon_decay_factor": "epsilon_decay_factor",
+            "epsilon_decay": "epsilon_decay",
+            "epsilon_decay_factor": "epsilon_decay",
             "epsilon_min": "epsilon_min",
             "replay_memory_size": "xpsize",
             "bsize": "bsize", "gamma": "gamma",
@@ -36,8 +37,9 @@ class AgentConfig:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
             return self.epsilon
-        else:
-            return self.epsilon_min
+
+        self.epsilon = self.epsilon_min
+        return self.epsilon_min
 
     def __getitem__(self, item):
         return self.__dict__[_parameter_alias(item)]
