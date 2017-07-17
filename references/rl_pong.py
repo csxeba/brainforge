@@ -1,4 +1,6 @@
 """ Trains an agent with (stochastic) Policy Gradients on Pong. Uses OpenAI Gym. """
+from collections import deque
+
 import numpy as np
 import pickle
 import gym
@@ -22,6 +24,10 @@ else:
 
 grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
 rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
+
+
+def xent(a, y):
+    return -(y * np.log(a)).sum()
 
 
 def sigmoid(Z):
@@ -74,8 +80,10 @@ xs, hs, dlogps, drs = [], [], [], []
 running_reward = 0
 reward_sum = 0
 episode_number = 0
+rewds = deque(maxlen=100)
 while True:
-    if render: env.render()
+    if render:
+        env.render()
 
     # preprocess the observation, set input to network to be difference image
     cur_x = prepro(observation)
@@ -117,7 +125,8 @@ while True:
 
         epdlogp *= discounted_epr  # modulate the gradient with advantage (PG magic happens right here.)
         grad = policy_backward(eph, epdlogp)
-        for k in model: grad_buffer[k] += grad[k]  # accumulate grad over batch
+        for k in model:
+            grad_buffer[k] += grad[k]  # accumulate grad over batch
 
         # perform rmsprop parameter update every batch_size episodes
         if episode_number % batch_size == 0:
@@ -129,6 +138,7 @@ while True:
 
         # boring book-keeping
         running_reward = running_reward * 0.99 + reward_sum * 0.01
+        rewds.append(epr.mean())
         # print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
         # if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
         reward_sum = 0
@@ -137,4 +147,4 @@ while True:
 
         if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
             print('ep {:>5}: epoch finished, reward: {:>4}, running: {:.4f}'
-                  .format(episode_number, reward, running_reward))
+                  .format(episode_number, reward, sum(rewds) / len(rewds)))

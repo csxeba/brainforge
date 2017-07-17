@@ -1,3 +1,5 @@
+[![codebeat badge](https://codebeat.co/badges/f72db301-fd66-4c05-b1ca-9b8c8196f06e)](https://codebeat.co/projects/github-com-csxeba-brainforge-dev)
+
 # Brainforge documentation
 Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy**.
 

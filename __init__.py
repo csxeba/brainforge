@@ -1,1 +1,2 @@
-from .architectures.architectures import Network
+from .model.backpropagation import BackpropNetwork
+from .model.neuroevolution import NeuroEvolution

@@ -143,6 +143,20 @@ def _convwhite(nf, fc, fy, fx):
     return np.random.randn(nf, fc, fy, fx) * np.sqrt(2. / float(nf*fy*fx + fc*fy*fx))
 
 
+def batch_stream(*arrays, m, shuffle=True, infinite=True):
+    N = arrays[0].shape[0]
+    while 1:
+        arg = np.arange(N)
+        if shuffle:
+            np.random.shuffle(arg)
+        shuffled = tuple(map(lambda ary: ary[arg], arrays))
+        for start in range(0, N, m):
+            minibatch = tuple(map(lambda ary: ary[start:start+m], shuffled))
+            yield minibatch
+        if not infinite:
+            break
+
+
 def white(*dims, dtype=floatX) -> np.ndarray:
     """Returns a white noise tensor"""
     tensor = _densewhite(*dims) if len(dims) == 2 else _convwhite(*dims)
@@ -160,3 +174,15 @@ def rtm(A):
         return A
     A = np.atleast_2d(A)
     return A.reshape(A.shape[0], np.prod(A.shape[1:]))
+
+
+def describe(network):
+    name = "{}, the Artificial Neural Network.".format(network.name) \
+        if network.name else "BrainForge Artificial Neural Network."
+    sep = "----------"
+    chain = "\n".join((
+        sep, name, sep, "Age: " + str(network.age),
+        "Architecture: " + "->".join(network.architecture),
+        sep
+    ))
+    return chain

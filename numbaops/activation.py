@@ -4,7 +4,8 @@ from ._llactivation import (
     sqrt, sqrt_p,
     linear, linear_p,
     relu, relu_p,
-    softmax, softmax_p
+    softmax, softmax_p,
+    s1
 )
 
 
@@ -12,13 +13,13 @@ class ActivationFunction:
 
     type = ""
 
-    def __call__(self, Z: np.ndarray) -> np.ndarray:
+    def __call__(self, Z):
         raise NotImplementedError
 
     def __str__(self):
         return self.type
 
-    def derivative(self, Z: np.ndarray) -> np.ndarray:
+    def derivative(self, Z):
         raise NotImplementedError
 
 
@@ -63,7 +64,7 @@ class SoftMax(ActivationFunction):
     __call__ = softmax
     true_derivative = softmax_p
 
-    def derivative(self, A: np.ndarray) -> np.ndarray:
+    def derivative(self, A):
         return s1
 
 

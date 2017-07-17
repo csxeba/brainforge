@@ -32,10 +32,10 @@ def build_keras_reference(data: CData):
 
 
 def build_cnn(data: CData, gradcheck=False):
-    from brainforge import Network
-    from brainforge.layers import ConvLayer, Flatten, Activation, PoolLayer
+    from brainforge import BackpropNetwork
+    from brainforge.architecture import ConvLayer, Flatten, Activation, PoolLayer
     inshape, outshape = data.neurons_required
-    net = Network(input_shape=inshape, name="TestBrainforgeCNN", layers=(
+    net = BackpropNetwork(input_shape=inshape, name="TestBrainforgeCNN", layers=(
         ConvLayer(15, 3, 3, compiled=False, activation="relu"),
         ConvLayer(15, 3, 3, compiled=False),
         PoolLayer(2, compiled=True),

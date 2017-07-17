@@ -28,7 +28,7 @@ DEFAULT_ID = 0
 class CNN:
     """Convolutional Neural Network model."""
 
-    def __init__(self, num_actions, observation_shape, params={}, verbose=False):
+    def __init__(self, num_actions, observation_shape, params, verbose=False):
         """
     Initialize the CNN model with a set of parameters.
     Args:
@@ -256,9 +256,9 @@ def parse_args():
     parser.add_argument('-l', default=DEFAULT_LEARNING_RATE, help='learning rate', type=float)
     parser.add_argument('-r', default=DEFAULT_REGULARIZATION, help='regularization', type=float)
     parser.add_argument('-num_hidden', default=DEFAULT_NUM_HIDDEN,
-                        help='the number of hidden layers in the deep network', type=int)
+                        help='the number of hidden architecture in the deep network', type=int)
     parser.add_argument('-hidden_size', default=DEFAULT_HIDDEN_SIZE,
-                        help='the hidden size of all layers in the network', type=int)
+                        help='the hidden size of all architecture in the network', type=int)
 
     args = parser.parse_args()
 
@@ -266,7 +266,7 @@ def parse_args():
         args.minibatch_size) + "_c_" + str(args.capacity) + "_id_" + str(args.id)
 
     agent_params = {'episodes': args.episodes, 'steps': args.steps, 'environment': args.env, 'run_id': run_id}
-    dqn_params = {'memory_capacity': args.capacity, 'epsilon': args.epsilon, 'gamma': args.gamma,
+    dqn_params = {'memory_capacity': args.capacity, 'epsilon': args.decaying_epsilon, 'gamma': args.gamma,
                   'mini_batch_size': args.minibatch_size}
     cnn_params = {'lr': args.l, 'reg': args.r, 'num_hidden': args.num_hidden, 'hidden_size': args.hidden_size,
                   'mini_batch_size': args.minibatch_size}

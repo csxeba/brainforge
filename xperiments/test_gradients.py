@@ -6,8 +6,8 @@ from csxdata import CData, roots
 from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge.util import numerical_gradients, analytical_gradients
-from brainforge.architectures import Network
-from brainforge.layers import DenseLayer
+from brainforge.model import BackpropNetwork
+from brainforge.architecture import DenseLayer
 
 
 class TestNetwork(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestNetwork(unittest.TestCase):
         self.data.transformation = "std"
         self.X, self.Y = self.data.table("testing", m=5, shuff=False)
 
-        self.net = Network(self.data.neurons_required[0], name="NumGradTestNetwork")
+        self.net = BackpropNetwork(self.data.neurons_required[0], name="NumGradTestNetwork")
         self.net.add(DenseLayer(30, activation="sigmoid"))
 
     def test_mse_with_sigmoid_output(self):

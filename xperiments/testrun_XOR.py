@@ -1,8 +1,8 @@
 import numpy as np
 
-from brainforge import Network
-from brainforge.layers import DenseLayer
-from brainforge.optimizers import SGD as Opt
+from brainforge import BackpropNetwork
+from brainforge.architecture import DenseLayer
+from optimization.gradient_descent import SGD as Opt
 
 from matplotlib import pyplot as plt
 
@@ -11,15 +11,15 @@ BATCH_SIZE = 20
 
 
 def input_stream(m):
-    Xs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    Ys = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
+    stimuli = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    targets = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
 
     while 1:
-        arg = np.random.randint(len(Xs), size=m)
-        yield Xs[arg], Ys[arg]
+        arg = np.random.randint(len(stimuli), size=m)
+        yield stimuli[arg], targets[arg]
 
 
-net = Network(input_shape=(2,), layers=[
+net = BackpropNetwork(input_shape=(2,), layers=[
     DenseLayer(4, activation="sigmoid"),
     DenseLayer(2, activation="softmax")
 ])
