@@ -1,2 +1,2 @@
 from .model.backpropagation import BackpropNetwork
-Network = BackpropNetwork
+from .model.neuroevolution import NeuroEvolution

@@ -1,5 +1,5 @@
 import numpy as np
-from optimization.gradient_descent import SGD as _SGD
+from .gradient_descent import SGD as _SGD
 
 
 class Adagrad(_SGD):

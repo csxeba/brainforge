@@ -1,33 +1,16 @@
 from csxdata import CData, roots
 
-from brainforge import BackpropNetwork
+from brainforge import NeuroEvolution
 from brainforge.architecture import DenseLayer
-from brainforge.evolution import Population
-
-
-def meanmate(ind1, ind2):
-    return (ind1 + ind2) / 2.
-
-
-def fitness(W, *args, **kw):
-    net.set_weights(W, fold=True)
-    cost, acc = net.evaluate(*data.table("learning", m=10000))
-    return cost,
 
 
 data = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=False,
              floatX="float64")
-net = BackpropNetwork(data.neurons_required[0], layers=(
-    DenseLayer(60, activation="sigmoid"),
-    DenseLayer(data.neurons_required[1], activation="softmax")
+net = NeuroEvolution(data.neurons_required[0], layers=(
+    DenseLayer(30, activation="sigmoid"),
+    DenseLayer(data.neurons_required[1], activation="sigmoid")
 ))
-pop = Population(net.nparams, fitness_function=fitness)
-net.finalize("xent")
+net.finalize("mse", population_size=30, on_accuracy=False)
 
 print("Initial acc:", net.evaluate(*data.table("testing"))[1])
-
-for epoch in range(10):
-    print("Epoch", epoch, end=" ")
-    pop.run(3, verbosity=1, survival_rate=0.2, mutation_rate=0.01)
-    net.set_weights(pop.best, fold=True)
-    print("Current acc:", net.evaluate(*data.table("testing"))[1])
+net.fit(*data.table("learning", m=10000), batch_size=500, validation=data.table("testing"), monitor=["acc"])

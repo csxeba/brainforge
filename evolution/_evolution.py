@@ -210,7 +210,7 @@ class Population:
 
     def mean_grade(self):
         """Calculates an average fitness value for the whole population"""
-        return self.grades.std()
+        return self.grades.mean()
 
     def describe(self, show=0):
         showme = np.argsort(self.grades)[:show]
