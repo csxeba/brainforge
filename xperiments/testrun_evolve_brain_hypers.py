@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import DenseLayer, DropOut
+from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
 from csxdata import CData, roots

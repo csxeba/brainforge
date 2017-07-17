@@ -1,7 +1,7 @@
 from collections import deque
 
 from brainforge import Network
-from brainforge.architecture import DenseLayer, Flatten
+from brainforge.layers import DenseLayer, Flatten
 from brainforge.reinforcement import DQN, AgentConfig
 
 from grund.getout import GetOut

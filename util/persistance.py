@@ -21,7 +21,7 @@ class Capsule:
             "name": network.name,
             "cost": network.cost,
             "optimizer": network.optimizer,
-            "architecture": network.architecture[:],
+            "layers": network.architecture[:],
             "layers": [layer.capsule() for layer in network.layers]})
 
         if dumppath is not None:

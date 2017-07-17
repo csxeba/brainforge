@@ -1,8 +1,8 @@
 from csxdata import Sequence, roots
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import (LSTM, GRU, RLayer, ClockworkLayer,
-                                     DenseLayer)
+from brainforge.layers import (LSTM, GRU, RLayer, ClockworkLayer,
+                               DenseLayer)
 from brainforge.util.rnn_util import speak_to_me
 from util import describe
 

@@ -4,7 +4,7 @@ import gym
 import numpy as np
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import DenseLayer
+from brainforge.layers import DenseLayer
 from brainforge.reinforcement import PG, AgentConfig
 
 

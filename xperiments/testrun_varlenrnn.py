@@ -1,5 +1,5 @@
 from brainforge import BackpropNetwork
-from brainforge.architecture import RLayer, DenseLayer
+from brainforge.layers import RLayer, DenseLayer
 
 from csxdata import WordSequence, roots
 

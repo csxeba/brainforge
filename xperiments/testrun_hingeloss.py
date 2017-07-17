@@ -1,7 +1,7 @@
 import numpy as np
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import DenseLayer
+from brainforge.layers import DenseLayer
 
 from csxdata import CData, roots
 

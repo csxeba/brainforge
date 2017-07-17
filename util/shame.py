@@ -1,16 +1,16 @@
 def translate_architecture(arch):
-    from ..architecture.core import (
+    from ..layers.core import (
         InputLayer, DenseLayer, Activation, Flatten, Reshape
     )
 
-    from ..architecture.fancy import (
+    from ..layers.fancy import (
         DropOut, HighwayLayer
     )
 
-    from ..architecture.recurrent import (
+    from ..layers.recurrent import (
         Reservoir, LSTM, RLayer, ClockworkLayer
     )
-    from ..architecture.tensor import (
+    from ..layers.tensor import (
         ConvLayer, PoolLayer
     )
 
