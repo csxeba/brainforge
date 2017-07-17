@@ -4,7 +4,7 @@ import numpy as np
 import gym
 
 from brainforge import Network
-from brainforge.architecture import DenseLayer
+from brainforge.layers import DenseLayer
 from brainforge.reinforcement import DQN as AgentType, AgentConfig
 from matplotlib import pyplot
 

@@ -7,7 +7,7 @@ from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge.util import numerical_gradients, analytical_gradients
 from brainforge.model import BackpropNetwork
-from brainforge.architecture import DenseLayer
+from brainforge.layers import DenseLayer
 
 
 class TestNetwork(unittest.TestCase):

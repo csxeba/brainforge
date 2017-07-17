@@ -1,7 +1,7 @@
 from sklearn.svm import SVR
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import Reservoir
+from brainforge.layers import Reservoir
 
 
 def build_model(inputs):

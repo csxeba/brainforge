@@ -1,7 +1,7 @@
 from csxdata import CData, roots
 
 from brainforge import NeuroEvolution
-from brainforge.architecture import DenseLayer
+from brainforge.layers import DenseLayer
 
 
 data = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=False,

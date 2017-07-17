@@ -55,7 +55,7 @@ class BackpropNetwork(Learner):
         return self.cost(self.output, Y)
 
     def backpropagate(self, error):
-        # TODO: optimize this, skip untrainable architecture at the beginning
+        # TODO: optimize this, skip untrainable layers at the beginning
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
 

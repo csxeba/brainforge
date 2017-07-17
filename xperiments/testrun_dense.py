@@ -2,7 +2,7 @@ from csxdata import CData, roots, log
 from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import DenseLayer, DropOut, HighwayLayer
+from brainforge.layers import DenseLayer, DropOut, HighwayLayer
 from optimization.gradient_descent import SGD
 
 mnistpath = roots["misc"] + "mnist.pkl.gz"

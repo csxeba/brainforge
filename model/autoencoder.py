@@ -12,7 +12,7 @@ class Autoencoder(BackpropNetwork):
         self.decoder = []
 
     def add(self, layer):
-        from ..architecture import DenseLayer, HighwayLayer, LSTM, RLayer
+        from ..layers import DenseLayer, HighwayLayer, LSTM, RLayer
 
         if type(layer) not in (DenseLayer, HighwayLayer, RLayer, LSTM):
             raise NotImplementedError(str(layer), "not yet implemented in autoencoder!")
@@ -31,7 +31,7 @@ class Autoencoder(BackpropNetwork):
     def finalize(self, cost="mse", optimizer="sgd"):
         from ..cost import cost_functions
         from ..optimization import optimizers
-        from ..architecture import DenseLayer
+        from ..layers import DenseLayer
 
         for layer in reversed(self.layers[1:]):
             decoder_layer = type(layer)

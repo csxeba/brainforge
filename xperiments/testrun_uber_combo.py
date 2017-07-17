@@ -2,7 +2,7 @@ from csxdata import CData
 from csxdata import Sequence, roots
 
 from brainforge import BackpropNetwork
-from brainforge.architecture import *
+from brainforge.layers import *
 from brainforge.util.persistance import Capsule, load
 
 
