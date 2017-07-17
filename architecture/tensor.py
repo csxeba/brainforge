@@ -59,19 +59,16 @@ class PoolLayer(LayerBase, NoParamMixin):
 
 class ConvLayer(LayerBase):
 
-    def __init__(self, nfilters, filterx, filtery,
-                 mode="valid", activation="linear",
-                 compiled=True, **kw):
+    def __init__(self, nfilters, filterx=3, filtery=3, **kw):
 
-        LayerBase.__init__(self, activation=activation, **kw)
+        LayerBase.__init__(self, activation=kw.get("activation", "linear"), **kw)
 
-        self.compiled = compiled
+        self.compiled = kw.get("compiled", False)
         self.nfilters = nfilters
         self.fx = filterx
         self.fy = filtery
         self.depth = 0
         self.stride = 1
-        self.mode = mode
 
         self.inshape = None
 

@@ -1,10 +1,10 @@
-from brainforge import GradientLearner
+from .backpropagation import BackpropNetwork
 
 
-class Autoencoder(GradientLearner):
+class Autoencoder(BackpropNetwork):
 
     def __init__(self, inshape=(), decoder_type="learnable", name=""):
-        GradientLearner.__init__(self, inshape, name)
+        super().__init__(inshape, name=name)
         if decoder_type not in ("learnable", "fixed", "built", "single", None):
             raise ValueError('decoder_type should be one of:\n"learnable", "mirrored", "built", "single", None')
         self.decoder_type = decoder_type
@@ -61,15 +61,7 @@ class Autoencoder(GradientLearner):
 
     # noinspection PyMethodOverriding
     def fit(self, X, batch_size=20, epochs=10, monitor=(), validation=(), verbose=1, shuffle=True):
-        GradientLearner.fit(self, X, X, batch_size, epochs, monitor, validation, verbose, shuffle)
-
-    def fit_csxdata(self, frame, batch_size=20, epochs=10, monitor=(), verbose=1, shuffle=True):
-        X, _ = frame.table("learning")
-        if frame.n_testing:
-            vX, _ = frame.table("testing")
-        else:
-            vX = None
-        GradientLearner.fit(self, X, X, batch_size, epochs, monitor, (vX, vX), verbose, shuffle)
+        super().fit(X, X, batch_size, epochs, monitor, validation, verbose, shuffle)
 
     # noinspection PyMethodOverriding
     def gradient_check(self, X, verbose=1, epsilon=1e-5):

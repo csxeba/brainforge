@@ -5,33 +5,29 @@ import numpy as np
 from ..util.rl_util import Experience
 
 
+def _parameter_alias(item):
+    return {"training_batch_size": "bsize",
+            "discount_factor": "gamma",
+            "knowledge_transfer_rate": "tau",
+            "epsilon_greedy_rate": "epsilon",
+            "replay_memory_size": "xpsize",
+            "bsize": "bsize", "gamma": "gamma",
+            "tau": "tau", "xpsize": "xpsize",
+            "epsilon": "epsilon"}[item]
+
+
 class AgentConfig:
 
-    def __init__(self, training_batch_size=300,
-                 discount_factor=0.99,
-                 knowledge_transfer_rate=0.1,
-                 epsilon_greedy_rate=0.9,
-                 epsilon_min=0.01,
-                 epsilon_decay_factor=1.0,
-                 replay_memory_size=9000):
-        self.bsize = training_batch_size
-        self.gamma = discount_factor
-        self.tau = knowledge_transfer_rate
-        self._epsilon = epsilon_greedy_rate
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay_factor
-        self.xpsize = replay_memory_size
+    def __init__(self, **kw):
 
-    @staticmethod
-    def alias(item):
-        return {"training_batch_size": "bsize",
-                "discount_factor": "gamma",
-                "knowledge_transfer_rate": "tau",
-                "epsilon_greedy_rate": "epsilon",
-                "replay_memory_size": "xpsize",
-                "bsize": "bsize", "gamma": "gamma",
-                "tau": "tau", "xpsize": "xpsize",
-                "epsilon": "epsilon"}[item]
+        self.bsize = 300
+        self.gamma = 0.99
+        self.tau = 0.1
+        self._epsilon = 0.9
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 1.0
+        self.xpsize = 9000
+        self.__dict__.update({_parameter_alias(k): v for k, v in kw.items() if k != "self"})
 
     @property
     def epsilon(self):
@@ -42,10 +38,10 @@ class AgentConfig:
             return self.epsilon_min
 
     def __getitem__(self, item):
-        return self.__dict__[self.alias(item)]
+        return self.__dict__[_parameter_alias(item)]
 
     def __setitem__(self, key, value):
-        self.__dict__[self.alias(key)] = value
+        self.__dict__[_parameter_alias(key)] = value
 
 
 class AgentBase(abc.ABC):
