@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from ..util.rl_util import Experience
+from ..util.rl_util import Experience, discount_rewards
 
 
 def _parameter_alias(item):
@@ -10,6 +10,8 @@ def _parameter_alias(item):
             "discount_factor": "gamma",
             "knowledge_transfer_rate": "tau",
             "epsilon_greedy_rate": "epsilon",
+            "epsilon_decay_factor": "epsilon_decay_factor",
+            "epsilon_min": "epsilon_min",
             "replay_memory_size": "xpsize",
             "bsize": "bsize", "gamma": "gamma",
             "tau": "tau", "xpsize": "xpsize",
@@ -73,7 +75,7 @@ class AgentBase(abc.ABC):
         N = len(X)
         if N < self.xp.limit:
             return 0.
-        costs = self.net.fit(X, Y, verbose=0)
+        costs = self.net.fit(X, Y, verbose=1, epochs=1)
         # return np.mean(cost.history["loss"])
         return np.mean(costs)
 
@@ -104,7 +106,7 @@ class PG(AgentBase):
         self.X = []
         self.Y = []
         self.rewards = []
-        self.grad = np.zeros_like(network.get_gradients(unfold=True))
+        self.grad = np.zeros((network.nparams,))
 
     def reset(self):
         self.X = []
@@ -120,17 +122,30 @@ class PG(AgentBase):
         return action
 
     def accumulate(self, state, reward):
-        # R = np.array(self.rewards[1:] + [reward])
-        # if self.cfg.gamma > 0.:
-        #     R = discount_rewards(R, self.cfg.gamma)
-        #     # R -= R.mean()
-        #     # R /= (R.std() + 1e-7)
-        X = np.stack(self.X[1:], axis=0)
-        Y = np.stack(self.Y[1:], axis=0)
-        w = np.ones((len(X))) * reward
-        costs = self.net.fit(X, Y, w=w, epochs=1, batch_size=50)
+        R = np.array(self.rewards[1:] + [reward])
+        if self.cfg.gamma > 0.:
+            R = discount_rewards(R, self.cfg.gamma)
+            # R -= R.mean()
+            # R /= (R.std() + 1e-7)
+        self.xp.remember(np.stack(self.X, axis=0), np.stack(self.Y, axis=0))
+        X, Y = self.xp.replay(1000)
+        N = len(X)
+
+        cost = 0.
+        for start in range(0, N, 50):
+            y = Y[start:start+50]
+            pred = self.net.predict(X[start:start+50])
+            grad = self.net.cost.derivative(pred, y)
+            cost += self.net.cost(pred, y)
+            self.net.backpropagate(grad * R[start:start+50, None])
+            self.grad += self.net.get_gradients(unfold=True)
+
+        W = self.net.optimizer.optimize(
+            self.net.get_weights(unfold=True), self.grad, N // 50
+        )
+        self.net.set_weights(W)
         self.reset()
-        return np.mean(costs)
+        return cost / N
 
 
 class DQN(AgentBase):

@@ -45,4 +45,6 @@ class Nesterov(Momentum):
     def __str__(self):
         return "Nesterov"
 
-
+gdopt = {k.lower(): v for k, v in locals().items()
+         if k not in ("GradientDescent", "np")
+         and k[0] != "_"}

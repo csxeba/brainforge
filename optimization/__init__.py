@@ -1,5 +1,6 @@
-from .gradient_descent import *
-from .adaptive_gd import *
+from .gradient_descent import gdopt as _gd
+from .adaptive_gd import agdopt as _agd
 
-optimizers = {k: v for k, v in locals().items() if k not in
-              ("np", "GradientDescent", "_SGD")}
+optimizers = dict()
+optimizers.update(_gd)
+optimizers.update(_agd)

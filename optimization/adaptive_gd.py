@@ -95,3 +95,6 @@ class Adam(_SGD):
 
     def __str__(self):
         return "Adam"
+
+agdopt = {k.lower(): v for k, v in locals().items()
+          if k not in ("_SGD", "np") and k[0] != "_"}
