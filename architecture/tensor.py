@@ -97,7 +97,7 @@ class ConvLayer(LayerBase):
 
     def feedforward(self, X):
         self.inputs = X
-        self.output = self.activation(self.op.apply(X, self.weights, self.mode))
+        self.output = self.activation(self.op.apply(X, self.weights, "valid"))
         return self.output
 
     def backpropagate(self, error):
@@ -127,12 +127,12 @@ class ConvLayer(LayerBase):
         return self.nfilters, ox, oy
 
     def capsule(self):
-        return LayerBase.capsule(self) + [self.mode, self.activation, self.get_weights(unfold=False)]
+        return LayerBase.capsule(self) + [self.activation, self.get_weights(unfold=False)]
 
     @classmethod
     def from_capsule(cls, capsule):
         nF, depth, fx, fy = capsule[-1][0].shape
-        return cls(nF, fx, fy, activation=capsule[-2], mode=capsule[-3], trainable=capsule[1])
+        return cls(nF, fx, fy, activation=capsule[-2], trainable=capsule[1])
 
     def __str__(self):
         return "Conv({}x{}x{})-{}".format(self.nfilters, self.fy, self.fx, str(self.activation)[:4])

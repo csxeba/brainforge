@@ -82,7 +82,8 @@ reward_sum = 0
 episode_number = 0
 rewds = deque(maxlen=100)
 while True:
-    if render: env.render()
+    if render:
+        env.render()
 
     # preprocess the observation, set input to network to be difference image
     cur_x = prepro(observation)
@@ -124,7 +125,8 @@ while True:
 
         epdlogp *= discounted_epr  # modulate the gradient with advantage (PG magic happens right here.)
         grad = policy_backward(eph, epdlogp)
-        for k in model: grad_buffer[k] += grad[k]  # accumulate grad over batch
+        for k in model:
+            grad_buffer[k] += grad[k]  # accumulate grad over batch
 
         # perform rmsprop parameter update every batch_size episodes
         if episode_number % batch_size == 0:

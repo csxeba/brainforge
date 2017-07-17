@@ -22,7 +22,7 @@ class Capsule:
             "cost": network.cost,
             "optimizer": network.optimizer,
             "architecture": network.architecture[:],
-            "architecture": [layer.capsule() for layer in network.layers]})
+            "layers": [layer.capsule() for layer in network.layers]})
 
         if dumppath is not None:
             capsule.dump(dumppath)
@@ -50,7 +50,7 @@ class Capsule:
 
 
 def load(capsule):
-    from ..model import GradientLearner
+    from ..model import BackpropNetwork
     from ..optimization import optimizers
     from ..util.shame import translate_architecture as trsl
 
@@ -58,7 +58,7 @@ def load(capsule):
         capsule = Capsule.read(capsule)
     c = capsule
 
-    net = GradientLearner(input_shape=c["vlayers"][0][0], name=c["vname"])
+    net = BackpropNetwork(input_shape=c["vlayers"][0][0], name=c["vname"])
 
     for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
         if layer_name[:5] == "Input":

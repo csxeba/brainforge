@@ -24,7 +24,7 @@ class HighwayLayer(FFBase):
         self.gates = None
 
     def connect(self, to, inshape):
-        self.neurons = int(np.prod(inshape))
+        self.neurons = np.prod(inshape)
         self.weights = white(self.neurons, self.neurons*3)
         self.biases = zX(self.neurons*3,)
         FFBase.connect(self, to, inshape)

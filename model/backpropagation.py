@@ -21,11 +21,15 @@ import warnings
 
 import numpy as np
 
-from .learner import Learner
+from .abstract_learner import Learner
 from ..optimization import optimizers
 
 
 class BackpropNetwork(Learner):
+
+    def __init__(self, input_shape, layers=(), name=""):
+        super().__init__(input_shape, layers, name)
+        self.optimizer = None
 
     def finalize(self, cost="mse", optimizer="sgd"):
         super().finalize(cost)
@@ -36,7 +40,6 @@ class BackpropNetwork(Learner):
         return self
 
     def learn_batch(self, X, Y, w=None):
-        self.X, self.Y = X, Y
         preds = self.predict(X)
         delta = self.cost.derivative(preds, Y)
         if w is not None:
@@ -56,26 +59,9 @@ class BackpropNetwork(Learner):
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
 
-    # ---- Some utilities ----
-
     def reset(self):
         for layer in (l for l in self.layers if l.trainable):
             layer.reset()
-
-    def describe(self, verbose=0):
-        if not self.name:
-            name = "BrainForge Artificial Neural Network."
-        else:
-            name = "{}, the Artificial Neural Network.".format(self.name)
-        chain = "----------\n"
-        chain += name + "\n"
-        chain += "Age: " + str(self.age) + "\n"
-        chain += "Architecture: " + "->".join(self.architecture) + "\n"
-        chain += "----------"
-        if verbose:
-            print(chain)
-        else:
-            return chain
 
     def get_gradients(self, unfold=True):
         grads = [l.gradients for l in self.layers if l.trainable]

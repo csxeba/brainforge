@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from .abstract import Graph
+from .abstract_graph import Graph
 from ..util import batch_stream
 
 

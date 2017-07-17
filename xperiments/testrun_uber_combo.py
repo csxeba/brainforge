@@ -1,8 +1,9 @@
 from csxdata import CData
 from csxdata import Sequence, roots
 
-from brainforge import GradientLearner
+from brainforge import BackpropNetwork
 from brainforge.architecture import *
+from brainforge.util.persistance import Capsule, load
 
 
 def pull_petofi_data():
@@ -16,7 +17,7 @@ def pull_mnist_data():
 
 def build_ultimate_recurrent_combo_network(data: Sequence, gradcheck=True):
     inshape, outshape = data.neurons_required
-    net = GradientLearner(input_shape=inshape, name="UltimateRecurrentComboNetwork")
+    net = BackpropNetwork(input_shape=inshape, name="UltimateRecurrentComboNetwork")
     net.add(LSTM(20, activation="tanh", return_seq=True))
     net.add(RLayer(10, activation="tanh", return_seq=True))
     net.add(Reservoir(5, activation="tanh"))
@@ -24,8 +25,6 @@ def build_ultimate_recurrent_combo_network(data: Sequence, gradcheck=True):
     net.add(HighwayLayer(activation="tanh"))
     net.add(DenseLayer(outshape, activation="sigmoid"))
     net.finalize("xent", optimizer="adam")
-
-    net.describe(1)
 
     if gradcheck:
         net.fit(*data.table("learning", m=20), batch_size=20, epochs=1, verbose=0)
@@ -36,7 +35,7 @@ def build_ultimate_recurrent_combo_network(data: Sequence, gradcheck=True):
 
 def build_ultimate_convolutional_combo_network(data: CData, gradcheck=True):
     inshape, outshape = data.neurons_required
-    net = GradientLearner(input_shape=inshape, name="UltimateConvolutionalComboNetwork")
+    net = BackpropNetwork(input_shape=inshape, name="UltimateConvolutionalComboNetwork")
     net.add(ConvLayer(1, 8, 8))
     net.add(PoolLayer(3))
     net.add(Activation("sigmoid"))
@@ -46,8 +45,6 @@ def build_ultimate_convolutional_combo_network(data: CData, gradcheck=True):
     net.add(DenseLayer(20, activation="tanh"))
     net.add(DenseLayer(outshape, activation="sigmoid"))
     net.finalize("xent", optimizer="adam")
-
-    net.describe(1)
 
     if gradcheck:
         net.fit(*data.table("learning", m=20), batch_size=20, epochs=1, verbose=0)
@@ -59,14 +56,14 @@ def build_ultimate_convolutional_combo_network(data: CData, gradcheck=True):
 def rxperiment():
     petofi = pull_petofi_data()
     model = build_ultimate_recurrent_combo_network(petofi, gradcheck=False)
-    model.fit_csxdata(petofi, monitor=["acc"], epochs=1)
+    model.fit(*petofi.table("learning"), monitor=["acc"], epochs=1)
     tx, ty = petofi.table("testing", m=50)
     acc_before_sleeping = model.evaluate(tx, ty)
 
     bedroom = roots["tmp"] + "TestUberRNN.cps"
-    model.encapsulate(bedroom)
+    Capsule.encapsulate(model, bedroom)
     del model
-    model = GradientLearner.from_capsule(bedroom)
+    model = load(bedroom)
     acc_after_sleeping = model.evaluate(tx, ty)
     again = model.evaluate(tx, ty)
     assert acc_before_sleeping == again
@@ -88,9 +85,9 @@ def cxperiment():
     acc_before_sleeping = model.evaluate(tx, ty)
 
     bedroom = roots["tmp"] + "TestUberCNN.cps"
-    model.encapsulate(bedroom)
+    Capsule.encapsulate(model, bedroom)
     del model
-    model = GradientLearner.from_capsule(bedroom)
+    model = load(bedroom)
     acc_after_sleeping = model.evaluate(tx, ty)
 
     if acc_before_sleeping != acc_after_sleeping:

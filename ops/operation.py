@@ -37,39 +37,6 @@ class DenseOp(Op):
         return self.neurons,
 
 
-class LSTMOp(Op):
-
-    @staticmethod
-    def forward(Xrsh, W, b):
-        time, im, idim = Xrsh.shape
-        neu = b.shape[0]
-        output = zX()
-        state = np.zeros_like(output)
-
-        for t in range(self.time):
-            Z = np.concatenate((self.inputs[t], output), axis=1)
-
-            preact = Z @ self.weights + self.biases
-            preact[:, :self.G] = sigmoid(preact[:, :self.G])
-            preact[:, self.G:] = self.activation(preact[:, self.G:])
-
-            f, i, o, cand = np.split(preact, 4, axis=-1)
-
-            state = state * f + i * cand
-            state_a = self.activation(state)
-            output = state_a * o
-
-            self.Zs.append(Z)
-            self.gates.append(preact)
-            self.cache.append([output, state_a, state, preact])
-
-        if self.return_seq:
-            self.output = np.stack([cache[0] for cache in self.cache], axis=1)
-        else:
-            self.output = self.cache[-1][0]
-        return self.output
-
-
 class ReshapeOp(Op):
 
     def __init__(self, shape):

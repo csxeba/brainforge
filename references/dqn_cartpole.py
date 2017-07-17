@@ -28,7 +28,7 @@ DEFAULT_ID = 0
 class CNN:
     """Convolutional Neural Network model."""
 
-    def __init__(self, num_actions, observation_shape, params={}, verbose=False):
+    def __init__(self, num_actions, observation_shape, params, verbose=False):
         """
     Initialize the CNN model with a set of parameters.
     Args:
@@ -266,7 +266,7 @@ def parse_args():
         args.minibatch_size) + "_c_" + str(args.capacity) + "_id_" + str(args.id)
 
     agent_params = {'episodes': args.episodes, 'steps': args.steps, 'environment': args.env, 'run_id': run_id}
-    dqn_params = {'memory_capacity': args.capacity, 'epsilon': args.epsilon, 'gamma': args.gamma,
+    dqn_params = {'memory_capacity': args.capacity, 'epsilon': args.decaying_epsilon, 'gamma': args.gamma,
                   'mini_batch_size': args.minibatch_size}
     cnn_params = {'lr': args.l, 'reg': args.r, 'num_hidden': args.num_hidden, 'hidden_size': args.hidden_size,
                   'mini_batch_size': args.minibatch_size}

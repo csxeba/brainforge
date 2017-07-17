@@ -3,7 +3,7 @@ from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge import BackpropNetwork
 from brainforge.architecture import DenseLayer, DropOut, HighwayLayer
-from brainforge.optimization import SGD
+from optimization.gradient_descent import SGD
 
 mnistpath = roots["misc"] + "mnist.pkl.gz"
 logstring = ""

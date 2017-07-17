@@ -16,7 +16,7 @@ class Autoencoder(BackpropNetwork):
 
         if type(layer) not in (DenseLayer, HighwayLayer, RLayer, LSTM):
             raise NotImplementedError(str(layer), "not yet implemented in autoencoder!")
-        GradientLearner.add(self, layer)
+        BackpropNetwork.add(self, layer)
         self.encoder_end += 1
 
         if self.decoder_type == "learnable":
@@ -65,4 +65,4 @@ class Autoencoder(BackpropNetwork):
 
     # noinspection PyMethodOverriding
     def gradient_check(self, X, verbose=1, epsilon=1e-5):
-        return GradientLearner.gradient_check(self, X, X, verbose, epsilon)
+        return BackpropNetwork.gradient_check(self, X, X, verbose, epsilon)

@@ -1,9 +1,10 @@
 from csxdata import Sequence, roots
 
-from brainforge import GradientLearner
+from brainforge import BackpropNetwork
 from brainforge.architecture import (LSTM, GRU, RLayer, ClockworkLayer,
                                      DenseLayer)
 from brainforge.util.rnn_util import speak_to_me
+from util import describe
 
 
 def pull_petofi_data():
@@ -24,7 +25,7 @@ def build_keras_net(data: Sequence):
 
 def build(data, what, gradcheck=False):
     inshape, outshape = data.neurons_required
-    net = GradientLearner(input_shape=inshape, name="TestRNN")
+    net = BackpropNetwork(input_shape=inshape, name="TestRNN")
     rl1 = 10
     rl2 = 10
     act = "tanh"
@@ -46,7 +47,6 @@ def build(data, what, gradcheck=False):
 def xperiment():
     petofi = pull_petofi_data()
     net = build(petofi, what="LSTM", gradcheck=True)
-    net.describe(verbose=1)
     print("Initial cost: {} acc: {}".format(*net.evaluate(*petofi.table("testing"))))
     print(speak_to_me(net, petofi))
 

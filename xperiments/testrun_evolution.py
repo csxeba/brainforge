@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from brainforge.evolution import Population
 
 
-def upscale(ind):
+def upscale(ind: np.ndarray):
     x = ind * 10.
     return x
 
@@ -44,7 +44,9 @@ plt.show()
 means, stds, bests = [], [], []
 for i in range(100):
     m, s, b = pop.run(1, verbosity=0, mutation_rate=0.01)
-    means += m; stds += s; bests += b
+    means += m
+    stds += s
+    bests += b
     obj.set_data(*upscale(pop.individuals.T))
     plt.pause(1)
 

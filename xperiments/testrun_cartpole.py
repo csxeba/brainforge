@@ -13,7 +13,7 @@ nactions = env.action_space.n
 
 
 def Qann():
-    from brainforge.optimization import Momentum as Opt
+    from optimization.gradient_descent import Momentum as Opt
 
     brain = Network(env.observation_space.shape, layers=[
         DenseLayer(24, activation="relu"),
@@ -25,7 +25,7 @@ def Qann():
 
 
 def PGann():
-    from brainforge.optimization import SGD as Opt
+    from optimization.gradient_descent import SGD as Opt
 
     brain = Network(env.observation_space.shape, layers=[
         DenseLayer(24, activation="tanh"),
@@ -72,7 +72,7 @@ def run(agent):
         agent.push_weights()
         meanrwd = np.mean(rewards)
         print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}," +
-              f" Cost: {cost:>6.4f}, Epsilon: {agent.cfg._epsilon:>6.4f}",
+              f" Cost: {cost:>6.4f}, Epsilon: {agent.cfg.epsilon:>6.4f}",
               end="")
         if episode % 100 == 0:
             print(" Pulled pork")
@@ -110,7 +110,7 @@ def plotrun(agent):
         agent.push_weights()
         if episode % 100 == 0:
             agent.pull_weights()
-        print(f"\r{episode / 1000:.1%}, Cost: {cost:8>.4f}, Epsilon: {agent.cfg._epsilon:8.6f}", end="")
+        print(f"\r{episode / 1000:.1%}, Cost: {cost:8>.4f}, Epsilon: {agent.cfg.epsilon:8.6f}", end="")
     print()
     pyplot.plot(range(len(rewards)), rewards)
     pyplot.show()

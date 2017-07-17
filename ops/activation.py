@@ -90,7 +90,8 @@ class SoftMax(ActivationFunction):
     def derivative(self, A: np.ndarray) -> np.ndarray:
         return s1
 
-    def true_derivative(self, A: np.ndarray):
+    @staticmethod
+    def true_derivative(A: np.ndarray):
         # TODO: test this with numerical gradient testing!
         I = np.eye(A.shape[1], dtype=floatX)
         idx, idy = np.diag_indices(I)

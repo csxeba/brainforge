@@ -144,7 +144,6 @@ def _convwhite(nf, fc, fy, fx):
 
 
 def batch_stream(*arrays, m, shuffle=True, infinite=True):
-
     N = arrays[0].shape[0]
     while 1:
         arg = np.arange(N)
@@ -175,3 +174,15 @@ def rtm(A):
         return A
     A = np.atleast_2d(A)
     return A.reshape(A.shape[0], np.prod(A.shape[1:]))
+
+
+def describe(network):
+    name = "{}, the Artificial Neural Network.".format(network.name) \
+        if network.name else "BrainForge Artificial Neural Network."
+    sep = "----------"
+    chain = "\n".join((
+        sep, name, sep, "Age: " + str(network.age),
+        "Architecture: " + "->".join(network.architecture),
+        sep
+    ))
+    return chain

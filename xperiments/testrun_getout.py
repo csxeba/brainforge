@@ -42,6 +42,7 @@ while 1:
     rsum = 0.
     while not done:
         if RENDER:
+            # noinspection PyUnboundLocalVariable
             obj.set_data(state.T)
             plt.pause(0.1)
         action = agent.sample(state, reward)

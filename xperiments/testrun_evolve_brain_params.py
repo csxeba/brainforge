@@ -1,6 +1,6 @@
 from csxdata import CData, roots
 
-from brainforge import GradientLearner
+from brainforge import BackpropNetwork
 from brainforge.architecture import DenseLayer
 from brainforge.evolution import Population
 
@@ -17,7 +17,7 @@ def fitness(W, *args, **kw):
 
 data = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=False,
              floatX="float64")
-net = GradientLearner(data.neurons_required[0], layers=(
+net = BackpropNetwork(data.neurons_required[0], layers=(
     DenseLayer(60, activation="sigmoid"),
     DenseLayer(data.neurons_required[1], activation="softmax")
 ))

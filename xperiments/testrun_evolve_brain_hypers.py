@@ -3,7 +3,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge import GradientLearner
+from brainforge import BackpropNetwork
 from brainforge.architecture import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
@@ -22,7 +22,7 @@ fweights = (1, 1)
 
 
 def phenotype_to_ann(phenotype):
-    net = GradientLearner(inshape, layers=[
+    net = BackpropNetwork(inshape, layers=[
         DenseLayer(int(phenotype[0]), activation="tanh"),
         DropOut(dropchance=phenotype[1]),
         DenseLayer(int(phenotype[2]), activation="tanh"),

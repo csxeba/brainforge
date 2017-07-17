@@ -23,17 +23,17 @@ class AgentConfig:
         self.bsize = 300
         self.gamma = 0.99
         self.tau = 0.1
-        self._epsilon = 0.9
+        self.epsilon = 0.9
         self.epsilon_min = 0.01
         self.epsilon_decay = 1.0
         self.xpsize = 9000
         self.__dict__.update({_parameter_alias(k): v for k, v in kw.items() if k != "self"})
 
     @property
-    def epsilon(self):
-        if self._epsilon > self.epsilon_min:
-            self._epsilon *= self.epsilon_decay
-            return self._epsilon
+    def decaying_epsilon(self):
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+            return self.epsilon
         else:
             return self.epsilon_min
 
@@ -158,7 +158,7 @@ class DQN(AgentBase):
         self.R.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.Q.append(Q)
-        action = (np.argmax(Q) if np.random.uniform() > self.cfg.epsilon
+        action = (np.argmax(Q) if np.random.uniform() > self.cfg.decaying_epsilon
                   else np.random.randint(0, self.nactions))
         self.A.append(action)
         return action

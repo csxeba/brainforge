@@ -31,10 +31,6 @@ class Graph(abc.ABC):
         self.architecture.append(str(inl))
 
     def add(self, layer):
-        from ..architecture import LayerBase
-        if not isinstance(layer, LayerBase):
-            raise RuntimeError("Supplied layer is not an instance of LayerBase!\n"+str(layer))
-
         layer.connect(self, inshape=self.layers[-1].outshape)
         self.layers.append(layer)
         self.architecture.append(str(layer))
@@ -61,13 +57,10 @@ class Graph(abc.ABC):
         return X
 
     def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False, verbose=False):
-        if not batch_size or batch_size == "full":
-            batch_size = len(X)
         N = X.shape[0]
         batches = batch_stream(X, Y, m=batch_size, shuffle=shuffle, infinite=False)
 
-        cost = []
-        acc = []
+        cost, acc = [], []
         for m, (x, y) in enumerate(batches, start=1):
             if verbose:
                 print("\rEvaluating: {:>7.2%}".format((m*batch_size) / N), end="")
@@ -78,17 +71,14 @@ class Graph(abc.ABC):
                 trgt_classes = np.argmax(y, axis=1)
                 eq = np.equal(pred_classes, trgt_classes)
                 acc.append(eq.mean())
-        if verbose:
-            print("\rEvaluating: {:>7.2%}".format(1.))
+        results = np.mean(cost)
         if classify:
-            return np.mean(cost), np.mean(acc)
-        return np.mean(cost)
+            results = (results, np.mean(acc))
+        return results
 
     def get_weights(self, unfold=True):
-        ws = [
-            layer.get_weights(unfold=unfold) for
-            layer in self.layers if layer.trainable
-        ]
+        ws = [layer.get_weights(unfold=unfold) for
+              layer in self.layers if layer.trainable]
         return np.concatenate(ws) if unfold else ws
 
     def set_weights(self, ws, fold=True):
