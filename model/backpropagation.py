@@ -21,30 +21,26 @@ import warnings
 
 import numpy as np
 
-from .abstract import GraphicalModel
+from .learner import Learner
+from ..optimization import optimizers
 
 
-class GradientLearner(GraphicalModel):
-
-    # ---- Methods for architecture building ----
+class BackpropNetwork(Learner):
 
     def finalize(self, cost="mse", optimizer="sgd"):
-        from ..cost import cost_functions
-        from ..optimization import optimizers
+        super().finalize(cost)
 
-        self.cost = cost_functions[cost] \
-            if isinstance(cost, str) else cost
         self.optimizer = optimizers[optimizer](self.nparams) \
             if isinstance(optimizer, str) else optimizer
         self._finalized = True
         return self
 
-    # ---- Methods for model fitting ----
-
-    def learn_batch(self, X, Y):
+    def learn_batch(self, X, Y, w=None):
         self.X, self.Y = X, Y
         preds = self.predict(X)
         delta = self.cost.derivative(preds, Y)
+        if w is not None:
+            delta *= w[:, None]
         self.backpropagate(delta)
         self.set_weights(
             self.optimizer.optimize(
@@ -54,21 +50,6 @@ class GradientLearner(GraphicalModel):
             )
         )
         return self.cost(self.output, Y)
-
-    def _print_progress(self, validation, monitor):
-        classificaton = "acc" in monitor
-        results = self.evaluate(*validation, classify=classificaton)
-
-        chain = "Testing cost: {0:.5f}"
-        if classificaton:
-            tcost, tacc = results
-            accchain = " accuracy: {0:.2%}".format(tacc)
-        else:
-            tcost = results
-            accchain = ""
-        print(chain.format(tcost) + accchain, end="")
-
-    # ---- Methods for forward/backward propagation ----
 
     def backpropagate(self, error):
         # TODO: optimize this, skip untrainable architecture at the beginning

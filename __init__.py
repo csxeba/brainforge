@@ -1,1 +1,2 @@
-from .model.backpropagation import GradientLearner
+from .model.backpropagation import BackpropNetwork
+Network = BackpropNetwork

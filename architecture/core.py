@@ -40,6 +40,7 @@ class LayerBase(abc.ABC):
         self.brain = to
         self.inshape = inshape
         self.position = len(self.brain.layers)
+        self.connected = True
 
     @abc.abstractmethod
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray: raise NotImplementedError

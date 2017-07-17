@@ -3,7 +3,7 @@ from collections import deque
 import numpy as np
 import gym
 
-from brainforge import GradientLearner
+from brainforge import Network
 from brainforge.architecture import DenseLayer
 from brainforge.reinforcement import DQN as AgentType, AgentConfig
 from matplotlib import pyplot
@@ -15,7 +15,7 @@ nactions = env.action_space.n
 def Qann():
     from brainforge.optimization import Momentum as Opt
 
-    brain = GradientLearner(env.observation_space.shape, layers=[
+    brain = Network(env.observation_space.shape, layers=[
         DenseLayer(24, activation="relu"),
         DenseLayer(24, activation="relu"),
         DenseLayer(nactions, activation="linear")
@@ -27,7 +27,7 @@ def Qann():
 def PGann():
     from brainforge.optimization import SGD as Opt
 
-    brain = GradientLearner(env.observation_space.shape, layers=[
+    brain = Network(env.observation_space.shape, layers=[
         DenseLayer(24, activation="tanh"),
         DenseLayer(nactions, activation="softmax")
     ])

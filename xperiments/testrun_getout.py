@@ -1,36 +1,32 @@
 from collections import deque
 
-from brainforge import GradientLearner
+from brainforge import Network
 from brainforge.architecture import DenseLayer, Flatten
-from brainforge.reinforcement import DQN, PG, AgentConfig
+from brainforge.reinforcement import DQN, AgentConfig
 
 from grund.getout import GetOut
 
 
-EPSILON = 0.
-RENDER = 0
+RENDER = 1
 
 
 def netbase(inshape):
-    return GradientLearner(inshape, layers=[Flatten(), DenseLayer(60, "tanh")])
+    return Network(inshape, layers=[Flatten(), DenseLayer(60, "tanh")])
 
 
 def get_qagent(environment):
     inshape, outshape = environment.neurons_required()
     net = netbase(inshape)
     net.add(DenseLayer(outshape))
-    return DQN(net.finalize("mse", "adam"), outshape, AgentConfig(epsilon_greedy_rate=EPSILON))
-
-
-def get_pgagent(environment):
-    inshape, outshape = environment.neurons_required()
-    net = netbase(inshape)
-    net.add(DenseLayer(outshape, "softmax"))
-    return PG(net.finalize("xent", "adam"), outshape, AgentConfig(epsilon_greedy_rate=EPSILON))
+    return DQN(net.finalize("mse", "momentum"), outshape, AgentConfig(
+        training_batch_size=320, replay_memory_size=320,
+        epsilon_decay_factor=0.999, epsilon_greedy_rate=1.0,
+        discount_factor=0.65
+    ))
 
 
 env = GetOut((5, 5))
-agent = get_pgagent(env)
+agent = get_qagent(env)
 
 if RENDER:
     from matplotlib import pyplot as plt
