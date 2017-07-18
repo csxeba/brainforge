@@ -5,7 +5,7 @@ import numpy as np
 
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
-from brainforge.reinforcement import DQN, AgentConfig
+from brainforge.reinforcement import PG, AgentConfig
 
 
 def prepro_coroutine(I):
@@ -34,12 +34,12 @@ stateshape = 6400
 print("Pong stateshape =", stateshape)
 brain = BackpropNetwork(stateshape, layers=[
     DenseLayer(200, activation="tanh"),
-    DenseLayer(nactions, activation="linear")
+    DenseLayer(nactions, activation="softmax")
 ])
-brain.finalize("mse", "momentum")
-agent = DQN(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
-                                         epsilon_greedy_rate=1., epsilon_decay=0.99,
-                                         epsilon_min=0.01, replay_memory_size=3000))
+brain.finalize("xent", "momentum")
+agent = PG(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
+                                        epsilon_greedy_rate=1., epsilon_decay=0.99,
+                                        epsilon_min=0.01, replay_memory_size=3000))
 rwds = deque(maxlen=100)
 episode = 1
 print(f"Episode {episode:>5}")

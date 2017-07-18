@@ -2,7 +2,8 @@ import abc
 
 import numpy as np
 
-from ..util.rl_util import Experience, discount_rewards
+from ..util.rl_util import discount_rewards
+from ._experience import _Experience, _TimeExperience
 
 
 def _parameter_alias(item):
@@ -12,11 +13,7 @@ def _parameter_alias(item):
             "epsilon_greedy_rate": "epsilon",
             "epsilon_decay": "epsilon_decay",
             "epsilon_decay_factor": "epsilon_decay",
-            "epsilon_min": "epsilon_min",
-            "replay_memory_size": "xpsize",
-            "bsize": "bsize", "gamma": "gamma",
-            "tau": "tau", "xpsize": "xpsize",
-            "epsilon": "epsilon"}[item]
+            "replay_memory_size": "xpsize"}.get(item, item)
 
 
 class AgentConfig:
@@ -30,6 +27,7 @@ class AgentConfig:
         self.epsilon_min = 0.01
         self.epsilon_decay = 1.0
         self.xpsize = 9000
+        self.time = 1
         self.__dict__.update({_parameter_alias(k): v for k, v in kw.items() if k != "self"})
 
     @property
@@ -57,7 +55,10 @@ class AgentBase(abc.ABC):
             agentconfig = AgentConfig(**kw)
         self.net = network
         self.shadow_net = network.get_weights()
-        self.xp = Experience(agentconfig.xpsize)
+        if agentconfig.time <= 1:
+            self.xp = _Experience(agentconfig.xpsize)
+        else:
+            self.xp = _TimeExperience(agentconfig.xpsize, agentconfig.time)
         self.cfg = agentconfig
 
     @abc.abstractmethod
@@ -73,11 +74,11 @@ class AgentBase(abc.ABC):
         raise NotImplementedError
 
     def learn_batch(self):
-        X, Y = self.xp.replay(self.xp.limit)
+        X, Y = self.xp.replay(self.cfg.bsize)
         N = len(X)
-        if N < self.xp.limit:
+        if N < self.cfg.bsize:
             return 0.
-        costs = self.net.fit(X, Y, verbose=1, epochs=1)
+        costs = self.net.fit(X, Y, verbose=0, epochs=1)
         # return np.mean(cost.history["loss"])
         return np.mean(costs)
 

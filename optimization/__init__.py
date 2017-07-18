@@ -1,5 +1,5 @@
-from .gradient_descent import gdopt as _gd
-from .adaptive_gd import agdopt as _agd
+from .gradient_descent import gdopt as _gd, SGD, Momentum
+from .adaptive_gd import agdopt as _agd, Adagrad, RMSprop, Adam
 
 optimizers = dict()
 optimizers.update(_gd)
