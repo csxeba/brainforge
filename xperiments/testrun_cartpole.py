@@ -25,8 +25,8 @@ def QannRecurrent():
 
 def QannDense():
     brain = BackpropNetwork(env.observation_space.shape, layers=[
-        DenseLayer(60, activation="tanh"),
-        DenseLayer(60, activation="relu"),
+        DenseLayer(24, activation="tanh"),
+        DenseLayer(24, activation="relu"),
         DenseLayer(nactions, activation="linear")
     ])
     brain.finalize("mse", Opt(brain.nparams, eta=0.0001))
@@ -78,13 +78,13 @@ def run(agent):
 def plotrun(agent):
     rewards = []
     rwmean = []
-    EPISODES = 2000
+    EPISODES = 1000
     for episode in range(1, EPISODES + 1):
         state = env.reset()
         reward_sum = 0.
         reward = 0.
         win = False
-        for time in range(1, 201):
+        for time in range(1, 151):
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
             reward_sum += reward
@@ -104,8 +104,7 @@ def plotrun(agent):
 
 
 if __name__ == '__main__':
-    plotrun(AgentType(QannDense(), nactions, AgentConfig(
-        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9999, epsilon_min=0.0,
+    run(AgentType(QannDense(), nactions, AgentConfig(
+        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.99999, epsilon_min=0.0,
         discount_factor=0.6, replay_memory_size=7200, training_batch_size=720,
-        time=5
     )))

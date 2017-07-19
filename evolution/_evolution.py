@@ -5,7 +5,7 @@ import numpy as np
 from ..util import floatX, zX, zX_like
 
 
-# I hereby state that
+# I solemly state that  # Thanks Mark
 # this evolutionary algorithm is MINIMIZING the fitness value!
 
 

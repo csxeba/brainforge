@@ -188,13 +188,20 @@ class DQN(AgentBase):
         R = np.array(self.R[1:] + [reward])
         ix = tuple(self.A)
         Y = Q.copy()
-        Ym = Y.max(axis=1) * self.cfg.gamma
-        Y[range(len(Y)), ix] = -(R + Ym)
+        Y[range(len(Y)), ix] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, ix[-1]] = -reward
         self.xp.remember(X, Y)
         self.reset()
         cost = self.learn_batch()
         return cost
+
+
+class DDQN(DQN):
+
+    def __init__(self, network, nactions, agentconfig, **kw):
+        from ..util.persistance import Capsule, load
+        super().__init__(network, nactions, agentconfig, **kw)
+        self.double = [network, load(Capsule.encapsulate(network))]
 
 
 class HillClimbing(AgentBase):
