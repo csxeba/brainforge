@@ -4,9 +4,12 @@ from .gradient_descent import SGD as _SGD
 
 class Adagrad(_SGD):
 
-    def __init__(self, nparams, eta=0.01, epsilon=1e-8, memory=None):
-        super().__init__(nparams, eta)
+    def __init__(self, eta=0.01, epsilon=1e-8):
+        super().__init__(eta)
         self.epsilon = epsilon
+        self.memory = None
+
+    def initialize(self, nparams, memory=None):
         self.memory = np.zeros((nparams,)) if memory is None else memory
 
     def optimize(self, W, gW, m):
@@ -60,8 +63,8 @@ class Adagrad(_SGD):
 
 class RMSprop(Adagrad):
 
-    def __init__(self, nparams, eta=0.1, decay=0.9, epsilon=1e-8, memory=None):
-        super().__init__(nparams, eta, epsilon, memory)
+    def __init__(self, eta=0.1, decay=0.9, epsilon=1e-8):
+        super().__init__(eta, epsilon)
         self.decay = decay
 
     def optimize(self, W, gW, m):
@@ -77,14 +80,16 @@ class RMSprop(Adagrad):
 
 class Adam(_SGD):
 
-    def __init__(self, nparams, eta=0.1, decay_memory=0.9, decay_velocity=0.999,
-                 epsilon=1e-8, velocity=None, memory=None):
-        super().__init__(nparams, eta)
+    def __init__(self, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8):
+        super().__init__(eta)
         self.decay_velocity = decay_velocity
         self.decay_memory = decay_memory
         self.epsilon = epsilon
-        self.velocity = np.zeros((self.nparams,)) if velocity is None else velocity
-        self.memory = np.zeros((self.nparams,)) if memory is None else memory
+        self.velocity, self.memory = None, None
+
+    def initialize(self, nparams, velocity=None, memory=None):
+        self.velocity = np.zeros((nparams,)) if velocity is None else velocity
+        self.memory = np.zeros((nparams,)) if memory is None else memory
 
     def optimize(self, W, gW, m):
         eta = self.eta / m

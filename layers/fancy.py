@@ -1,7 +1,7 @@
 import numpy as np
 
-from .core import LayerBase, FFBase, NoParamMixin
-from ..ops import Sigmoid
+from .abstract_layer import LayerBase, NoParamMixin, FFBase
+from ..atomic import Sigmoid
 from ..util import white, rtm, zX, floatX, scalX
 
 sigmoid = Sigmoid()
@@ -9,14 +9,7 @@ sigmoid = Sigmoid()
 
 class HighwayLayer(FFBase):
     """
-    Neural Highway Layer
-
-    Based on Srivastava et al., 2015
-
-    A carry gate is applied to the raw input.
-    A transform gate is applied to the output activation.
-    y = y_ * g_t + x * g_c
-    Output shape equals the input shape.
+    Neural Highway Layer based on Srivastava et al., 2015
     """
 
     def __init__(self, activation="tanh", **kw):
@@ -70,7 +63,7 @@ class HighwayLayer(FFBase):
         return "Highway-{}".format(str(self.activation))
 
 
-class DropOut(LayerBase, NoParamMixin):
+class DropOut(NoParamMixin, LayerBase):
 
     def __init__(self, dropchance):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -97,7 +90,7 @@ class DropOut(LayerBase, NoParamMixin):
 
     @property
     def outshape(self):
-        return self.neurons
+        return self.neurons,
 
     def capsule(self):
         return LayerBase.capsule(self) + [self.dropchance]

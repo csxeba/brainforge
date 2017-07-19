@@ -5,7 +5,7 @@ import gym
 
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer, ClockworkLayer
-from brainforge.optimization import RMSprop as Opt
+from brainforge.optimization import RMSprop
 from brainforge.reinforcement import DQN as AgentType, AgentConfig
 from matplotlib import pyplot
 
@@ -24,12 +24,11 @@ def QannRecurrent():
 
 
 def QannDense():
-    brain = BackpropNetwork(env.observation_space.shape, layers=[
+    brain = BackpropNetwork(input_shape=env.observation_space.shape, layers=[
         DenseLayer(24, activation="tanh"),
         DenseLayer(24, activation="relu"),
         DenseLayer(nactions, activation="linear")
-    ])
-    brain.finalize("mse", Opt(brain.nparams, eta=0.0001))
+    ], cost="mse", optimizer=RMSprop(eta=0.0001))
     return brain
 
 

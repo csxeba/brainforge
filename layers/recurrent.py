@@ -2,10 +2,9 @@ import abc
 
 import numpy as np
 
-from .core import FFBase
-from ..ops import Sigmoid
+from .abstract_layer import FFBase
+from ..atomic import Sigmoid
 from ..util import white, white_like, zX, zX_like, ctx1
-
 
 sigmoid = Sigmoid()
 
@@ -13,7 +12,7 @@ sigmoid = Sigmoid()
 class RecurrentBase(FFBase):
 
     def __init__(self, neurons, activation, return_seq=False):
-        FFBase.__init__(self, neurons, activation)
+        super().__init__(neurons, activation)
         self.Z = 0
         self.Zs = []
         self.cache = []
@@ -57,19 +56,21 @@ class RecurrentBase(FFBase):
         else:
             return self.neurons,
 
+    def __str__(self):
+        return self.__class__.__name__ + "-{}-{}".format(self.neurons, str(self.activation)[:4])
+
 
 class RLayer(RecurrentBase):
 
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons)
-        self.biases = zX(self.neurons,)
-
-        RecurrentBase.connect(self, to, inshape)
+        self.biases = zX(self.neurons, )
+        super().connect(to, inshape)
 
     def feedforward(self, questions):
 
-        output = RecurrentBase.feedforward(self, questions)
+        output = super().feedforward(questions)
 
         for t in range(self.time):
             Z = np.concatenate((self.inputs[t], output), axis=-1)
@@ -92,14 +93,14 @@ class RLayer(RecurrentBase):
         :param error: the deltas flowing from the next layer
         """
 
-        error = RecurrentBase.backpropagate(self, error)
+        error = super().backpropagate(error)
 
         # the gradient flowing backwards in time
         dh = zX_like(error[-1])
         # the gradient wrt the whole input tensor: dC/dX = dC/dY_{l-1}
         dX = zX_like(self.inputs)
 
-        for t in range(self.time-1, -1, -1):
+        for t in range(self.time - 1, -1, -1):
             output = self.cache[t]
             Z = self.Zs[t]
 
@@ -115,14 +116,11 @@ class RLayer(RecurrentBase):
 
         return dX.transpose(1, 0, 2)
 
-    def __str__(self):
-        return "RLayer-{}-{}".format(self.neurons, str(self.activation))
-
 
 class LSTM(RecurrentBase):
 
     def __init__(self, neurons, activation, bias_init_factor=7., return_seq=False):
-        RecurrentBase.__init__(self, neurons, activation, return_seq)
+        super().__init__(neurons, activation, return_seq)
         self.G = neurons * 3
         self.Zs = []
         self.gates = []
@@ -131,12 +129,12 @@ class LSTM(RecurrentBase):
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
-        self.biases = zX(self.neurons * 4,) + self.bias_init_factor
-        RecurrentBase.connect(self, to, inshape)
+        self.biases = zX(self.neurons * 4, ) + self.bias_init_factor
+        super().connect(to, inshape)
 
     def feedforward(self, X):
 
-        output = RecurrentBase.feedforward(self, X)
+        output = super().feedforward(X)
         state = zX_like(output)
 
         for t in range(self.time):
@@ -164,7 +162,7 @@ class LSTM(RecurrentBase):
 
     def backpropagate(self, error):
 
-        error = RecurrentBase.backpropagate(self, error)
+        error = super().backpropagate(error)
 
         actprime = self.activation.derivative
         sigprime = sigmoid.derivative
@@ -173,7 +171,7 @@ class LSTM(RecurrentBase):
         dX = zX_like(self.inputs)
         dZ = zX_like(self.Zs[0])
 
-        for t in range(-1, -(self.time+1), -1):
+        for t in range(-1, -(self.time + 1), -1):
             output, Ca, state, preact = self.cache[t]
             f, i, o, cand = np.split(self.gates[t], 4, axis=-1)
 
@@ -183,7 +181,7 @@ class LSTM(RecurrentBase):
             # Backprop into state
             dC += error[t] * o * actprime(Ca)
 
-            state_yesterday = 0. if t == -self.time else self.cache[t-1][2]
+            state_yesterday = 0. if t == -self.time else self.cache[t - 1][2]
             # Calculate the gate derivatives
             df = state_yesterday * dC
             di = cand * dC
@@ -202,9 +200,6 @@ class LSTM(RecurrentBase):
             dX[t] = dZ[:, :-self.neurons]
 
         return dX.transpose(1, 0, 2)
-
-    def __str__(self):
-        return "LSTM-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
 class GRU(RecurrentBase):
@@ -264,7 +259,7 @@ class GRU(RecurrentBase):
         Wu, Wr, Wo = np.split(self.weights, 3, axis=1)
         neu = self.neurons
 
-        for t in range(-1, -(self.time+1), -1):
+        for t in range(-1, -(self.time + 1), -1):
             (U, R, O), (Z, Zk) = self.gates[t], self.Zs[t]
             prevout = Z[:, -neu:]
             dh += error[t]
@@ -285,9 +280,6 @@ class GRU(RecurrentBase):
             self.nabla_b += ct((dU, dR, dO), axis=1).sum(axis=0)
 
         return dX.transpose(1, 0, 2)
-
-    def __str__(self):
-        return "GRU-{}-{}".format(self.neurons, str(self.activation)[:4])
 
 
 class ClockworkLayer(RecurrentBase):
@@ -316,7 +308,7 @@ class ClockworkLayer(RecurrentBase):
                 msg += "Please also consider that timesteps < 0 are invalid!"
                 raise RuntimeError(msg)
         self.ticks = np.array(ticktimes)
-        self.tick_array = zX(self.neurons,)
+        self.tick_array = zX(self.neurons, )
         print("CW blocks:", self.blocksizes)
         print("CW ticks :", self.ticks)
 
@@ -328,22 +320,22 @@ class ClockworkLayer(RecurrentBase):
         U = white(inshape[-1], self.neurons)
 
         for i, bls in enumerate(self.blocksizes):
-            start = i*bls
+            start = i * bls
             end = start + bls
             W[start:end, start:] = white_like(W[start:end, start:])
             self.tick_array[start:end] = self.ticks[i]
 
         self.weights = np.concatenate((W, U), axis=0)
-        self.biases = zX(self.neurons,)
+        self.biases = zX(self.neurons)
 
-        RecurrentBase.connect(self, to, inshape)
+        super().connect(to, inshape)
 
     def feedforward(self, stimuli):
-        output = RecurrentBase.feedforward(self, stimuli)
+        output = super().feedforward(stimuli)
 
-        for t in range(1, self.time+1):
+        for t in range(1, self.time + 1):
             time_gate = np.equal(t % self.tick_array, 0.)
-            Z = np.concatenate((self.inputs[t-1], output), axis=-1)
+            Z = np.concatenate((self.inputs[t - 1], output), axis=-1)
             gated_W = self.weights * time_gate[None, :]
             gated_b = self.biases * time_gate
             output = self.activation(Z.dot(gated_W) + gated_b)
@@ -360,14 +352,12 @@ class ClockworkLayer(RecurrentBase):
         return self.output
 
     def backpropagate(self, error):
-        error = RecurrentBase.backpropagate(self, error)
+        error = super().backpropagate(error)
 
-        # the gradient flowing backwards in time
         dh = zX_like(error[-1])
-        # the gradient wrt the whole input tensor: dC/dX = dC/dY_{l-1}
         dX = zX_like(self.inputs)
 
-        for t in range(self.time-1, -1, -1):
+        for t in range(self.time - 1, -1, -1):
             output = self.cache[t]
             Z = self.Zs[t]
             time_gate, gated_W = self.gates[t]
@@ -384,31 +374,27 @@ class ClockworkLayer(RecurrentBase):
 
         return dX.transpose(1, 0, 2)
 
-    def __str__(self):
-        return "ClockworkLayer-{}-{}".format(self.neurons, self.activation)
-
 
 class Reservoir(RLayer):
 
-    def __init__(self, neurons, activation, return_seq=False, p=0.1):
+    trainable = False
+
+    def __init__(self, neurons, activation, return_seq=False, r=0.1):
         RLayer.__init__(self, neurons, activation, return_seq)
         self.trainable = False
-        self.p = p
+        self.r = r
 
     def connect(self, to, inshape):
-        RLayer.connect(self, to, inshape)
+        super().connect(to, inshape)
         wx, wy = self.weights.shape
         # Create a sparse weight matrix (biases are included)
-        W = np.random.binomial(1, self.p, size=(wx, wy+1)).astype(float)
-        W *= np.random.randn(wx, wy+1)
+        W = np.random.binomial(1, self.r, size=(wx, wy + 1)).astype(float)
+        W *= np.random.randn(wx, wy + 1)
         S = np.linalg.svd(W, compute_uv=False)  # compute singular values
-        W /= S[0]**2  # scale to unit spectral radius
+        W /= S[0] ** 2  # scale to unit spectral radius
         self.weights = W[:, :-1]
         self.biases = W[:, -1]
 
     def backpropagate(self, error):
         if self.position > 1:
             return super().backpropagate(error)
-
-    def __str__(self):
-        return "Reservoir-{}-{}".format(self.neurons, str(self.activation)[:4])

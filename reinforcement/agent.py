@@ -2,8 +2,9 @@ import abc
 
 import numpy as np
 
+from ..model import BackpropNetwork
 from ..util.rl_util import discount_rewards
-from ._experience import _Experience, _TimeExperience
+from ._experience import xp_factory
 
 
 def _parameter_alias(item):
@@ -50,15 +51,12 @@ class AgentBase(abc.ABC):
 
     type = ""
 
-    def __init__(self, network, agentconfig, **kw):
+    def __init__(self, network: BackpropNetwork, agentconfig: AgentConfig, **kw):
         if agentconfig is None:
             agentconfig = AgentConfig(**kw)
         self.net = network
-        self.shadow_net = network.get_weights()
-        if agentconfig.time <= 1:
-            self.xp = _Experience(agentconfig.xpsize)
-        else:
-            self.xp = _TimeExperience(agentconfig.xpsize, agentconfig.time)
+        self.shadow_net = network.layers.get_weights()
+        self.xp = xp_factory(agentconfig.xpsize, "drop", agentconfig.time)
         self.cfg = agentconfig
 
     @abc.abstractmethod
@@ -83,14 +81,14 @@ class AgentBase(abc.ABC):
         return np.mean(costs)
 
     def push_weights(self):
-        W = self.net.get_weights(unfold=True)
+        W = self.net.layers.get_weights(unfold=True)
         D = np.linalg.norm(self.shadow_net - W)
         self.shadow_net *= (1. - self.cfg.tau)
-        self.shadow_net += self.cfg.tau * self.net.get_weights(unfold=True)
+        self.shadow_net += self.cfg.tau * self.net.layers.get_weights(unfold=True)
         return D / len(W)
 
     def pull_weights(self):
-        self.net.set_weights(self.shadow_net, fold=True)
+        self.net.layers.set_weights(self.shadow_net, fold=True)
 
     def update(self):
         pass
@@ -138,15 +136,14 @@ class PG(AgentBase):
         for start in range(0, N, 50):
             y = Y[start:start+50]
             pred = self.net.predict(X[start:start+50])
-            grad = self.net.cost.derivative(pred, y)
             cost += self.net.cost(pred, y)
-            self.net.backpropagate(grad * R[start:start+50, None])
-            self.grad += self.net.get_gradients(unfold=True)
+            delta = self.net.cost.derivative(pred, y)
+            self.grad += self.net.backpropagate(delta * R[start:start + 50, None])
 
         W = self.net.optimizer.optimize(
-            self.net.get_weights(unfold=True), self.grad, N // 50
+            self.net.layers.get_weights(unfold=True), self.grad, N // 50
         )
-        self.net.set_weights(W)
+        self.net.layers.set_weights(W)
         self.reset()
         return cost / N
 
@@ -220,12 +217,12 @@ class HillClimbing(AgentBase):
         return pred.argmax()
 
     def accumulate(self, state, reward):
-        W = self.net.get_weights(unfold=True)
+        W = self.net.layers.get_weights(unfold=True)
         if self.rewards > self.bestreward:
             # print(" Improved by", self.rewards - self.bestreward)
             self.bestreward = self.rewards
             self.shadow_net = W
-        self.net.set_weights(W + np.random.randn(*W.shape)*0.1)
+        self.net.layers.set_weights(W + np.random.randn(*W.shape)*0.1)
         self.reset()
         self.bestreward *= 0.1
         return self.bestreward

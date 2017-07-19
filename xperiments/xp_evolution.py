@@ -48,7 +48,7 @@ for i in range(100):
     stds += s
     bests += b
     obj.set_data(*upscale(pop.individuals.T))
-    plt.pause(1)
+    plt.pause(0.1)
 
 means, stds, bests = tuple(map(np.array, (means, stds, bests)))
 plt.close()

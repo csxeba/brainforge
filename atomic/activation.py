@@ -110,5 +110,5 @@ class OnePlus(ActivationFunction):
         return eZ / (eZ + 1.)
 
 
-act_fns = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
-           "linear": Linear, "relu": ReLU, "softmax": SoftMax}
+activations = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
+               "linear": Linear, "relu": ReLU, "softmax": SoftMax}

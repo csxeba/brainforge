@@ -14,9 +14,12 @@ class SGD(GradientDescent):
 
 class Momentum(SGD):
 
-    def __init__(self, nparams, eta=0.1, mu=0.9, velocity=None):
-        super().__init__(nparams, eta)
+    def __init__(self, eta=0.1, mu=0.9):
+        super().__init__(eta)
         self.mu = mu
+        self.velocity = None
+
+    def initialize(self, nparams, velocity=None):
         self.velocity = np.zeros((nparams,)) if velocity is None else velocity
 
     def optimize(self, W, gW, m):
@@ -30,8 +33,12 @@ class Momentum(SGD):
 
 class Nesterov(Momentum):
 
-    def __init__(self, nparams, eta=0.1, mu=0.9, velocity=None, memory=None):
-        super().__init__(nparams, eta, mu, velocity)
+    def __init__(self, eta=0.1, mu=0.9):
+        super().__init__(eta, mu)
+        self.memory = None
+
+    def initialize(self, nparams, velocity=None, memory=None):
+        super().initialize(nparams, velocity)
         self.memory = np.zeros_like(self.velocity) if memory is None else memory
 
     def optimize(self, W, gW, m):
@@ -45,6 +52,5 @@ class Nesterov(Momentum):
     def __str__(self):
         return "Nesterov"
 
-gdopt = {k.lower(): v for k, v in locals().items()
-         if k not in ("GradientDescent", "np")
-         and k[0] != "_"}
+
+gdopt = {"sgd": SGD, "momentum": Momentum, "nesterov": Nesterov}

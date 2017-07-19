@@ -32,7 +32,7 @@ env = gym.make("Pong-v0")
 nactions = env.action_space.n
 stateshape = 6400
 print("Pong stateshape =", stateshape)
-brain = BackpropNetwork(stateshape, layers=[
+brain = BackpropNetwork(input_shape=stateshape, layers=[
     DenseLayer(200, activation="tanh"),
     DenseLayer(nactions, activation="softmax")
 ])

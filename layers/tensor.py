@@ -1,15 +1,15 @@
-from .core import LayerBase, NoParamMixin
-from ..util import white, zX, zX_like, errors
+from .abstract_layer import LayerBase, NoParamMixin
+from ..util import white, zX, zX_like
 
 
-class PoolLayer(LayerBase, NoParamMixin):
+class PoolLayer(NoParamMixin, LayerBase):
 
     def __init__(self, fdim, compiled=True):
         LayerBase.__init__(self, activation="linear", trainable=False)
         if compiled:
             from ..numbaops.lltensor import MaxPoolOp
         else:
-            from ..ops import MaxPoolOp
+            from ..atomic import MaxPoolOp
         self.fdim = fdim
         self.filter = None
         self.op = MaxPoolOp()
@@ -17,7 +17,7 @@ class PoolLayer(LayerBase, NoParamMixin):
     def connect(self, to, inshape):
         ic, iy, ix = inshape[-3:]
         if any((iy % self.fdim, ix % self.fdim)):
-            raise errors.ShapeError(
+            raise RuntimeError(
                 "Incompatible shapes: {} % {}".format((ix, iy), self.fdim)
             )
         LayerBase.connect(self, to, inshape)
@@ -78,10 +78,10 @@ class ConvLayer(LayerBase):
         if self.compiled:
             from ..numbaops.lltensor import ConvolutionOp
         else:
-            from ..ops import ConvolutionOp
+            from ..atomic import ConvolutionOp
         depth, iy, ix = inshape[-3:]
         if any((iy < self.fy, ix < self.fx)):
-            raise errors.ShapeError(
+            raise RuntimeError(
                 "Incompatible shapes: iy ({}) < fy ({}) OR ix ({}) < fx ({})"
                 .format(iy, self.fy, ix, self.fx)
             )
@@ -89,7 +89,6 @@ class ConvLayer(LayerBase):
         self.op = ConvolutionOp()
         self.inshape = inshape
         self.depth = depth
-        # self.weights = white(self.fx, self.fy, self.depth, self.nfilters)
         self.weights = white(self.nfilters, self.depth, self.fy, self.fx)
         self.biases = zX(self.nfilters)
         self.nabla_b = zX_like(self.biases)

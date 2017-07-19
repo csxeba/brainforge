@@ -1,6 +1,4 @@
 """Wrappers for vector-operations and other functions"""
-import abc
-
 import numpy as np
 
 from ..util import zX, zX_like
@@ -10,17 +8,9 @@ from .activation import Sigmoid
 sig = Sigmoid()
 
 
-class Op(abc.ABC):
+class DenseOp:
 
-    @abc.abstractmethod
-    def outshape(self, inshape):
-        raise NotImplementedError
-
-
-class DenseOp(Op):
-
-    def __init__(self, neurons):
-        self.neurons = neurons
+    type = "Dense"
 
     @staticmethod
     def forward(X, W, b):
@@ -29,31 +19,25 @@ class DenseOp(Op):
     @staticmethod
     def backward(X, E, W):
         gW = np.dot(X.T, E)
-        # gb = np.sum(E, axis=1)
+        gb = np.sum(E, axis=0)
         gX = np.dot(E, W.T)
-        return gW, gX
-
-    def outshape(self, inshape):
-        return self.neurons,
+        return gW, gb, gX
 
 
-class ReshapeOp(Op):
+class ReshapeOp:
 
-    def __init__(self, shape):
-        self.shape = shape
+    type = "Reshape"
 
-    def __str__(self):
-        return "Reshape"
+    @staticmethod
+    def forward(X, outshape):
+        return X.reshape(X.shape[0], *outshape)
 
-    def __call__(self, A):
-        m = A.shape[0]
-        return A.reshape(m, *self.shape)
-
-    def outshape(self, *args):
-        return self.shape
+    @staticmethod
+    def backward(E, inshape):
+        return ReshapeOp.forward(E, inshape)
 
 
-class ConvolutionOp(Op):
+class ConvolutionOp:
 
     @staticmethod
     def valid(A, F):
@@ -112,7 +96,7 @@ class ConvolutionOp(Op):
         return "Convolution"
 
 
-class MaxPoolOp(Op):
+class MaxPoolOp:
 
     def __str__(self):
         return "MaxPool"
