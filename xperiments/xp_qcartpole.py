@@ -6,7 +6,8 @@ import gym
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer, ClockworkLayer
 from brainforge.optimization import RMSprop
-from brainforge.reinforcement import DQN as AgentType, AgentConfig
+from brainforge.reinforcement import AgentConfig
+from reinforcement.qlearning import DDQN as AgentType
 from matplotlib import pyplot
 
 env = gym.make("CartPole-v1")
@@ -18,15 +19,13 @@ def QannRecurrent():
         ClockworkLayer(120, activaton="tanh"),
         DenseLayer(60, activation="relu"),
         DenseLayer(nactions, activation="linear")
-    ])
-    brain.finalize("mse", Opt(brain.nparams, eta=0.0001))
+    ], cost="mse", optimizer=RMSprop(eta=0.0001))
     return brain
 
 
 def QannDense():
     brain = BackpropNetwork(input_shape=env.observation_space.shape, layers=[
         DenseLayer(24, activation="tanh"),
-        DenseLayer(24, activation="relu"),
         DenseLayer(nactions, activation="linear")
     ], cost="mse", optimizer=RMSprop(eta=0.0001))
     return brain
@@ -104,6 +103,6 @@ def plotrun(agent):
 
 if __name__ == '__main__':
     run(AgentType(QannDense(), nactions, AgentConfig(
-        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.99999, epsilon_min=0.0,
+        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
         discount_factor=0.6, replay_memory_size=7200, training_batch_size=720,
     )))
