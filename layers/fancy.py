@@ -66,19 +66,19 @@ class HighwayLayer(FFBase):
 class DropOut(NoParamMixin, LayerBase):
 
     def __init__(self, dropchance):
-        LayerBase.__init__(self, activation="linear", trainable=False)
+        super().__init__()
         self.dropchance = scalX(1. - dropchance)
         self.mask = None
-        self.neurons = None
+        self.inshape = None
         self.training = True
 
     def connect(self, to, inshape):
-        self.neurons = inshape
-        LayerBase.connect(self, to, inshape)
+        self.inshape = inshape
+        super().connect(to, inshape)
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.inputs = stimuli
-        self.mask = np.random.uniform(0, 1, self.neurons) < self.dropchance  # type: np.ndarray
+        self.mask = np.random.uniform(0, 1, self.inshape) < self.dropchance  # type: np.ndarray
         self.mask.astype(floatX)
         self.output = stimuli * (self.mask if self.brain.learning else self.dropchance)
         return self.output
@@ -90,7 +90,7 @@ class DropOut(NoParamMixin, LayerBase):
 
     @property
     def outshape(self):
-        return self.neurons,
+        return self.inshape
 
     def capsule(self):
         return LayerBase.capsule(self) + [self.dropchance]

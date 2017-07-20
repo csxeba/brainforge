@@ -9,7 +9,7 @@ class BackpropNetwork(LearnerBase):
     def __init__(self, layers, cost="mse", optimizer="sgd", name="", **kw):
         super().__init__(layers, cost, name, **kw)
         self.optimizer = (
-            optimizer if isinstance(optimizer, GradientDescent) else optimizers[optimizer]
+            optimizer if isinstance(optimizer, GradientDescent) else optimizers[optimizer]()
         )
         self.optimizer.initialize(nparams=self.layers.nparams)
 

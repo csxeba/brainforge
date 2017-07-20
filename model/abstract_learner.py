@@ -15,7 +15,6 @@ class LearnerBase:
         self.layers = layerstack
         self.name = name
         self.age = 0
-        self.learning = False  # Dropout uses this
         self.cost = cost if isinstance(cost, CostFunction) else cost_functions[cost]
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, classify=True, validation=(), verbose=1):
@@ -38,7 +37,7 @@ class LearnerBase:
 
         costs = []
         done = 0
-        self.learning = True
+        self.layers.learning = True
         while done < no_lessons:
             batch = next(generator)
             cost = self.learn_batch(*batch)
@@ -48,7 +47,7 @@ class LearnerBase:
             if verbose:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t "
                       .format(done/no_lessons, np.mean(costs)), end="")
-        self.learning = False
+        self.layers.learning = False
 
         if verbose:
             print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(costs)), end="")

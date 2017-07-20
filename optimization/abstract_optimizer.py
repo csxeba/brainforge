@@ -18,7 +18,7 @@ class Optimizer(abc.ABC):
 
 class GradientDescent(Optimizer):
 
-    def __init__(self, eta):
+    def __init__(self, eta=0.01):
         self.eta = eta
         self.nparams = None
 

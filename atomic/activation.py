@@ -82,10 +82,20 @@ class SoftMax(ActivationFunction):
 
     type = "softmax"
 
-    def __call__(self, Z) -> np.ndarray:
-        # nZ = Z - np.max(Z)
-        eZ = np.exp(Z)
+    def __init__(self, temperature=1.):
+        if temperature != 1.:
+            self.temperature = scalX(temperature)
+            self.__call__ = self.tn
+
+    def tn(self, Z):
+        return self.t1(Z / self.temperature)
+
+    @staticmethod
+    def t1(Z) -> np.ndarray:
+        eZ = np.exp(Z - Z.max(axis=1, keepdims=True))
         return eZ / np.sum(eZ, axis=1, keepdims=True)
+
+    __call__ = t1
 
     def derivative(self, A: np.ndarray) -> np.ndarray:
         return s1
@@ -100,7 +110,7 @@ class SoftMax(ActivationFunction):
 
 class OnePlus(ActivationFunction):
 
-    type = "softplus"
+    type = "oneplus"
 
     def __call__(self, Z):
         return 1. + np.log(1. + np.exp(Z))

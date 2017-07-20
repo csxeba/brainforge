@@ -1,6 +1,6 @@
 from csxdata import roots, CData
 
-from brainforge import LayerStack, BackpropNetwork
+from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
 from brainforge.optimization import SGD
 

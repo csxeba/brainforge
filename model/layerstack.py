@@ -6,6 +6,7 @@ class LayerStack:
     def __init__(self, input_shape, layers=()):
         self.layers = []
         self.architecture = []
+        self.learning = False
         self._iterme = None
 
         self._add_input_layer(input_shape)
