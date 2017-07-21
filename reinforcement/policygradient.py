@@ -26,7 +26,7 @@ class PG(AgentBase):
     def sample(self, state, reward):
         self.X.append(state)
         self.rewards.append(reward)
-        probabilities = self.net.predict(state[None, ...])[0]
+        probabilities = self.net.feedforward(state[None, ...])[0]
         action = np.random.choice(self.actions, p=probabilities)
         self.Y.append(self.action_labels[action])
         return action
@@ -44,7 +44,7 @@ class PG(AgentBase):
         m = self.cfg.bsize
         for start in range(0, N, m):
             y = Y[start:start+m]
-            pred = self.net.predict(X[start:start+m])
+            pred = self.net.feedforward(X[start:start + m])
             cost += self.net.cost(pred, y)
             delta = self.net.cost.derivative(pred, y)
             self.grad += self.net.backpropagate(delta * R[start:start+m, None])

@@ -6,8 +6,8 @@ from ..optimization import optimizers, GradientDescent
 
 class BackpropNetwork(LearnerBase):
 
-    def __init__(self, layers, cost="mse", optimizer="sgd", name="", **kw):
-        super().__init__(layers, cost, name, **kw)
+    def __init__(self, layerstack, cost="mse", optimizer="sgd", name="", **kw):
+        super().__init__(layerstack, cost, name, **kw)
         self.optimizer = (
             optimizer if isinstance(optimizer, GradientDescent) else optimizers[optimizer]()
         )

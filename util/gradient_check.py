@@ -92,10 +92,10 @@ class GradientCheck:
             perturb[i] += self.eps
 
             network.set_weights(ws + perturb, fold=True)
-            pred1 = network.predict(X)
+            pred1 = network.feedforward(X)
             cost1 = network.cost(pred1, Y)
             network.set_weights(ws - perturb, fold=True)
-            pred2 = network.predict(X)
+            pred2 = network.feedforward(X)
             cost2 = network.cost(pred2, Y)
 
             numgrads[i] = (cost1 - cost2)
@@ -112,7 +112,7 @@ class GradientCheck:
         network = self.net
         print("Calculating analytical gradients...")
         print("Forward pass:", end=" ")
-        preds = network.predict(X)
+        preds = network.feedforward(X)
         print("done! Backward pass:", end=" ")
         delta = network.cost.derivative(preds, Y)
         nabla = network.backpropagate(delta)

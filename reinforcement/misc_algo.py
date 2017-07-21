@@ -15,7 +15,7 @@ class HillClimbing(AgentBase):
 
     def sample(self, state, reward):
         self.rewards += reward if reward is not None else 0
-        pred = self.net.predict(state[None, :])[0]
+        pred = self.net.feedforward(state[None, :])[0]
         return pred.argmax()
 
     def accumulate(self, state, reward):

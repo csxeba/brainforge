@@ -4,28 +4,30 @@ from ..evolution import Population
 
 class NeuroEvolution(LearnerBase):
 
-    population = None  # type: Population
-    on_accuracy = False
-
-    def finalize(self, cost="mse", population_size=100, on_accuracy=False, **kw):
-        super().finalize(cost)
+    def __init__(self, layerstack, cost="mse", population_size=100, name="", **kw):
+        super().__init__(layerstack, cost, name, **kw)
         ff = kw.pop("fitness_function", self.fitness)
         fw = kw.pop("fitness_weights", [1.])
+        oa = kw.pop("on_accuracy", False)
         self.population = Population(
             loci=self.layers.nparams,
             fitness_function=ff,
             fitness_weights=fw,
             limit=population_size, **kw
         )
-        self.on_accuracy = on_accuracy
+        self.on_accuracy = oa
 
     @staticmethod
     def as_weights(genome):
         return (genome - 0.5) * 20.
 
     def learn_batch(self, X, Y, **kw):
-        self.population.run(epochs=1, survival_rate=0.8, mutation_rate=0.1,
-                            verbosity=0, X=X, Y=Y)
+        evolepoch = kw.get("epochs", 1)
+        survrate = kw.get("survival_rate", 0.8)
+        mutrate = kw.get("mutation_rate", 0.1)
+        evolverbose = kw.get("verbosity", 0)
+        self.population.run(epochs=evolepoch, survival_rate=survrate, mutation_rate=mutrate,
+                            verbosity=evolverbose, X=X, Y=Y)
         self.layers.set_weights(self.as_weights(self.population.best))
         return self.population.mean_grade()
 

@@ -27,7 +27,7 @@ class DQN(AgentBase):
     def sample(self, state, reward):
         self.X.append(state)
         self.R.append(reward)
-        Q = self.net.predict(state[None, ...])[0]
+        Q = self.net.feedforward(state[None, ...])[0]
         self.Q.append(Q)
         action = (np.argmax(Q) if np.random.uniform() > self.cfg.decaying_epsilon
                   else np.random.randint(0, self.nactions))
@@ -35,7 +35,7 @@ class DQN(AgentBase):
         return action
 
     def accumulate(self, state, reward):
-        q = self.net.predict(state[None, ...])[0]
+        q = self.net.feedforward(state[None, ...])[0]
         X = np.stack(self.X, axis=0)
         Q = np.stack(self.Q[1:] + [q], axis=0)
         R = np.array(self.R[1:] + [reward])
@@ -72,7 +72,7 @@ class DDQN(DQN):
         X = np.stack(self.X + [state], axis=0)
         R = np.array(self.R[1:] + [reward])
 
-        Y = self.critic.predict(X[1:])
+        Y = self.critic.feedforward(X[1:])
         Y[range(len(Y)), (tuple(self.A))] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, self.A[-1]] = -reward
 

@@ -11,7 +11,7 @@ class LayerStack:
 
         self._add_input_layer(input_shape)
         for layer in layers:
-            self._add_layer(layer)
+            self.add(layer)
 
     def _add_input_layer(self, input_shape):
         if isinstance(input_shape, int) or isinstance(input_shape, np.int64):
@@ -22,7 +22,7 @@ class LayerStack:
         self.layers.append(inl)
         self.architecture.append(str(inl))
 
-    def _add_layer(self, layer):
+    def add(self, layer):
         layer.connect(self, inshape=self.layers[-1].outshape)
         self.layers.append(layer)
         self.architecture.append(str(layer))
@@ -30,6 +30,11 @@ class LayerStack:
     def pop(self):
         self.layers.pop()
         self.architecture.pop()
+
+    def feedforward(self, X):
+        for layer in self.layers:
+            X = layer.feedrorward(X)
+        return X
 
     def get_weights(self, unfold=True):
         ws = [layer.get_weights(unfold=unfold) for

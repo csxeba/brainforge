@@ -28,19 +28,18 @@ class LearnerBase:
         self.age += epochs
         return epcosts
 
-    def fit(self, X, Y, batch_size=20, epochs=30, classify=True, validation=(), verbose=1, shuffle=True, w=None):
-        data = (X, Y) if w is None else (X, Y, w)
-        datastream = batch_stream(*data, m=batch_size, shuffle=shuffle)
-        return self.fit_generator(datastream, len(X), epochs, classify, validation, verbose)
+    def fit(self, X, Y, batch_size=20, epochs=30, classify=True, validation=(), verbose=1, shuffle=True, **kw):
+        datastream = batch_stream(X, Y, m=batch_size, shuffle=shuffle)
+        return self.fit_generator(datastream, len(X), epochs, classify, validation, verbose, **kw)
 
-    def epoch(self, generator, no_lessons, classify=True, validation=None, verbose=1):
+    def epoch(self, generator, no_lessons, classify=True, validation=None, verbose=1, **kw):
 
         costs = []
         done = 0
         self.layers.learning = True
         while done < no_lessons:
             batch = next(generator)
-            cost = self.learn_batch(*batch)
+            cost = self.learn_batch(*batch, **kw)
             costs.append(cost)
 
             done += len(batch[0])
@@ -70,9 +69,7 @@ class LearnerBase:
         print(chain.format(tcost) + accchain, end="")
 
     def predict(self, X):
-        for layer in self.layers:
-            X = layer.feedforward(X)
-        return X
+        return self.layers.feedforward(X)
 
     def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False, verbose=False):
         N = X.shape[0]

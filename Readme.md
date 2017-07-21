@@ -1,75 +1,115 @@
 [![codebeat badge](https://codebeat.co/badges/f72db301-fd66-4c05-b1ca-9b8c8196f06e)](https://codebeat.co/projects/github-com-csxeba-brainforge-dev)
 
 # Brainforge documentation
+
 Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy** (and optionally **Numba**, a jit compiler for Python and NumPy)
 
 ## Models
-A Neural Network can be considered as a stack of Layer instances. There are two possible configuration of models currently
-available in Brainforge:
 
-- BackpropNetwork, which uses a variant of Gradient Descent to optimize the weights
-- NeuroEvolution, which uses differential evolution for optimization.
+Brainforge treats neural networks as layer stacks with some learning logic applied to them. These concepts are separated in the API, so the building of an ANN is a two-stage process.
+1. A LayersStack instance should be created and populated with layers
+2. The LayerStack should be wrapped with some learning logic
 
-These classes expect the following parameters at initialization time:
+Currently the following learning wrappers are implemented:
 
-- *input_shape*: tuple, specifying the dimensionality of the data. An InputLayer will be automatically instanciated
+- BackpropNetwork, which uses a selected variant of Gradient Descent to optimize the weights (see section **Optimizers** for more information)
+- NeuroEvolution, which uses differential evolution for weight optimization
+
+### LayerStack - Specifiing the architecture
+
+#### Constructor parameters
+
+- *input_shape*: tuple or int, specifying the dimensionality of the data. An InputLayer will be automatically instanciated
 based on this information.
-- *layers*: some iterable, holding Layer instances. Optional, layers can also be added to the network via the **add()**
-method.
+- *layers*: some iterable, holding Layer instances.
 - *name*: string, specifying a name for the network, used in the **describe()** and **save()** methods.
 
 #### Methods
-For building the architecture:
+
 - *add*: expects a Layer instance, which is added to the top of the layer stack.
 - *pop*: deletes the last layer from the layer stack.
-- *finalize*: finalizes the model, making it ready to fit the data.
-  - *cost*: string or CostFunction inste, specifying the cost (or loss) function used to evaluate the network's
-performance. See section: **Costs**
+- *feedforward*: performs a forward-propagation through the layer stack.
+- *get_weights* and *set_weights*. They accept a bool parameter (unfold and fold respectively) for convenience.
+- *reset*: reinitializes the layers randomly.
 
-For model fitting:
-- *fit*: fits the model to the given data
+#### Properties
+
+- *nparams*: returns the total number of trainable parameters
+
+#### Other info
+
+LayerStack can be iterated with a for loop, which yields the layers of the stack.
+
+### LearnerBase - Learning Logic Interface
+Every learning logic wrapper is derived from the abstract base class, LearnerBase, which specifies an interface for fitting.
+
+#### Constructor parameters
+
+- *layerstack*: either a LayerStack instance or an iterable containing layer instances.
+- *cost*: eiter a string, specifiing a cost function or the instance of a ConstFunction subclass. See section **Costs** for more information.
+- *name*: optional string, used in persistance.
+
+#### Methods
+
+- *fit*: fits the model to the given data. Calls *fit_generator* in the background.
   - *X*: numpy array containing the training Xs (the independent variables)
   - *Y*: numpy array containing the training Ys (the dependent variables)
   - *batch_size*: the batch size of stochastic training. 1 for on-line (per-lesson) training. Defaults to 20.
   - *epochs*: the number of epochs to train for. Defaults to 30.
-  - *monitor*: iterable, containing strings, specifying what runtime scores to monitor. Currently, only "acc" is supported.
-Defaults to nothingness (aka void or nihil).
+  - *classify*: boolean parameter, which determines whether to calculate classification accuracy along with cost during evaluation.
   - *validation*: tuple, containing separate X and Y tensors used to validate the network performance. Defualts to an
 empty tuple.
   - *verbose*: integer, specifying the level of verbosity. Defaults to 1.
   - *shuffle*: bool, if set, the Xs and Ys will be reshuffled before every epoch. Defaults to True.
 supported for monitoring the classification accuracy.
-- *fit_generator*: fits the model to an infinite generator, which spits out batches of learning data.
-- *epoch*: runs a single epoch on the supplied data.
-- *learn_batch*: runs a forward and backward propagation and performs a single parameter update.
-- *backpropagate*: only available for BackpropNetwork. Backpropagates a supplied delta tensor and calculates gradients.
+- *fit_generator*: fits the model to an infinite generator, which spits out batches of learning data. Calls *epoch* in the background
+- *epoch*: runs a single epoch on the supplied data. Calls *learn_batch* in the background.
+- *learn_batch*: abstract method, derivatives must implement it.
+- *predict*: performs a forward-propagation through the layer stack.
+- *evaluate*: evaluates the network's performance on some X and Y. Calculates the cost and can optionally return classification accuracy as well, if the parameter *classify* is set to True.
+- *cost*: an instance method, basically a function reference to the cost function.
 
-For prediction and forward propagation:
-- *prediction*: forward propagates a stimulus (X) throught the network, returning raw predictions.
-  - *X*: the stimulus
-- *classify*: wraps prediction by adding a final argmax to the computation, thus predicting a class from raw
-probabilities.
-- *evaluate*: evaluates the network's performance on the supplied tensors.
-  - *X*: the input tensor
-  - *Y*: the target tensor
-  - *classify*: bool, determining whether a classification accuracy should be used or only cost determination.
+#### Properties
+- *layers*: a LayerStack instance. Can be iterated with a for loop.
+- *age*: 0 if the network is untrained. Incremented by 1 after every epoch.
 
-Some utilities:
-- *reset*: reshuffle the weights of the layers, effectively resetting the net
-- *get_weights*: extract the paramters from the layers. If unfold is set, the parameters are returned as one big vector.
-- *set_weights*: expects an iterable, ws. Sets the layers' weights according to **ws**. **ws** can be a flattened vector
-if this method's **fold** argument is set.
-- *get_gradients*: extracts gradients from the layers. Best to use together with *.backpropagate()*.
-- *gradient_check*: performs numerical gradient check on the supplied X and Y tensors.
-- *output*: property, returning the network's last output.
-- *nparams*: property, returning the total number of parameters in the model.
+### BackpropNetwork - Gradient Descent learning
 
-### Autoencoder
-TBD
+Gradient Descent and derivatives are implemented as Optimizer subclasses.
+
+#### Constructor parameters
+
+- *layerstack*, *cost* and *name* are the same as in **LearnerBase**
+- *optimizer*: either a string specifiing an optimizer algorithm with default hyperparameters or the instance of an Optimizer subclass. See section **Optimizers** for more information.
+
+#### Methods
+- Methods from LearnerBase are inherited.
+- *learn_batch*: fits the weights to a batch of data.
+- *backpropagate*: performs a backwards pass and returns all gradients concatenated to vector. Expects a matrix, *error*, which contains the output errors. Output errors can be obtained by calling instance.cost.derivative(prediction, target).
+- *get_gradients*: returns the gradients currently stored (from the last call of *backpropagate* or *fit_batch*). The parameter *unfold* can be set to False if the grads should be reshaped to the weights' shapes.
+
+#### Properties
+- *layers* and *age* are inherited from LearnerBase.
+- *optimizer*: can be used to directly call into the optimizer.
+
+### NeuroEvolution - Differential Evolution
+
+A simple genetic algorith is implemented in the submodule *evolution*. See more in section **Evolution**.
+
+#### Constructor parameters
+- *layerstack*, *cost* and *name* are the same as in **LearnerBase**.
+- *population_size*: how many sets of weights to keep in memory as individuals in a population.
+- *kw*: optional keywors arguments are passed down to an implicitly instanciated Population constructor. See section **Evolution** for more information. **on_accuracy** is one such argument which specifies whether to minimize cost or the classification accuracy directly.
+
+#### Methods
+- *learn_batch*: kwargs are supported for Population.run. Calling **fit()** or **fit_generator()**, these args are passed down to **epoch** and finally **learn_batch**.
+- *fitness*: the default fitness function, return the cost or the classification accuracy (depending on the value of the **on_accuracy** constructor parameter.
+- *as_weights*: upscales an individual (0-1) to the range (-10, 10)
+
+#### Properties
+- *population*: a Population instance with unfolded weight matrices as individuals.
 
 ## Layers
-Neural network operations are implemented as *Layer* subclasses and an ANN can be thought of as a stack of *Layer*
-instances.
 
 ### Core layers
 These layers are the ones used most regularily when working with ANNs.
