@@ -26,19 +26,18 @@ def prepro_coroutine(I):
         dsI = ds(I)
 
 
-RENDER = True
+RENDER = False
 
 env = gym.make("Pong-v0")
 nactions = env.action_space.n
 stateshape = 6400
 print("Pong stateshape =", stateshape)
-brain = BackpropNetwork(stateshape, layers=[
+brain = BackpropNetwork(input_shape=stateshape, layerstack=[
     DenseLayer(200, activation="tanh"),
     DenseLayer(nactions, activation="softmax")
-])
-brain.finalize("xent", "momentum")
-agent = PG(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=1.,
-                                        epsilon_greedy_rate=1., epsilon_decay_factor=0.999,
+], cost="xent", optimizer="sgd")
+agent = PG(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
+                                        epsilon_greedy_rate=1., epsilon_decay=0.99,
                                         epsilon_min=0.01, replay_memory_size=3000))
 rwds = deque(maxlen=100)
 episode = 1
@@ -63,6 +62,9 @@ while 1:
     rwds.append(rwd_sum)
     print()
     cost = agent.accumulate(state, reward)
+    agent.push_weights()
     rwd_mean = sum(rwds) / len(rwds)
+    if episode % 10 == 0:
+        agent.pull_weights()
     episode += 1
-    print(f"\nEpisode {episode:>5} Rwd: {rwd_mean:>5.2f}")
+    print(f"\nEpisode {episode:>5} Rwd: {rwd_mean:>5.2f} E: {agent.cfg.epsilon}")

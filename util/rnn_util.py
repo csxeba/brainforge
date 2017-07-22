@@ -7,7 +7,7 @@ def speak_to_me(model, csxframe, stochastic=False, ngrams=50):
     chain = "[{}]".format("".join(human))
     for _ in range(ngrams):
         inputs = pred[:, -(csxframe.timestep - 1):, :]
-        nextpred = model.predict(inputs)
+        nextpred = model.feedforward(inputs)
         pred = np.column_stack((pred, nextpred.reshape(1, *nextpred.shape)))
         human = csxframe.translate(nextpred, use_proba=stochastic)
         chain += "".join(human)
@@ -20,7 +20,7 @@ def keras_speak(net, dat, stochastic=False, ngrams=50):
     chain = "[{}]".format("".join(human))
     for _ in range(ngrams):
         inputs = pred[:, -(dat.timestep - 1):, :]
-        nextpred = net.predict(inputs)
+        nextpred = net.feedforward(inputs)
         pred = np.column_stack((pred, nextpred.reshape(1, *nextpred.shape)))
         human = dat.translate(nextpred, use_proba=stochastic)
         chain += "".join(human)

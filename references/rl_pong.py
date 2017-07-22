@@ -77,9 +77,8 @@ env = gym.make("Pong-v0")
 observation = env.reset()
 prev_x = np.zeros(D)  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
-running_reward = 0
 reward_sum = 0
-episode_number = 0
+episode = 0
 rewds = deque(maxlen=100)
 while True:
     if render:
@@ -108,7 +107,7 @@ while True:
     drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
     if done:  # an episode finished
-        episode_number += 1
+        episode += 1
 
         # stack together all inputs, hidden states, action gradients, and rewards for this episode
         epx = np.vstack(xs)
@@ -129,7 +128,7 @@ while True:
             grad_buffer[k] += grad[k]  # accumulate grad over batch
 
         # perform rmsprop parameter update every batch_size episodes
-        if episode_number % batch_size == 0:
+        if episode % batch_size == 0:
             for k, v in model.items():
                 g = grad_buffer[k]  # gradient
                 rmsprop_cache[k] = decay_rate * rmsprop_cache[k] + (1 - decay_rate) * g ** 2
@@ -137,8 +136,7 @@ while True:
                 grad_buffer[k] = np.zeros_like(v)  # reset batch gradient buffer
 
         # boring book-keeping
-        running_reward = running_reward * 0.99 + reward_sum * 0.01
-        rewds.append(epr.mean())
+        rewds.append(reward_sum)
         # print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
         # if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
         reward_sum = 0
@@ -146,5 +144,5 @@ while True:
         prev_x = np.zeros(D)
 
         if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
-            print('ep {:>5}: epoch finished, reward: {:>4}, running: {:.4f}'
-                  .format(episode_number, reward, sum(rewds) / len(rewds)))
+            print('ep {:>5}: epoch finished, running: {:.4f}'
+                  .format(episode, np.mean(rewds)))

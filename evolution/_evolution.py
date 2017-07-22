@@ -5,7 +5,7 @@ import numpy as np
 from ..util import floatX, zX, zX_like
 
 
-# I hereby state that
+# I solemly state that  # Thanks Mark
 # this evolutionary algorithm is MINIMIZING the fitness value!
 
 
@@ -21,7 +21,8 @@ class Population:
                  limit: int=100,
                  grade_function: callable=None,
                  mate_function: callable=None,
-                 mutate_function: callable=None):
+                 mutate_function: callable=None,
+                 **kw):
         """
         :param loci: number of elements in an individual's chromosome
         :param fitness_function: accepts a genotype, returns a tuple of fitnesses

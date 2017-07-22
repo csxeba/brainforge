@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge.ops import (
+from brainforge.atomic import (
     ConvolutionOp as NPConv,
     MaxPoolOp as NpPool,
 )

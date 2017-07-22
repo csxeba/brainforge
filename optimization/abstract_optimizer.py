@@ -18,9 +18,12 @@ class Optimizer(abc.ABC):
 
 class GradientDescent(Optimizer):
 
-    def __init__(self, nparams, eta):
+    def __init__(self, eta=0.01):
         self.eta = eta
-        self.nparams = nparams
+        self.nparams = None
+
+    def initialize(self, **kw):
+        pass
 
     @abc.abstractmethod
     def optimize(self, W, gW, m):
