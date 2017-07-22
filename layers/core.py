@@ -75,7 +75,7 @@ class InputLayer(Activation):
         super().__init__("linear")
 
 
-class Reshape(LayerBase, NoParamMixin):
+class Reshape(NoParamMixin, LayerBase):
 
     def __init__(self, shape=None):
         LayerBase.__init__(self, activation="linear", trainable=False)
@@ -99,6 +99,7 @@ class Reshape(LayerBase, NoParamMixin):
     def from_capsule(cls, capsule):
         return cls(*capsule)
 
+    @property
     def outshape(self):
         return self.shape
 

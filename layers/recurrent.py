@@ -28,7 +28,7 @@ class RecurrentBase(FFBase):
         self.inputs = stimuli.transpose(1, 0, 2)
         self.time = self.inputs.shape[0]
         self.Zs, self.gates, self.cache = [], [], []
-        return zX(self.brain.m, self.neurons)
+        return zX(len(stimuli), self.neurons)
 
     @abc.abstractmethod
     def backpropagate(self, error):
@@ -37,7 +37,7 @@ class RecurrentBase(FFBase):
         if self.return_seq:
             return error.transpose(1, 0, 2)
         else:
-            error_tensor = zX(self.time, self.brain.m, self.neurons)
+            error_tensor = zX(self.time, len(error), self.neurons)
             error_tensor[-1] = error
             return error_tensor
 
