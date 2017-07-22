@@ -1,10 +1,10 @@
 import numpy as np
 
-from .abstract_learner import LearnerBase
+from .abstract_learner import Learner
 from ..optimization import optimizers, GradientDescent
 
 
-class BackpropNetwork(LearnerBase):
+class BackpropNetwork(Learner):
 
     def __init__(self, layerstack, cost="mse", optimizer="sgd", name="", **kw):
         super().__init__(layerstack, cost, name, **kw)

@@ -33,7 +33,7 @@ class LayerStack:
 
     def feedforward(self, X):
         for layer in self.layers:
-            X = layer.feedrorward(X)
+            X = layer.feedforward(X)
         return X
 
     def get_weights(self, unfold=True):

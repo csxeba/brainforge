@@ -1,6 +1,6 @@
 import numpy as np
-from reinforcement import AgentBase
-from util.rl_util import discount_rewards
+from .abstract_agent import AgentBase
+from ..util.rl_util import discount_rewards
 
 
 class PG(AgentBase):

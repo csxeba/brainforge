@@ -1,15 +1,16 @@
 import abc
 
 import numpy as np
-from brainforge import BackpropNetwork
-from reinforcement import AgentConfig, xp_factory
+
+from .agentconfig import AgentConfig
+from .experience import xp_factory
 
 
 class AgentBase(abc.ABC):
 
     type = ""
 
-    def __init__(self, network: BackpropNetwork, agentconfig: AgentConfig, **kw):
+    def __init__(self, network, agentconfig: AgentConfig, **kw):
         if agentconfig is None:
             agentconfig = AgentConfig(**kw)
         self.net = network
@@ -47,6 +48,3 @@ class AgentBase(abc.ABC):
 
     def pull_weights(self):
         self.net.layers.set_weights(self.shadow_net, fold=True)
-
-    def update(self):
-        pass

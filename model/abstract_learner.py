@@ -7,24 +7,26 @@ from ..cost import cost_functions, CostFunction
 from ..util import batch_stream
 
 
-class LearnerBase:
+class Learner:
 
     def __init__(self, layerstack, cost="mse", name="", **kw):
         if not isinstance(layerstack, LayerStack):
+            if "input_shape" not in kw:
+                raise RuntimeError("Please supply input_shape as a keyword argument!")
             layerstack = LayerStack(kw["input_shape"], layers=layerstack)
         self.layers = layerstack
         self.name = name
         self.age = 0
         self.cost = cost if isinstance(cost, CostFunction) else cost_functions[cost]
 
-    def fit_generator(self, generator, lessons_per_epoch, epochs=30, classify=True, validation=(), verbose=1):
+    def fit_generator(self, generator, lessons_per_epoch, epochs=30, classify=True, validation=(), verbose=1, **kw):
         epcosts = []
         lstr = len(str(epochs))
         for epoch in range(1, epochs+1):
             if verbose:
                 print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
             epcosts += self.epoch(generator, no_lessons=lessons_per_epoch, classify=classify,
-                                  validation=validation, verbose=verbose)
+                                  validation=validation, verbose=verbose, **kw)
         self.age += epochs
         return epcosts
 
@@ -57,7 +59,7 @@ class LearnerBase:
         return costs
 
     def _print_progress(self, validation, classify):
-        results = self.evaluate(*validation, classify)
+        results = self.evaluate(*validation, classify=classify)
 
         chain = "Testing cost: {0:.5f}"
         if classify:

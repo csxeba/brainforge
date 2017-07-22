@@ -1,8 +1,8 @@
-from .abstract_learner import LearnerBase
+from .abstract_learner import Learner
 from ..evolution import Population
 
 
-class NeuroEvolution(LearnerBase):
+class NeuroEvolution(Learner):
 
     def __init__(self, layerstack, cost="mse", population_size=100, name="", **kw):
         super().__init__(layerstack, cost, name, **kw)

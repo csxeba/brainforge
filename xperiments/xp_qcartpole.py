@@ -24,7 +24,7 @@ def QannRecurrent():
 
 
 def QannDense():
-    brain = BackpropNetwork(input_shape=env.observation_space.shape, layers=[
+    brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
         DenseLayer(24, activation="tanh"),
         DenseLayer(nactions, activation="linear")
     ], cost="mse", optimizer=RMSprop(eta=0.0001))
@@ -32,45 +32,30 @@ def QannDense():
 
 
 def run(agent):
-
     episode = 1
-    wins = 0
     rewards = deque(maxlen=100)
 
     while 1:
         state = env.reset()
-        done = False
+        win = False
         steps = 1
         reward = None
-        while not done:
-            # env.render()
-            # print(f"\rStep {steps:>4}", end="")
+        for step in range(200):
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
-            steps += 1
+            if done:
+                break
+        else:
+            win = True
 
         rewards.append(steps)
-        win = steps > 145
         cost = agent.accumulate(state, 10. if win else -1.)
-        # agent.push_weights()
         meanrwd = np.mean(rewards)
-        print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}," +
-              f" Cost: {cost:>6.4f}, Epsilon: {agent.cfg.epsilon:>6.4f}",
+        print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}, Cost: {cost:>6.4f}",
               end="")
-        # if episode % 100 == 0:
-        #     print(" Pulled pork")
-        #     agent.pull_weights()
         if win:
             print(" Win!")
-            wins += 1
-        else:
-            wins = 0
-        if wins >= 50:
-            break
         episode += 1
-    print("\n\n")
-    print("-" * 50)
-    print("Environment solved!")
 
 
 def plotrun(agent):

@@ -6,21 +6,21 @@ Brainforge is an Artificial Neural Networking library implemented in **Python**,
 
 ## Models
 
-Brainforge treats neural networks as layer stacks with some learning logic applied to them. These concepts are separated in the API, so the building of an ANN is a two-stage process.
-1. A LayersStack instance should be created and populated with layers
-2. The LayerStack should be wrapped with some learning logic
+Brainforge treats neural networks as layer stacks with some learning logic applied to them. These concepts are separated in the API, so the building of an ANN is a multi-stage process.
+1. A **LayersStack** instance should be created and populated with layers.
+2. Layers are instances of **Layer** subclasses, which group together the forward and backward logic of various architectures.
+2. The LayerStack should be wrapped with some learning logic, these are instances of Learner subclasses.
 
 Currently the following learning wrappers are implemented:
 
-- BackpropNetwork, which uses a selected variant of Gradient Descent to optimize the weights (see section **Optimizers** for more information)
-- NeuroEvolution, which uses differential evolution for weight optimization
+- **BackpropNetwork**, which uses a selected variant of Gradient Descent to optimize the weights (see section **Optimizers** for more information)
+- **NeuroEvolution**, which uses differential evolution for weight optimization
 
 ### LayerStack - Specifiing the architecture
 
 #### Constructor parameters
 
-- *input_shape*: tuple or int, specifying the dimensionality of the data. An InputLayer will be automatically instanciated
-based on this information.
+- *input_shape*: tuple or int, specifying the dimensionality of the data. An **InputLayer** will be automatically instanciated based on this information.
 - *layers*: some iterable, holding Layer instances.
 - *name*: string, specifying a name for the network, used in the **describe()** and **save()** methods.
 
@@ -40,12 +40,12 @@ based on this information.
 
 LayerStack can be iterated with a for loop, which yields the layers of the stack.
 
-### LearnerBase - Learning Logic Interface
-Every learning logic wrapper is derived from the abstract base class, LearnerBase, which specifies an interface for fitting.
+### Learner - Learning Logic Interface
+Every learning logic wrapper is derived from the abstract base class, Learner, which specifies an interface for fitting.
 
 #### Constructor parameters
 
-- *layerstack*: either a LayerStack instance or an iterable containing layer instances.
+- *layerstack*: either a LayerStack instance or an iterable containing layer instances (in the latter case, **input_shape** has to be passed as a keyword argument.
 - *cost*: eiter a string, specifiing a cost function or the instance of a ConstFunction subclass. See section **Costs** for more information.
 - *name*: optional string, used in persistance.
 
@@ -79,17 +79,17 @@ Gradient Descent and derivatives are implemented as Optimizer subclasses.
 
 #### Constructor parameters
 
-- *layerstack*, *cost* and *name* are the same as in **LearnerBase**
+- *layerstack*, *cost* and *name* are the same as in **Learner**
 - *optimizer*: either a string specifiing an optimizer algorithm with default hyperparameters or the instance of an Optimizer subclass. See section **Optimizers** for more information.
 
 #### Methods
-- Methods from LearnerBase are inherited.
+- Methods from Learner are inherited.
 - *learn_batch*: fits the weights to a batch of data.
 - *backpropagate*: performs a backwards pass and returns all gradients concatenated to vector. Expects a matrix, *error*, which contains the output errors. Output errors can be obtained by calling instance.cost.derivative(prediction, target).
 - *get_gradients*: returns the gradients currently stored (from the last call of *backpropagate* or *fit_batch*). The parameter *unfold* can be set to False if the grads should be reshaped to the weights' shapes.
 
 #### Properties
-- *layers* and *age* are inherited from LearnerBase.
+- *layers* and *age* are inherited from Learner.
 - *optimizer*: can be used to directly call into the optimizer.
 
 ### NeuroEvolution - Differential Evolution
@@ -97,14 +97,14 @@ Gradient Descent and derivatives are implemented as Optimizer subclasses.
 A simple genetic algorith is implemented in the submodule *evolution*. See more in section **Evolution**.
 
 #### Constructor parameters
-- *layerstack*, *cost* and *name* are the same as in **LearnerBase**.
+- *layerstack*, *cost* and *name* are the same as in **Learner**.
 - *population_size*: how many sets of weights to keep in memory as individuals in a population.
 - *kw*: optional keywors arguments are passed down to an implicitly instanciated Population constructor. See section **Evolution** for more information. **on_accuracy** is one such argument which specifies whether to minimize cost or the classification accuracy directly.
 
 #### Methods
 - *learn_batch*: kwargs are supported for Population.run. Calling **fit()** or **fit_generator()**, these args are passed down to **epoch** and finally **learn_batch**.
 - *fitness*: the default fitness function, return the cost or the classification accuracy (depending on the value of the **on_accuracy** constructor parameter.
-- *as_weights*: upscales an individual (0-1) to the range (-10, 10)
+- *as_weights*: upscales an individual (0-1) to the range (-10, 10). I know its lame, but meh... I'll look into this later.
 
 #### Properties
 - *population*: a Population instance with unfolded weight matrices as individuals.
@@ -113,7 +113,7 @@ A simple genetic algorith is implemented in the submodule *evolution*. See more 
 
 ### Core layers
 These layers are the ones used most regularily when working with ANNs.
-- **InputLayer**: passes the input tensor forward, unmodified.
+- **(InputLayer)**: passes the input tensor forward, unmodified.
   - No parameters required
   - This layer gets instantiated automatically
 - **Flatten**: performs flattening on a *dims* dimensional tensor. Returns a matrix of shape
@@ -121,25 +121,22 @@ These layers are the ones used most regularily when working with ANNs.
   - No paramters required
 - **Reshape**: reshapes the input tensor to a given shape. Keeps the leading dimension,
 which corresponds to *batch_size*
-  - No parameters required
+  - *shape*: determines the output shape.
 - **DenseLayer**: just your regular densely connected layer.
   - *neurons*: integer, specifying the output dimensions
-  - *activation*: string or ActivationFunction instance, specifying the activation function. Defaults to Linear.
+  - *activation*: string or ActivationFunction instance, specifying the activation function. Defaults to linear.
 - **Activation**: applies a (possibly) nonlinear activation function elementwise on the
 input tensor.
-  - *activation*: string, specifying the function to be used. Can be one of *sigmoid, tanh, relu* or *softmax*.
-
-*Softmax* is only available with *categorycal crossentropy (xent)*, because the raw derivatives I worked out for this
-function won't pass the numerical gradient test, so it's implemented the simplified form of *(a - y)*.
+  - *activation*: string, specifying the function to be used. Can be one of see section **Activation** for more info.
 
 ### Fancy layers
 Some fancy feedforward layers from various scientific articles
 - **HighwayLayer**: See Srivastava et al., 2015. This layer applies a gating mechanism to its inputs. This consist of
 a forget gate and an input gate, determining the amount of information discarded and kept. Finally, it applies an
 output gate, selecting the information to be passed on to the next layer. This operation doesn't change the
-dimensionality of the inputs.
+dimensionality of the inputs, but it does perform the usual neural projection by appliing a weight matrix.
   - activation: string or ActivationFunction instance, specifying the activation function to be applied
-- **DropOut**: Discards certain neurons in the training phase, thus improving generalization.
+- **DropOut**: Discards certain neurons in the training phase, thus improving generalization by regularization.
 See Srivastava et al., 2014
 
 ### Recurrent
@@ -161,7 +158,7 @@ the result of the last iteration (False). Defaults to False.
   - *return_seq*: bool, determining whether to return every output (or inner state) generated (True) or to only return
 the result of the last iteration (False). Defaults to False.
 - **ClockworkLayer**: see Koutník et al., 2014: a simple recurrent layer with time-dependent masking. The weight matrix
-is partition into blocks. Each block is assigned a tick. At timestep t, only those blocks are activated, whose tick
+is partitioned into blocks. Each block is assigned a tick. At timestep t, only those blocks are activated, whose tick
 value is a factor of t (e.g. t *mod* tick = 0, where *mod* is the modulo operation).
   - *neurons*: integer, specifying the output shape of the layer.
   - *activation*: string or ActivationFunction instance, specifying the activation function.
@@ -171,57 +168,53 @@ Defaults to 5 blocks, with equal blocksizes. The remainder of the division-by-fi
 Defaults to 2^i, where i is the (one-based) index of the block in question.
   - *return_seq*: bool, determining whether to return every output (or inner state) generated (True) or to only return
 the result of the last iteration (False). Defaults to False.
-- **Reservoir**: an untrainable, specially initialized recurrent layer used in Echo State Networks.
-See Reservoir computing and Jaeger, 2007 (Scholarpaedia)
+- **Reservoir**: an untrainable recurrent layer used in Echo State Networks. Has a sparse weight matrix normalized to
+unit spectral radius. See Reservoir computing and Jaeger, 2007 (Scholarpaedia)
   - *neurons*: integer, specifying the output (and the inner state's) shape of the layer.
   - *activation*: string or ActivationFunction instance, specifying the activation function.
   - *return_seq*: bool, determining whether to return every output (or inner state) generated (True) or to only return
 the result of the last iteration (False). Defaults to False.
-
 
 ### Tensor
 Feedforward layers working with multidimensional data
 
 - **PoolLayer**: untrainable layer performing the max-pooling operation
   - *fdim*: integer, specifying the filter dimension. This value will also be used as the stride of the pooling operation.
-  - *compiled*: bool, specifying whether to jit compile and optimize the layer with **numba** (highly recommended).
+  - *compiled*: bool, specifying whether to jit compile the layer with **numba** (highly recommended).
 - **ConvLayer**: performs convolution/cross-correlation on a batch of images by learnable kernels of a given shape.
   - *nfilters*: integer, specifying the number of filters (neurons) to be learned
   - *filterx*: integer, specifying the X dimension of the filter
-  - *filtery*: integer, specifying the X dimension of the filter
-  - *compiled*: bool, specifying whether to jit compile and optimize the layer with **numba** (highly recommended).
-
-These tensor processing layers are operating very slowly at the moment, especially PoolLayer.
+  - *filtery*: integer, specifying the Y dimension of the filter
+  - *compiled*: bool, specifying whether to jit compile the layer with **numba** (highly recommended).
 
 ## Optimizers
 Currently the following optimizers are implemented:
 
 - **SGD**: the classic stochastic gradient descent
   - *eta*: the learning rate, defaults to 0.01
-- **Momentum**: momentum-accelerated gradient descent. Sums up all previous gradients and updates parameters according
-to this accumulated term (velocity, in a physics sense), instead of the raw gradients.
+- **Momentum**: Sums up all previous gradients and updates parameters according to this accumulated term (velocity, in a
+physics sense), instead of the raw gradients.
   - *eta*: the learning rate, defaults to 0.1
   - *mu*: decay term for summed gradients, defaults to 0.9. Friction, from a physics standpoint.
-  - *nesterov*: boolean argument, if set, the implemetation of the Nesterov Accelerated Gradient will be used.
-It is very similar to normal Momentum, only this method "looks ahead" before updating the position. See Nesterov, 1983
-for further details. Defaults to False.
+- **Nesterov**: Nesterov-accelerated gradient, very similar to Momentum, only this method "looks ahead" before updating
+the position. See Nesterov, 1983.
 - **Adagrad**: Adaptive Subgradient Method for stochastic optimization, see Duchi et al. 2011. An internal memory of all
-prevoius squared gradients is kept and used to modify the general learning rate on a per-parameter basis.
+prevoius squared gradients and the general learning rate is modulated by its RMS on a per-parameter basis.
   - *eta*: general learning rate, defaults to 0.01
   - *epsilon*: stabilizing term for the square root operation, defaults to 1e-8.
 - **RMSprop**: the unpublished method of Geoffrey Hinton. See Lecture 6e of his Coursera Class. Keeps a decaying average
-of past squared gradients and uses it to adjust a per-parameter learning rate.
+of past squared gradients and uses it to adjust updates on a per-parameter basis.
   - *eta*: general learning rate, defaults to 0.1
   - *decay*: the memory decay term / update rate. Defaults to 0.9
   - *epsilon*: stabilizing term for the square root operation, defaults to 1e-8.
 - **Adam**: Adaptive Moment Estimation, see Kingma et al., 2015. Keeps a decaying average of past gradients (velocity)
-and of past squared gradients (memory).
+and of past squared gradients (memory). Basically the combination of Adagrad and RMSprop.
   - *eta*: general learning rate, defaults to 0.1
   - *decay_memory*: the memory decay term / update rate. Defaults to 0.9
   - *decay_velocity*: the velocity decay term / update rate. Defaults to 0.999
   - *epsilon*: stabilizing term for the square root operation, defaults to 1e-8.
 
-Adagrad and Adadelta are untested and seem to be faulty at the moment.
+Adam becomes unstable when the gradients are small :(
 
 ## Costs
 The following cost functions are supported:
@@ -233,15 +226,15 @@ use for classification tasks (softmax for multiclass, sigmoid for multilabel-mul
 - **Hinge loss (Hinge)**: for maximal margin convergence.
 
 ## Evolution
-Support is available for evolutionary optimization. This technique can be used to either evolve optimal
-hyperparameters for an ANN or to evolve the parameters (weights and biases) themselves (or both) (or for other purposes).
+A simple genetic algorithm is included. This technique can be used either to evolve optimal hyperparameters for an ANN
+or to evolve the parameters (weights and biases) themselves (or both) (or for other purposes).
 The feature can be accessed via the **brainforge.evolution** module, which defines the following class:
 - **Population**: abstraction of a population of individuals
   - *loci*: integer, specifying the number of loci on the individuals' genome (the length of the genome).
   - *fitness_function*: a function reference, which will be called on every individual. This function has to return
 a tuple/list/array of fitness values.
   - *fitness_weights*: an array, specifying the weights used when calculating the weighted sum of the fitness values,
-thus creating a **grade** value representing the individuals' overall value.
+thus creating a **grade** value representing the individuals' overall value. Defaults to (1,).
   - *limit*: integer, specifying the size of the population (the number of individuals). Defaults to 100.
   - *grade_function*: reference to a function, which, if supplied, will be used instead of weighted sum to determine the
 grade (overall value) of individuals. This function has to return a scalar given a tuple of fitness values. Defaults to
@@ -267,32 +260,39 @@ ones, which are not up-to-date (e.g. offsprings and mutants).
 verbosity-1 number of the top individuals' genomes and fitnesses as grades.
 - Miscellaneous keyword arguments can also be specified, which get passed down to the fitness function.
 
+## Reinforcement Learning
+Reinforcement learning agents are accessible from **brainforge.reinforcement**. Currently the following angents are
+implemented:
+- DQN: Deep Q Learning, see Mnih et al., 2013.
+- PG: A vanilla policy gradient method.
+- DDQN: Double Deep Q Learning, see Hasselt et al., 2015.
+
 ## Examples
-### Fit shallow net to the XOR problem
+### Fit shallow backprop net to the XOR problem
 ```python
 import numpy as np
 
-from brainforge import Network
+from brainforge import LayerStack, BackpropNetwork
 from brainforge.layers import DenseLayer
 
-def input_stream(m=20):
+def input_stream(batchsize=20):
     Xs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     Ys = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
 
     while 1:
-        arg = np.random.randint(len(Xs), size=m)
+        arg = np.random.randint(len(Xs), size=batchsize)
         yield Xs[arg], Ys[arg]
 
-net = Network(input_shape=(2,), layers=[
+layers = LayerStack(input_shape=2, layers=[
     DenseLayer(3, activation="sigmoid"),
     DenseLayer(2, activation="softmax")
 ])
-net.finalize(cost="xent", optimizer="momentum")
+net = BackpropNetwork(layers, cost="xent", optimizer="momentum")
 
-datagen = input_stream(1000)
+datastream = input_stream(1000)
 validation = next(input_stream(100))
 
-net.fit_generator(datagen, 5000000, epochs=2, monitor=["acc"],
+net.fit_generator(datastream, lessons_per_epoch=1000000, epochs=10, classify=True,
                   validation=validation, verbose=1)
 ```
 
@@ -302,28 +302,29 @@ For more complicated tasks, the use of the dataframe library csxdata is suggeste
 ```python
 from csxdata import CData
 
-from brainforge import Network
-from brainforge.layers import (DenseLayer, DropOut, Activation,
-                               PoolLayer, ConvLayer, Flatten)
+from brainforge import BackpropNetwork
+from brainforge.layers import (
+    DenseLayer, DropOut, Activation,
+    PoolLayer, ConvLayer, Flatten
+)
 
 dataroot = "path/to/pickled/gzipped/tuple/of/X/Y/ndarrays.pkl.gz"
-images = CData(dataroot, indeps=0, headers=None)
+images = CData(dataroot, indeps=0, headers=None, cross_val=10000)
 
 inshape, outshape = images.neurons_required
 
-model = Network(inshape, layers=(
+model = BackpropNetwork(input_shape=inshape, layerstack=(
     ConvLayer(nfilters=10, filterx=3, filtery=3, compiled=True),
-    PoolLayer(fdim=2),
+    PoolLayer(fdim=2, compiled=True),
     Activation("relu"),
     ConvLayer(nfilters=10, filterx=5, filtery=5, compiled=True),
-    PoolLayer(fdim=3),
+    PoolLayer(fdim=3, compiled=True),
     Activation("relu"),
     Flatten(),
     DenseLayer(120, activation="tanh"),
     DropOut(0.5),
     DenseLayer(outshape, activation="softmax")
-))
-model.finalize(cost="xent", optimizer="rmsprop")
+), cost="xent", optimizer="rmsprop")
 X, Y = images.table("learning")
 valid = images.table("testing")
 model.fit(X, Y, batch_size=20, epochs=30, validation=valid,
@@ -334,7 +335,7 @@ model.fit(X, Y, batch_size=20, epochs=30, validation=valid,
 ```python
 from csxdata import Sequence
 
-from brainforge import Network
+from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer, LSTM
 
 datapath = "path/to/text/file.txt"
@@ -353,18 +354,18 @@ datapath = "path/to/text/file.txt"
 # into k-dimensional continous space.
 seq = Sequence(datapath, n_gram=3, timestep=7)
 inshape, outshape = seq.neurons_required
-model = Network(inshape, layers=(
+model = BackpropNetwork(input_shape=inshape, layerstack=(
     LSTM(120, activation="relu", return_seq=True),
     LSTM(60, activation="relu", return_seq=False),
     DenseLayer(120, activation="tanh"),
     DenseLayer(outshape, activation="softmax")
-))
-model.finalize(cost="xent", optimizer="rmsprop")
+), cost="xent", optimizer="adam")
 X, Y = seq.table("learning")
 valid = seq.table("testing")
 model.fit(X, Y, batch_size=120, epochs=100,
           monitor=["acc"], validation=valid)
 ```
+
 ### Evolve network hyperparameters.
 In this script, we use the evolutionary algorithm to optimize the number of neurons in two hidden layers, along with
 dropout rates. The fitness values are constructed so, that besides the classification error rate, we try to minimize
@@ -377,7 +378,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge import Network
+from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
@@ -389,22 +390,21 @@ frame = CData(dataroot, headers=1, indeps=3, feature="FeatureName")
 inshape, outshape = frame.neurons_required
 
 # Genome will be the number of hidden neurons at two network DenseLayers.
-ranges = ((10, 300), (0, 0.75), (10, 300), (0, 0.75))
-# We determine 2 fitness values: the network's classification error and
-# the time required to run the net. These two values will both be minimized
-# and the accuracy will be considered with a 20x higher weight.
-fweights = (200, 1)
+ranges = ((10, 300), (0., 0.75), (10, 300), (0., 0.75))
+# We determine 3 fitness values: the network's classification error, the time
+# required to run the net and the L2 norm of the weights. These values will be
+# minimized and the accuracy will be considered with a 20x higher weight.
+fweights = (200., 1., 1.)
 
 
 def phenotype_to_ann(phenotype):
-    net = Network(inshape, layers=[
+    net = BackpropNetwork(input_shape=inshape, layerstack=[
         DenseLayer(int(phenotype[0]), activation="tanh"),
         DropOut(dropchance=phenotype[1]),
         DenseLayer(int(phenotype[2]), activation="tanh"),
         DropOut(dropchance=phenotype[3]),
         DenseLayer(outshape, activation="softmax")
-    ])
-    net.finalize(cost="xent", optimizer="momentum")
+    ], cost="xent", optimizer="momentum")
     return net
 
 
@@ -412,21 +412,21 @@ def phenotype_to_ann(phenotype):
 def fitness(genotype):
     start = time.time()
     net = phenotype_to_ann(to_phenotype(genotype, ranges))
-    net.fit_csxdata(frame, batch_size=20, epochs=30, verbose=0)
-    score = net.evaluate(*frame.table("testing", m=10), classify=True)[-1]
-    error_rate = 1. - score
+    net.fit(*frame.table("learning"), batch_size=20, epochs=30, verbose=0)
+    cost, acc = net.evaluate(*frame.table("testing", m=10), classify=True)
+    error_rate = 1. - acc
     time_req = time.time() - start
-    return error_rate, time_req
+    l2 = np.linalg.norm(net.layers.get_weights(unfold=True), ord=2)
+    return error_rate, time_req, l2
 
-
-# Build a population of 12 individuals. grade_function and mate_function are
+# Build a population of 15 individuals. grade_function and mate_function are
 # left to defaults.
 pop = Population(loci=4, limit=15,
                  fitness_function=fitness,
                  fitness_weights=fweights)
-# The population is optimized for 12 rounds with the hyperparameters below.
-# at every 3 rounds, we force a complete-reupdate of fitnesses, because the
-# neural networks utilize randomness due to initialization, random batches, etc.
+# The population is optimized for 30 rounds.
+# At every 3 rounds, we force a complete re-update of fitnesses because of the
+# many stochastic aspects of ANNs (weight initialization, minibatch-randomizing, etc.)
 means, stds, bests = pop.run(epochs=30,
                              survival_rate=0.3,
                              mutation_rate=0.05,
@@ -443,6 +443,8 @@ plt.show()
 
 ### Evolve network weights and biases
 ```python
+from matplotlib import pyplot as plt
+
 from csxdata import CData
 
 from brainforge import NeuroEvolution
@@ -452,12 +454,62 @@ datapath = "path/to/data.csv"
 data = CData(datapath, indeps=1, headers=1)
 data.transformation = "std"
 
-net = NeuroEvolution(data.neurons_required[0], layers=(
+net = NeuroEvolution(input_shape=data.neurons_required[0], layerstack=(
     DenseLayer(60, activation="sigmoid"),
     DenseLayer(data.neurons_required[1], activation="softmax")
-))
-net.finalize("xent", population_size=30, on_accuracy=False)
+), cost="xent", population_size=30, on_accuracy=False)
 
 print("Initial acc:", net.evaluate(*data.table("testing"))[1])
-net.fit(*data.table("learning"), batch_size=500, validation=data.table("testing"), monitor=["acc"])
+costs = net.fit(*data.table("learning"), epochs=50, validation=data.table("testing"), classify=True)
+
+plt.plot(range(len(costs)), costs, c="red")
+plt.show()
+```
+
+### Deep Q Learning on CartPole-v0
+```python
+from collections import deque
+
+import gym
+
+from brainforge import BackpropNetwork
+from brainforge.layers import DenseLayer
+from brainforge.reinforcement import DQN, agentconfig
+from brainforge.optimization import RMSprop
+
+env = gym.make("CartPole-v0")
+inshape, outshape = env.observation_space.shape, env.action_space.n
+
+net = BackpropNetwork(input_shape=inshape, layerstack=[
+    DenseLayer(24, activation="tanh"),
+    DenseLayer(outshape, activation="linear")
+], cost="mse", optimizer=RMSprop(eta=0.0001))
+agent = DQN(net, nactions=outshape, agentconfig=agentconfig.AgentConfig(
+    epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
+    discount_factor=0.6, replay_memory_size=7200, training_batch_size=720
+))
+
+episode = 1
+rewards = deque(maxlen=100)
+
+while 1:
+    state = env.reset()
+    win = False
+    reward = None
+    for step in range(1, 201):
+        action = agent.sample(state, reward)
+        state, reward, done, info = env.step(action)
+        if done:
+            break
+    else:
+        win = True
+
+    rewards.append(step)
+    cost = agent.accumulate(state, 10. if win else -1.)
+    meanrwd = sum(rewards) / len(rewards)
+    if episode % 10 == 0:
+        print(f"Episode {episode:>6}, running reward: {meanrwd:.2f}, Cost: {cost:>6.4f}")
+        if win:
+            print(" Win!")
+    episode += 1
 ```
