@@ -8,7 +8,7 @@ mnist = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=False)
 inshape, outshape = mnist.neurons_required
 
 
-network = BackpropNetwork(input_shape=inshape, layers=[
+network = BackpropNetwork(input_shape=inshape, layerstack=[
     DenseLayer(30, activation="sigmoid"),
     DenseLayer(outshape, activation="softmax")
 ], cost="xent", optimizer=SGD(eta=3.))

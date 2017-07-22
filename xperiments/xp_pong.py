@@ -5,8 +5,7 @@ import numpy as np
 
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
-from brainforge.reinforcement import AgentConfig
-from reinforcement.policygradient import PG
+from brainforge.reinforcement import PG, AgentConfig
 
 
 def prepro_coroutine(I):
@@ -33,7 +32,7 @@ env = gym.make("Pong-v0")
 nactions = env.action_space.n
 stateshape = 6400
 print("Pong stateshape =", stateshape)
-brain = BackpropNetwork(input_shape=stateshape, layers=[
+brain = BackpropNetwork(input_shape=stateshape, layerstack=[
     DenseLayer(200, activation="tanh"),
     DenseLayer(nactions, activation="softmax")
 ], cost="xent", optimizer="sgd")

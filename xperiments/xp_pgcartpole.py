@@ -6,8 +6,7 @@ import gym
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
 from brainforge.optimization import SGD
-from brainforge.reinforcement import AgentConfig
-from reinforcement.policygradient import PG
+from brainforge.reinforcement import PG, AgentConfig
 from matplotlib import pyplot
 
 env = gym.make("CartPole-v1")
@@ -15,7 +14,7 @@ nactions = env.action_space.n
 
 
 def get_agent():
-    brain = BackpropNetwork(input_shape=env.observation_space.shape, layers=[
+    brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
         DenseLayer(nactions, activation="softmax")
     ], cost="xent", optimizer=SGD(eta=0.0001))
     return brain
