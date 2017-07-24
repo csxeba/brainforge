@@ -17,12 +17,13 @@ def numerical_gradients(gcobj, X, Y):
     network = gcobj.net
     ws = network.layers.get_weights(unfold=True)
     numgrads = np.zeros_like(ws)
-    perturb = np.copy(numgrads)
+    perturb = np.zeros_like(ws)
 
     nparams = ws.size
+    lstr = len(str(nparams))
     print("Calculating numerical gradients...")
     for i in range(nparams):
-        print("\r{0:>{1}} / {2:<}".format(i + 1, len(str(nparams)), nparams), end=" ")
+        print("\r{0:>{1}} / {2}".format(i + 1, lstr, nparams), end=" ")
         perturb[i] += gcobj.eps
 
         network.layers.set_weights(ws + perturb, fold=True)
@@ -35,7 +36,7 @@ def numerical_gradients(gcobj, X, Y):
         numgrads[i] = (cost1 - cost2)
         perturb[i] = 0.
 
-    numgrads /= 2.
+    numgrads /= 2. * gcobj.eps
     network.layers.set_weights(ws, fold=True)
 
     print("Done!")
