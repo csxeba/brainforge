@@ -7,7 +7,7 @@ class PG(AgentBase):
 
     """Policy Gradient"""
 
-    type = "PG"
+    type = "PolicyGradient"
 
     def __init__(self, network, nactions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)

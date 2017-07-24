@@ -65,7 +65,7 @@ def run(agent):
 def plotrun(agent):
     rewards = []
     rwmean = []
-    EPISODES = 1000
+    EPISODES = 2000
     for episode in range(1, EPISODES + 1):
         state = env.reset()
         reward_sum = 0.
@@ -87,6 +87,7 @@ def plotrun(agent):
     Xs = np.arange(len(rewards))
     pyplot.scatter(Xs, rewards, marker=".", s=3, c="r", alpha=0.5)
     pyplot.plot(Xs, rwmean, color="b", linewidth=2)
+    pyplot.title(agent.type)
     pyplot.show()
 
 
