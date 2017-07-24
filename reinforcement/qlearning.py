@@ -8,7 +8,7 @@ class DQN(AgentBase):
 
     """Deep Q Network"""
 
-    type = "DeepQLearning"
+    type = "DQN"
 
     def __init__(self, network, nactions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)
@@ -51,6 +51,8 @@ class DQN(AgentBase):
 
 class DDQN(DQN):
 
+    type = "DDQN"
+
     def __init__(self, network, nactions, agentconfig, **kw):
         from pickle import loads, dumps
         super().__init__(network, nactions, agentconfig, **kw)
@@ -72,7 +74,7 @@ class DDQN(DQN):
         X = np.stack(self.X + [state], axis=0)
         R = np.array(self.R[1:] + [reward])
 
-        Y = self.critic.feedforward(X[1:])
+        Y = self.critic.predict(X[1:])
         Y[range(len(Y)), (tuple(self.A))] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, self.A[-1]] = -reward
 

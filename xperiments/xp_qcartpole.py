@@ -6,8 +6,7 @@ import gym
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer, ClockworkLayer
 from brainforge.optimization import RMSprop
-from brainforge.reinforcement import AgentConfig
-from reinforcement.qlearning import DDQN as AgentType
+from brainforge.reinforcement import AgentConfig, DDQN as AgentType
 from matplotlib import pyplot
 
 env = gym.make("CartPole-v1")
@@ -31,16 +30,17 @@ def QannDense():
     return brain
 
 
-def run(agent):
+def run(agent, **kw):
+    del kw
     episode = 1
     rewards = deque(maxlen=100)
 
     while 1:
         state = env.reset()
         win = False
-        steps = 1
+        step = 0
         reward = None
-        for step in range(200):
+        for step in range(1, 201):
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
             if done:
@@ -48,7 +48,7 @@ def run(agent):
         else:
             win = True
 
-        rewards.append(steps)
+        rewards.append(step)
         cost = agent.accumulate(state, 10. if win else -1.)
         meanrwd = np.mean(rewards)
         print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}, Cost: {cost:>6.4f}",
@@ -58,11 +58,10 @@ def run(agent):
         episode += 1
 
 
-def plotrun(agent):
+def plotrun(agent, episodes=1000):
     rewards = []
     rwmean = []
-    EPISODES = 1000
-    for episode in range(1, EPISODES + 1):
+    for episode in range(1, episodes + 1):
         state = env.reset()
         reward_sum = 0.
         reward = 0.
@@ -78,16 +77,17 @@ def plotrun(agent):
         rewards.append(reward_sum)
         rwmean.append(np.mean(rewards[-10:]))
         cost = agent.accumulate(state, (-1. if not win else 1.))
-        print(f"\r{episode / EPISODES:.1%}, Cost: {cost:8>.4f}, Epsilon: {agent.cfg.epsilon:8.6f}", end="")
+        print(f"\r{episode / episodes:.1%}, Cost: {cost:8>.4f}, Epsilon: {agent.cfg.epsilon:8.6f}", end="")
     print()
     Xs = np.arange(len(rewards))
     pyplot.scatter(Xs, rewards, marker=".", s=3, c="r", alpha=0.5)
     pyplot.plot(Xs, rwmean, color="b", linewidth=2)
+    pyplot.title(agent.type)
     pyplot.show()
 
 
 if __name__ == '__main__':
-    run(AgentType(QannDense(), nactions, AgentConfig(
+    plotrun(AgentType(QannDense(), nactions, AgentConfig(
         epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
         discount_factor=0.6, replay_memory_size=7200, training_batch_size=720,
-    )))
+    )), episodes=2000)
