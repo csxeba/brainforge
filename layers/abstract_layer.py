@@ -1,7 +1,7 @@
 import abc
 
 import numpy as np
-from .. import atomic
+from .. import atomic, config
 from ..util import zX_like, white_like
 
 
