@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 from .. import atomic
-from ..util import white_like, zX_like
+from ..util import zX_like, white_like
 
 
 class LayerBase(abc.ABC):
@@ -23,6 +23,7 @@ class LayerBase(abc.ABC):
         self.nabla_b = None
 
         self.connected = False
+        self.compiled = kw.get("compiled", False)
 
         if isinstance(activation, str):
             self.activation = atomic.activations[activation]()

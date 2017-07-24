@@ -2,9 +2,9 @@ import abc
 
 import numpy as np
 
-from .layerstack import LayerStack
-from ..cost import cost_functions, CostFunction
-from ..util import batch_stream
+from brainforge.model.layerstack import LayerStack
+from brainforge.cost import cost_functions, CostFunction
+from brainforge.util import batch_stream
 
 
 class Learner:

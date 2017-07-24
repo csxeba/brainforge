@@ -1,7 +1,7 @@
 """Wrappers for vector-operations and other functions"""
 import numpy as np
 
-from ..util import zX, zX_like
+from ..util.typing import zX, zX_like
 from .activation import Sigmoid
 
 

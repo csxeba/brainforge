@@ -1,3 +1,5 @@
+import unittest
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -11,10 +13,48 @@ from brainforge.numbaops.lltensor import (
 )
 
 
-def visualize(A, d, O1, O2, supt=None):
-    print("d.mean() =", d.mean())
-    if d.mean() == 0.:
-        print("Test passed!")
+VISUAL = False
+
+
+class TestNumbaTensorOps(unittest.TestCase):
+
+    def test_convolution_op(self):
+        npop = NPConv()
+        nbop = NBConv()
+
+        A = np.random.uniform(0., 1., (1, 1, 12, 12))
+        F = np.random.uniform(0., 1., (1, 1, 3, 3))
+
+        npO = npop.apply(A, F, mode="full")
+        nbO = nbop.apply(A, F, mode="full")
+
+        self.assertTrue(np.allclose(npO, nbO))
+
+        if VISUAL:
+            visualize(A, npO, nbO, supt="Testing Convolutions")
+
+    def test_pooling_op(self):
+        npop = NpPool()
+        nbop = NbPool()
+
+        A = np.random.uniform(0., 1., (1, 1, 12, 12))
+
+        npO, npF = npop.apply(A, 2)
+        nbO, nbF = nbop.apply(A, 2)
+
+        npbF = npop.backward(npO, npF)
+        nbbF = nbop.backward(nbO, nbF)
+
+        self.assertTrue(np.allclose(npF, nbF))
+        self.assertTrue(np.allclose(npbF, nbbF))
+        self.assertTrue(np.allclose(npO, nbO))
+
+        if VISUAL:
+            visualize(A, npO, nbO, supt="Testing Pooling")
+
+
+def visualize(A, O1, O2, supt=None):
+    d = O1 - O2
     vmax, vmin = max(O1.max(), O2.max()), min(O1.min(), O2.min())
     fig, axarr = plt.subplots(2, 2)
     axarr[0][0].imshow(A[0, 0], vmin=0, vmax=1, cmap="autumn")
@@ -28,44 +68,3 @@ def visualize(A, d, O1, O2, supt=None):
     plt.suptitle(supt)
     plt.tight_layout()
     plt.show()
-
-
-def test_convolutions():
-    print("Testing ConvOps")
-    npop = NPConv()
-    nbop = NBConv()
-    A = np.random.uniform(0., 1., (1, 1, 12, 12))
-    F = np.random.uniform(0., 1., (1, 1, 3, 3))
-
-    npO = npop.apply(A, F, mode="full")
-    nbO = nbop.apply(A, F, mode="full")
-
-    dC = np.abs(npO - nbO)
-
-    visualize(A, dC, npO, nbO, supt="ConvTest")
-
-
-def test_pooling():
-    print("Testing MaxPoolOps")
-    npop = NpPool()
-    nbop = NbPool()
-
-    A = np.random.uniform(0., 1., (1, 1, 12, 12))
-
-    npO, npF = npop.apply(A, 2)
-    nbO, nbF = nbop.apply(A, 2)
-
-    assert np.allclose(npF, nbF)
-
-    npbF = npop.backward(npO, npF)
-    nbbF = nbop.backward(nbO, nbF)
-
-    assert np.allclose(npbF, nbbF)
-
-    dP = np.abs(npO - nbO)
-
-    visualize(A, dP, npO, nbO, supt="PoolTest")
-
-
-if __name__ == '__main__':
-    test_pooling()

@@ -1,11 +1,11 @@
-from csxdata import Sequence, roots
+from csxdata import roots, Sequence
 
 from brainforge import BackpropNetwork
 from brainforge.layers import LSTM, DenseLayer
 from brainforge.optimization import RMSprop
 
 
-data = Sequence(roots["txt"] + "petofi.txt", n_gram=1, timestep=5)
+data = Sequence(roots["txt"] + "petofi.txt", n_gram=1, timestep=5, floatX="float64")
 inshape, outshape = data.neurons_required
 net = BackpropNetwork(input_shape=inshape, layerstack=[
     LSTM(60, activation="tanh"),

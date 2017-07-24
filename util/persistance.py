@@ -50,7 +50,7 @@ class Capsule:
 
 
 def load(capsule):
-    from ..model import BackpropNetwork
+    from ..learner import BackpropNetwork
     from ..optimization import optimizers
     from ..util.shame import translate_architecture as trsl
 

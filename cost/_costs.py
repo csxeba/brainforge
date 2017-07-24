@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from ..util import scalX
+from ..util.typing import scalX
 
 s0 = scalX(0.)
 s05 = scalX(0.5)

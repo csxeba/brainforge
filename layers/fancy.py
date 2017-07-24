@@ -2,7 +2,8 @@ import numpy as np
 
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
 from ..atomic import Sigmoid
-from ..util import white, rtm, zX, floatX, scalX
+from ..util import rtm, scalX, zX, white
+from ..config import floatX
 
 sigmoid = Sigmoid()
 
@@ -19,7 +20,7 @@ class HighwayLayer(FFBase):
     def connect(self, to, inshape):
         self.neurons = np.prod(inshape)
         self.weights = white(self.neurons, self.neurons*3)
-        self.biases = zX(self.neurons*3,)
+        self.biases = zX(self.neurons*3)
         FFBase.connect(self, to, inshape)
 
     def feedforward(self, stimuli) -> np.ndarray:
@@ -85,7 +86,7 @@ class DropOut(NoParamMixin, LayerBase):
 
     def backpropagate(self, error: np.ndarray) -> np.ndarray:
         output = error * self.mask
-        self.mask = np.ones_like(self.mask, dtype=floatX) * self.dropchance
+        self.mask = np.ones_like(self.mask) * self.dropchance
         return output
 
     @property

@@ -1,5 +1,5 @@
 from .abstract_learner import Learner
-from ..evolution import Population
+from brainforge.evolution import Population
 
 
 class NeuroEvolution(Learner):

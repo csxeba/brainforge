@@ -2,7 +2,8 @@ import warnings
 
 import numpy as np
 
-from ..util import floatX, zX, zX_like
+from ..config.numeric import floatX
+from ..util.typing import zX, zX_like
 
 
 # I solemly state that  # Thanks Mark
@@ -33,7 +34,7 @@ class Population:
         :param mutate_function: accepts individuals and mutation rate, returns mutants
          and index of mutants
         """
-
+        del kw
         self.fitness = fitness_function
         self.limit = limit
 

@@ -1,6 +1,7 @@
 import numpy as np
 
-from ..util import scalX, floatX
+from ..util import scalX
+from ..config import floatX
 
 s0 = scalX(0.)
 s1 = scalX(1.)

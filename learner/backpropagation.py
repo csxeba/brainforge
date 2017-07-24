@@ -1,7 +1,7 @@
 import numpy as np
 
 from .abstract_learner import Learner
-from ..optimization import optimizers, GradientDescent
+from brainforge.optimization import optimizers, GradientDescent
 
 
 class BackpropNetwork(Learner):
@@ -30,7 +30,9 @@ class BackpropNetwork(Learner):
     def backpropagate(self, error):
         # TODO: optimize this, skip untrainable layers at the beginning
         for layer in self.layers[-1:0:-1]:
+            assert error.dtype == "float64"
             error = layer.backpropagate(error)
+        assert error.dtype == "float64"
         return self.get_gradients(unfold=True)
 
     def get_gradients(self, unfold=True):

@@ -1,9 +1,12 @@
 import numpy as np
 
+from .abstract_model import Model
 
-class LayerStack:
+
+class LayerStack(Model):
 
     def __init__(self, input_shape, layers=()):
+        super().__init__(input_shape)
         self.layers = []
         self.architecture = []
         self.learning = False
@@ -33,7 +36,9 @@ class LayerStack:
 
     def feedforward(self, X):
         for layer in self.layers:
+            assert X.dtype == "float64"
             X = layer.feedforward(X)
+        assert X.dtype == "float64"
         return X
 
     def get_weights(self, unfold=True):
@@ -59,6 +64,10 @@ class LayerStack:
     def reset(self):
         for layer in (l for l in self.layers if l.trainable):
             layer.reset()
+
+    @property
+    def outshape(self):
+        return self.layers[-1].outshape
 
     @property
     def nparams(self):

@@ -4,6 +4,11 @@
 
 Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy** (and optionally **Numba**, a jit compiler for Python and NumPy)
 
+## Installation
+
+Sadly, the project is not packaged at the moment. This is because I don't know how it is done, but I intend to do so in
+the near future, so it's downloading and unzipping for now :(
+
 ## Models
 
 Brainforge treats neural networks as layer stacks with some learning logic applied to them. These concepts are separated in the API, so the building of an ANN is a multi-stage process.

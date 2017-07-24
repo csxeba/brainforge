@@ -1,6 +1,11 @@
 import abc
 
 import numpy as np
+from ..util.typing import scalX
+
+s05 = scalX(0.5)
+s1 = scalX(1.)
+s2 = scalX(2.)
 
 
 class Regularizer(abc.ABC):
@@ -37,22 +42,10 @@ class L1Norm(Regularizer):
 class L2Norm(Regularizer):
 
     def __call__(self):
-        return 0.5 * self.lmbd * (self.layer.get_weights()**2.).sum()
+        return s05 * self.lmbd * np.linalg.norm(self.layer.get_weights() ** s2)
 
     def derivative(self, eta, m):
-        return (1. - ((eta * self.lmbd) / m)) * self.layer.get_weights().sum()
+        return (s1 - ((eta * self.lmbd) / m)) * self.layer.get_weights().sum()
 
     def __str__(self):
         return "L2-{}".format(self.lmbd)
-
-
-class _Regularizers:
-
-    def __init__(self):
-        self.dct = {key.lower(): val for key, val in globals().items()
-                    if key[:3] in ("L1N", "L2N")}
-
-    def __getitem__(self, item):
-        if item not in self.dct:
-            raise IndexError("No such regularizer: {}".format(item))
-        return self.dct[item]

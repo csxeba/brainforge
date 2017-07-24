@@ -4,7 +4,7 @@ import numpy as np
 
 from .abstract_layer import FFBase
 from ..atomic import Sigmoid
-from ..util import white, white_like, zX, zX_like, ctx1
+from ..util import ctx1, zX, zX_like, white, white_like
 
 sigmoid = Sigmoid()
 
@@ -65,7 +65,7 @@ class RLayer(RecurrentBase):
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons)
-        self.biases = zX(self.neurons, )
+        self.biases = zX(self.neurons)
         super().connect(to, inshape)
 
     def feedforward(self, questions):
@@ -129,7 +129,7 @@ class LSTM(RecurrentBase):
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
-        self.biases = zX(self.neurons * 4, ) + self.bias_init_factor
+        self.biases = zX(self.neurons * 4) + self.bias_init_factor
         super().connect(to, inshape)
 
     def feedforward(self, X):
@@ -308,7 +308,7 @@ class ClockworkLayer(RecurrentBase):
                 msg += "Please also consider that timesteps < 0 are invalid!"
                 raise RuntimeError(msg)
         self.ticks = np.array(ticktimes)
-        self.tick_array = zX(self.neurons, )
+        self.tick_array = zX(self.neurons)
         print("CW blocks:", self.blocksizes)
         print("CW ticks :", self.ticks)
 

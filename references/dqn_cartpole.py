@@ -249,11 +249,11 @@ def parse_args():
     parser.add_argument('-epsilon', default=DEFAULT_EPSILON,
                         help='epsilon value for the probability of taking a random action', type=float)
     parser.add_argument('-gamma', default=DEFAULT_GAMMA,
-                        help='gamma value for the contribution of the Q function in learning', type=float)
+                        help='gamma value for the contribution of the Q function in learner', type=float)
     parser.add_argument('-minibatch_size', default=DEFAULT_MINI_BATCH_SIZE, help='mini batch size for training',
                         type=int)
 
-    parser.add_argument('-l', default=DEFAULT_LEARNING_RATE, help='learning rate', type=float)
+    parser.add_argument('-l', default=DEFAULT_LEARNING_RATE, help='learner rate', type=float)
     parser.add_argument('-r', default=DEFAULT_REGULARIZATION, help='regularization', type=float)
     parser.add_argument('-num_hidden', default=DEFAULT_NUM_HIDDEN,
                         help='the number of hidden layers in the deep network', type=int)
@@ -284,7 +284,7 @@ def run_dqn():
     num_actions = env.action_space.n
     observation_shape = env.observation_space.shape
 
-    # initialize dqn learning
+    # initialize dqn learner
     dqn = DQN(num_actions, observation_shape, dqn_params, cnn_params)
 
     last_100 = deque(maxlen=100)

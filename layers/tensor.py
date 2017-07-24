@@ -1,5 +1,5 @@
 from .abstract_layer import LayerBase, NoParamMixin
-from ..util import white, zX, zX_like
+from ..util import zX, zX_like, white
 
 
 class PoolLayer(NoParamMixin, LayerBase):

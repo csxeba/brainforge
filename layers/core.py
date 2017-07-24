@@ -1,7 +1,8 @@
 import numpy as np
 
 from .. import atomic
-from ..util import white, zX
+from ..util import zX, white
+
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
 
 
