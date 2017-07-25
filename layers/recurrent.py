@@ -69,7 +69,7 @@ class RLayer(RecurrentBase):
         self.inputs = questions.transpose(1, 0, 2)
         self.time = len(self.inputs)
         o, self.Z = self.op.forward(self.inputs, self.weights, self.biases)
-        self.output = o.reshape(1, 0, 2) if self.return_seq else o[-1]
+        self.output = o.transpose(1, 0, 2) if self.return_seq else o[-1]
         return self.output
 
     def backpropagate(self, error):
