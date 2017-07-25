@@ -25,13 +25,13 @@ class DenseLayer(FFBase):
 
     def feedforward(self, X):
         self.inputs = X
-        self.output = self.activation(self.op(
+        self.output = self.activation.forward(self.op(
             X, self.weights, self.biases
         ))
         return self.output
 
     def backpropagate(self, delta):
-        delta *= self.activation.derivative(self.output)
+        delta *= self.activation.backward(self.output)
         self.nabla_w = self.op(self.inputs.T.copy(), delta)
         self.nabla_b = delta.sum(axis=0)
         return self.op(delta, self.weights.T.copy())
@@ -43,11 +43,11 @@ class DenseLayer(FFBase):
 class Activation(NoParamMixin, LayerBase):
 
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
-        self.output = self.activation(stimuli)
+        self.output = self.activation.forward(stimuli)
         return self.output
 
     def backpropagate(self, error) -> np.ndarray:
-        return error * self.activation.derivative(self.output)
+        return error * self.activation.backward(self.output)
 
     @property
     def outshape(self):

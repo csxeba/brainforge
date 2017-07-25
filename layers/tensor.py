@@ -31,7 +31,7 @@ class PoolLayer(NoParamMixin, LayerBase):
         :param questions: numpy.ndarray, a batch of outsize from the previous layer
         :return: numpy.ndarray, max pooled batch
         """
-        self.output, self.filter = self.op.apply(questions, self.fdim)
+        self.output, self.filter = self.op.forward(questions, self.fdim)
         return self.output
 
     def backpropagate(self, error):
@@ -85,19 +85,19 @@ class ConvLayer(LayerBase):
 
     def feedforward(self, X):
         self.inputs = X
-        self.output = self.activation(self.op.apply(X, self.weights, "valid"))
+        self.output = self.activation.forward(self.op.forward(X, self.weights, "valid"))
         return self.output
 
     def backpropagate(self, error):
-        error *= self.activation.derivative(self.output)
-        self.nabla_w = self.op.apply(
+        error *= self.activation.backward(self.output)
+        self.nabla_w = self.op.forward(
             self.inputs.transpose(1, 0, 2, 3),
             error.transpose(1, 0, 2, 3),
             mode="valid"
         ).transpose(1, 0, 2, 3)
         # self.nabla_b = error.sum()  # TODO: why is this commented out???
         rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
-        return self.op.apply(error, rW, "full")
+        return self.op.forward(error, rW, "full")
 
     @property
     def outshape(self):

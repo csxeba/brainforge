@@ -6,12 +6,14 @@ from matplotlib import pyplot as plt
 from brainforge.atomic import (
     ConvolutionOp as NpConv,
     MaxPoolOp as NpPool,
-    DenseOp as NpDense
+    DenseOp as NpDense,
+    RecurrentOp as NpRec
 )
 from brainforge.llatomic import (
     ConvolutionOp as NbConv,
     MaxPoolOp as NbPool,
-    DenseOp as NbDense
+    DenseOp as NbDense,
+    RecurrentOp as NbRec
 )
 
 
@@ -28,7 +30,7 @@ class TestNumbaTensorOps(unittest.TestCase):
         F = np.random.uniform(size=(1, 1, 3, 3))
 
         npO = npop.apply(A, F, mode="full")
-        nbO = nbop.apply(A, F, mode="full")
+        nbO = nbop.forward(A, F, mode="full")
 
         self.assertTrue(np.allclose(npO, nbO))
 
@@ -42,7 +44,7 @@ class TestNumbaTensorOps(unittest.TestCase):
         A = np.random.uniform(0., 1., (1, 1, 12, 12))
 
         npO, npF = npop.apply(A, 2)
-        nbO, nbF = nbop.apply(A, 2)
+        nbO, nbF = nbop.forward(A, 2)
 
         npbF = npop.backward(npO, npF)
         nbbF = nbop.backward(nbO, nbF)
@@ -68,6 +70,21 @@ class TestNumbaTensorOps(unittest.TestCase):
         self.assertTrue(np.allclose(npO, nbO))
         if VISUAL:
             visualize(A[None, None, ...], npO[None, None, ...], nbO[None, None, ...], "Testing Dense")
+
+    def test_recurrent_op(self):
+
+        npop = NpRec("tanh")
+        nbop = NbRec("tanh")
+
+        A = np.random.uniform(size=(5, 20, 10))
+        W = np.random.uniform(size=(20, 10))
+        b = np.random.uniform(size=(10,))
+
+        npO, npZ = npop.forward(A, W, b)
+        nbO, nbZ = nbop.forward(A, W, b)
+
+        self.assertTrue(np.allclose(npO, nbO))
+        self.assertTrue(np.allclose(npZ, nbZ))
 
 
 def visualize(A, O1, O2, supt=None):

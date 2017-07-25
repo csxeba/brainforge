@@ -32,7 +32,7 @@ def run(agent):
         steps = 1
         reward = None
         while not done:
-            # env.render()
+            env.render()
             # print(f"\rStep {steps:>4}", end="")
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
@@ -92,7 +92,7 @@ def plotrun(agent):
 
 
 if __name__ == '__main__':
-    plotrun(PG(get_agent(), nactions, AgentConfig(
+    run(PG(get_agent(), nactions, AgentConfig(
         epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
         discount_factor=0.6, replay_memory_size=1800, training_batch_size=180,
     )))

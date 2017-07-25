@@ -1,3 +1,5 @@
+import numpy as np
+
 from ..util.typing import zX, zX_like
 
 

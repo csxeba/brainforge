@@ -26,8 +26,8 @@ class HighwayLayer(FFBase):
     def feedforward(self, stimuli) -> np.ndarray:
         self.inputs = rtm(stimuli)
         self.gates = self.inputs.dot(self.weights) + self.biases
-        self.gates[:, :self.neurons] = self.activation(self.gates[:, :self.neurons])
-        self.gates[:, self.neurons:] = sigmoid(self.gates[:, self.neurons:])
+        self.gates[:, :self.neurons] = self.activation.forward(self.gates[:, :self.neurons])
+        self.gates[:, self.neurons:] = sigmoid.forward(self.gates[:, self.neurons:])
         h, t, c = np.split(self.gates, 3, axis=1)
         self.output = h * t + self.inputs * c
         return self.output.reshape(stimuli.shape)
@@ -38,9 +38,9 @@ class HighwayLayer(FFBase):
 
         h, t, c = np.split(self.gates, 3, axis=1)
 
-        dh = self.activation.derivative(h) * t * error
-        dt = sigmoid.derivative(t) * h * error
-        dc = sigmoid.derivative(c) * self.inputs * error
+        dh = self.activation.backward(h) * t * error
+        dt = sigmoid.backward(t) * h * error
+        dc = sigmoid.backward(c) * self.inputs * error
         dx = c * error
 
         dgates = np.concatenate((dh, dt, dc), axis=1)
