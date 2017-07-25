@@ -1,7 +1,7 @@
 import numpy as np
 
 from .. import atomic
-from .. import numbaops
+from .. import llatomic
 from ..util import zX, white
 
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
@@ -19,7 +19,7 @@ class DenseLayer(FFBase):
         super().connect(to, inshape)
         if self.compiled:
             print("Compiling DenseLayer...")
-            self.op = numbaops.DenseOp.forward
+            self.op = llatomic.DenseOp.forward
         else:
             self.op = atomic.DenseOp.forward
 

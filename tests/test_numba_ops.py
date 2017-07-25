@@ -8,7 +8,7 @@ from brainforge.atomic import (
     MaxPoolOp as NpPool,
     DenseOp as NpDense
 )
-from brainforge.numbaops import (
+from brainforge.llatomic import (
     ConvolutionOp as NbConv,
     MaxPoolOp as NbPool,
     DenseOp as NbDense

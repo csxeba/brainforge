@@ -8,7 +8,7 @@ class PoolLayer(NoParamMixin, LayerBase):
         LayerBase.__init__(self, activation="linear", trainable=False)
         if compiled:
             print("Compiling PoolLayer...")
-            from ..numbaops.lltensor import MaxPoolOp
+            from ..llatomic.lltensor_op import MaxPoolOp
         else:
             from ..atomic import MaxPoolOp
         self.fdim = fdim
@@ -65,7 +65,7 @@ class ConvLayer(LayerBase):
     def connect(self, to, inshape):
         if self.compiled:
             print("Compiling ConvLayer...")
-            from ..numbaops.lltensor import ConvolutionOp
+            from ..llatomic.lltensor_op import ConvolutionOp
         else:
             from ..atomic import ConvolutionOp
         depth, iy, ix = inshape[-3:]
