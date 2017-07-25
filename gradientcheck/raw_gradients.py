@@ -8,9 +8,9 @@ def analytical_gradients(gcobj, X, Y):
     preds = network.predict(X)
     print("done! Backward pass:", end=" ")
     delta = network.cost.derivative(preds, Y)
-    nabla = network.backpropagate(delta)
+    network.backpropagate(delta)
     print("done!")
-    return nabla
+    return network.get_gradients(unfold=True)
 
 
 def numerical_gradients(gcobj, X, Y):

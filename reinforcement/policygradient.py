@@ -47,7 +47,8 @@ class PG(AgentBase):
             pred = self.net.predict(X[start:start + m])
             cost += self.net.cost(pred, y)
             delta = self.net.cost.derivative(pred, y)
-            self.grad += self.net.backpropagate(delta * R[start:start+m, None])
+            self.net.backpropagate(delta * R[start:start + m, None])
+            self.grad += self.net.get_gradients(unfold=True)
 
         W = self.net.optimizer.optimize(
             self.net.layers.get_weights(unfold=True), self.grad, N

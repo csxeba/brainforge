@@ -19,7 +19,7 @@ class LayerStack(Model):
     def _add_input_layer(self, input_shape):
         if isinstance(input_shape, int) or isinstance(input_shape, np.int64):
             input_shape = (input_shape,)
-        from ..layers import InputLayer
+        from ..layers.core import InputLayer
         inl = InputLayer()
         inl.connect(to=self, inshape=input_shape)
         self.layers.append(inl)

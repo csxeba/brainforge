@@ -49,13 +49,6 @@ class HighwayLayer(FFBase):
 
         return (dgates.dot(self.weights.T) + dx).reshape(shape)
 
-    def capsule(self):
-        return FFBase.capsule(self) + [self.activation, self.get_weights(unfold=False)]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(activation=capsule[-2])
-
     @property
     def outshape(self):
         return self.inshape
@@ -92,13 +85,6 @@ class DropOut(NoParamMixin, LayerBase):
     @property
     def outshape(self):
         return self.inshape
-
-    def capsule(self):
-        return LayerBase.capsule(self) + [self.dropchance]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(dropchance=capsule[-1])
 
     def __str__(self):
         return "DropOut({})".format(self.dropchance)

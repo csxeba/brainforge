@@ -11,19 +11,19 @@ class LayerBase(abc.ABC):
 
     def __init__(self, activation="linear", **kw):
 
-        self.position = 0
         self.brain = None
         self.inputs = None
         self.output = None
         self.inshape = None
+        self.op = None
+        self.opb = None
 
         self.weights = None
         self.biases = None
         self.nabla_w = None
         self.nabla_b = None
 
-        self.connected = False
-        self.compiled = kw.get("compiled", False)
+        self.compiled = kw.get("compiled", config.compiled)
 
         if isinstance(activation, str):
             self.activation = atomic.activations[activation]()
@@ -33,8 +33,6 @@ class LayerBase(abc.ABC):
     def connect(self, to, inshape):
         self.brain = to
         self.inshape = inshape
-        self.position = len(self.brain.layers)
-        self.connected = True
 
     def shuffle(self) -> None:
         self.weights = white_like(self.weights)
@@ -61,18 +59,11 @@ class LayerBase(abc.ABC):
     def nparams(self):
         return self.weights.size + self.biases.size
 
-    def capsule(self):
-        return [self.inshape]
-
     @abc.abstractmethod
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray: raise NotImplementedError
 
     @abc.abstractmethod
     def backpropagate(self, error) -> np.ndarray: raise NotImplementedError
-
-    @classmethod
-    @abc.abstractmethod
-    def from_capsule(cls, capsule): raise NotImplementedError
 
     @property
     @abc.abstractmethod

@@ -1,27 +1,22 @@
 """Wrappers for vector-operations and other functions"""
 import numpy as np
 
-from ..util.typing import zX, zX_like
+from ..util.typing import zX, zX_like, scalX
 from .activation import Sigmoid
 
-
 sig = Sigmoid()
+s0 = scalX(0.)
 
 
 class DenseOp:
 
-    type = "Dense"
-
     @staticmethod
-    def forward(X, W, b):
+    def forward(X, W, b=s0):
         return np.dot(X, W) + b
 
     @staticmethod
     def backward(X, E, W):
-        gW = np.dot(X.T, E)
-        gb = np.sum(E, axis=0)
-        gX = np.dot(E, W.T)
-        return gW, gb, gX
+        raise NotImplementedError("No backwards for DenseOp!")
 
 
 class ReshapeOp:

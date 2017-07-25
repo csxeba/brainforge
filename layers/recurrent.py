@@ -41,14 +41,6 @@ class RecurrentBase(FFBase):
             error_tensor[-1] = error
             return error_tensor
 
-    def capsule(self):
-        return FFBase.capsule(self) + [self.neurons, self.activation, self.return_seq,
-                                       self.get_weights(unfold=False)]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(neurons=capsule[2], activation=capsule[3], return_seq=capsule[4])
-
     @property
     def outshape(self):
         if self.return_seq:
@@ -381,7 +373,6 @@ class Reservoir(RLayer):
 
     def __init__(self, neurons, activation, return_seq=False, r=0.1):
         RLayer.__init__(self, neurons, activation, return_seq)
-        self.trainable = False
         self.r = r
 
     def connect(self, to, inshape):
@@ -394,7 +385,3 @@ class Reservoir(RLayer):
         W /= S[0] ** 2  # scale to unit spectral radius
         self.weights = W[:, :-1]
         self.biases = W[:, -1]
-
-    def backpropagate(self, error):
-        if self.position > 1:
-            return super().backpropagate(error)

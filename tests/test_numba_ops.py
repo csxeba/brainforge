@@ -4,12 +4,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from brainforge.atomic import (
-    ConvolutionOp as NPConv,
+    ConvolutionOp as NpConv,
     MaxPoolOp as NpPool,
+    DenseOp as NpDense
 )
-from brainforge.numbaops.lltensor import (
-    ConvolutionOp as NBConv,
+from brainforge.numbaops import (
+    ConvolutionOp as NbConv,
     MaxPoolOp as NbPool,
+    DenseOp as NbDense
 )
 
 
@@ -19,11 +21,11 @@ VISUAL = False
 class TestNumbaTensorOps(unittest.TestCase):
 
     def test_convolution_op(self):
-        npop = NPConv()
-        nbop = NBConv()
+        npop = NpConv()
+        nbop = NbConv()
 
-        A = np.random.uniform(0., 1., (1, 1, 12, 12))
-        F = np.random.uniform(0., 1., (1, 1, 3, 3))
+        A = np.random.uniform(size=(1, 1, 12, 12))
+        F = np.random.uniform(size=(1, 1, 3, 3))
 
         npO = npop.apply(A, F, mode="full")
         nbO = nbop.apply(A, F, mode="full")
@@ -51,6 +53,21 @@ class TestNumbaTensorOps(unittest.TestCase):
 
         if VISUAL:
             visualize(A, npO, nbO, supt="Testing Pooling")
+
+    def test_dense_op(self):
+        npop = NpDense()
+        nbop = NbDense()
+
+        A = np.random.uniform(size=(12, 12))
+        W = np.random.uniform(size=(12, 12))
+        b = np.random.uniform(size=(12,))
+
+        npO = npop.forward(A, W, b)
+        nbO = nbop.forward(A, W, b)
+
+        self.assertTrue(np.allclose(npO, nbO))
+        if VISUAL:
+            visualize(A[None, None, ...], npO[None, None, ...], nbO[None, None, ...], "Testing Dense")
 
 
 def visualize(A, O1, O2, supt=None):

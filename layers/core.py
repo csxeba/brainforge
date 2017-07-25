@@ -1,6 +1,7 @@
 import numpy as np
 
 from .. import atomic
+from .. import numbaops
 from ..util import zX, white
 
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
@@ -16,27 +17,24 @@ class DenseLayer(FFBase):
         self.weights = white(inshape[0], self.neurons)
         self.biases = zX(self.neurons)
         super().connect(to, inshape)
+        if self.compiled:
+            print("Compiling DenseLayer...")
+            self.op = numbaops.DenseOp.forward
+        else:
+            self.op = atomic.DenseOp.forward
 
     def feedforward(self, X):
         self.inputs = X
-        self.output = self.activation(atomic.DenseOp.forward(
+        self.output = self.activation(self.op(
             X, self.weights, self.biases
         ))
         return self.output
 
     def backpropagate(self, delta):
         delta *= self.activation.derivative(self.output)
-        self.nabla_w, self.nabla_b, dX = atomic.DenseOp.backward(
-            self.inputs, delta, self.weights
-        )
-        return dX
-
-    def capsule(self):
-        return FFBase.capsule(self) + [self.activation, self.get_weights(unfold=False)]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(neurons=capsule[-1][0].shape[1], activation=capsule[-2])
+        self.nabla_w = self.op(self.inputs.T.copy(), delta)
+        self.nabla_b = delta.sum(axis=0)
+        return self.op(delta, self.weights.T.copy())
 
     def __str__(self):
         return "Dense-{}-{}".format(self.neurons, str(self.activation)[:5])
@@ -44,27 +42,16 @@ class DenseLayer(FFBase):
 
 class Activation(NoParamMixin, LayerBase):
 
-    def __init__(self, activation="linear"):
-        LayerBase.__init__(self, activation)
-
     def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
         self.output = self.activation(stimuli)
         return self.output
 
     def backpropagate(self, error) -> np.ndarray:
-        if self.position > 1:
-            return error * self.activation.derivative(self.output)
+        return error * self.activation.derivative(self.output)
 
     @property
     def outshape(self):
         return self.inshape
-
-    def capsule(self):
-        return LayerBase.capsule(self) + [self.activation]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(activation=capsule[-1])
 
     def __str__(self):
         return "Activation-{}".format(str(self.activation))
@@ -73,13 +60,13 @@ class Activation(NoParamMixin, LayerBase):
 class InputLayer(Activation):
 
     def __init__(self):
-        super().__init__("linear")
+        super().__init__(activation="linear")
 
 
 class Reshape(NoParamMixin, LayerBase):
 
     def __init__(self, shape=None):
-        LayerBase.__init__(self, activation="linear", trainable=False)
+        super().__init__(activation="linear")
         self.shape = shape
 
     def connect(self, to, inshape):
@@ -95,10 +82,6 @@ class Reshape(NoParamMixin, LayerBase):
 
     def capsule(self):
         return [self.inshape]
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        return cls(*capsule)
 
     @property
     def outshape(self):
