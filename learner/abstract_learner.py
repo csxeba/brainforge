@@ -27,7 +27,6 @@ class Learner:
                 print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
             epcosts += self.epoch(generator, no_lessons=lessons_per_epoch, classify=classify,
                                   validation=validation, verbose=verbose, **kw)
-        self.age += epochs
         return epcosts
 
     def fit(self, X, Y, batch_size=20, epochs=30, classify=True, validation=(), verbose=1, shuffle=True, **kw):
@@ -35,9 +34,9 @@ class Learner:
         return self.fit_generator(datastream, len(X), epochs, classify, validation, verbose, **kw)
 
     def epoch(self, generator, no_lessons, classify=True, validation=None, verbose=1, **kw):
-
         costs = []
         done = 0
+
         self.layers.learning = True
         while done < no_lessons:
             batch = next(generator)
@@ -49,13 +48,13 @@ class Learner:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t "
                       .format(done/no_lessons, np.mean(costs)), end="")
         self.layers.learning = False
-
         if verbose:
             print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(costs)), end="")
             if validation:
                 self._print_progress(validation, classify)
             print()
 
+        self.age += no_lessons
         return costs
 
     def _print_progress(self, validation, classify):

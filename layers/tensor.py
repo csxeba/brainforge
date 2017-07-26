@@ -34,13 +34,13 @@ class PoolLayer(NoParamMixin, LayerBase):
         self.output, self.filter = self.op.forward(questions, self.fdim)
         return self.output
 
-    def backpropagate(self, error):
+    def backpropagate(self, delta):
         """
         Calculates the error of the previous layer.
-        :param error:
+        :param delta:
         :return: numpy.ndarray, the errors of the previous layer
         """
-        return self.op.backward(error, self.filter)
+        return self.op.backward(delta, self.filter)
 
     @property
     def outshape(self):
@@ -88,16 +88,16 @@ class ConvLayer(LayerBase):
         self.output = self.activation.forward(self.op.forward(X, self.weights, "valid"))
         return self.output
 
-    def backpropagate(self, error):
-        error *= self.activation.backward(self.output)
+    def backpropagate(self, delta):
+        delta *= self.activation.backward(self.output)
         self.nabla_w = self.op.forward(
             self.inputs.transpose(1, 0, 2, 3),
-            error.transpose(1, 0, 2, 3),
+            delta.transpose(1, 0, 2, 3),
             mode="valid"
         ).transpose(1, 0, 2, 3)
         # self.nabla_b = error.sum()  # TODO: why is this commented out???
         rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
-        return self.op.forward(error, rW, "full")
+        return self.op.forward(delta, rW, "full")
 
     @property
     def outshape(self):

@@ -41,30 +41,6 @@ class RecurrentOp:
         nablab = E.sum(axis=(0, 1))
         return dX, nablaW, nablab
 
-    def backward_o(self, Z, O, E, W):
-        outdim = W.shape[-1]
-        time, batch, zdim = Z.shape
-        indim = zdim - outdim
-
-        bwO = self.actfn.backward(O)
-
-        nablaW = zX_like(W)
-        nablab = zX(outdim)
-
-        dX = zX(time, batch, indim)
-
-        for t in range(time-1, -1, -1):
-            E[t] *= bwO[t]
-
-            nablaW += np.dot(Z[t].T, E[t])
-            nablab += E[t].sum(axis=0)
-
-            deltaZ = np.dot(E[t], W.T)
-            dX[t] = deltaZ[:, :indim]
-            E[t-1] += deltaZ[:, indim:]
-
-        return dX, nablaW, nablab
-
 
 class LSTMOp:
 
@@ -82,24 +58,57 @@ class LSTMOp:
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
 
             p = np.dot(Z[t], W) + b
-            p[:, :outdim*3] = sigmoid.forward(p[:, :outdim*3])
-            p[:, outdim*3:] = self.actfn.forward(p[:, outdim*3:])
+            p[:, -outdim:] = sigmoid.forward(p[:, -outdim:])
+            p[:, :-outdim] = self.actfn.forward(p[:, :-outdim])
 
-            f[t] = p[:, :outdim]
-            i[t] = p[:, outdim:2*outdim]
-            o[t] = p[:, 2*outdim:3*outdim]
-            cand[t] = p[:, 3*outdim:]
+            f[t], i[t], o[t], cand[t] = np.split(p, 4, axis=1)
 
-            C[t] = C[t] * f[t] + cand[t] * i[t]
+            C[t] = C[t-1] * f[t] + cand[t] * i[t]
             Ca[t] = self.actfn.forward(C[t])
 
             O[t] = Ca[t] * o[t]
 
-        return O, (Z, C, f, i, o, cand, Ca)
+        return O, Z, np.stack((C, f, i, o, cand, Ca))
 
-    def backward(self, O, E, W, cache):
-        Z, C, f, i, o, cand, Ca = cache
-        outdim = W.shape[-1]
+    def backward(self, Z, O, E, W, cache):
+        outdim = W.shape[-1] // 4
+        time, batch, zdim = Z.shape
+        indim = zdim - outdim
+
+        C, f, i, o, cand, Ca = cache
+        bwgates = np.concatenate((f, i, o, cand), axis=-1)
+        bwgates[..., :-outdim] = sigmoid.backward(bwgates[..., :-outdim])
+        bwgates[..., -outdim:] = self.actfn.backward(bwgates[..., -outdim:])
+        bwCa = self.actfn.backward(Ca)
+
+        deltaC = zX_like(O[-1])
+        deltaZ = zX_like(Z)
+        dgates = zX(time, batch, outdim*4)
+
+        for t in range(time-1, -1, -1):
+            deltaC += E[t] * o[t] * bwCa[t]
+            state_yesterday = 0. if not t else C[t-1]
+
+            do = Ca[t] * E[t]
+            df = deltaC * state_yesterday
+            di = deltaC * cand[t]
+            dcand = deltaC * i[t]
+
+            dgates[t] = np.concatenate((df, di, do, dcand), axis=-1) * bwgates[t]
+
+            deltaC *= f[t]
+
+            deltaZ[t] = np.dot(dgates[t], W.T)
+            E[t-1] += deltaZ[t, :, indim:] if t else 0.
+
+        nablaW = np.matmul(Z.transpose(0, 2, 1), dgates).sum(axis=0)
+        nablab = np.sum(dgates, axis=(0, 1))
+        deltaX = deltaZ[:, :, :indim]
+        return deltaX, nablaW, nablab
+
+    def backward_o(self, Z, O, E, W, cache):
+        C, f, i, o, cand, Ca = cache
+        outdim = W.shape[-1] // 4
         time, batch, zdim = Z.shape
         indim = zdim - outdim
 
@@ -109,29 +118,31 @@ class LSTMOp:
         bwCa = self.actfn.backward(Ca)
 
         nablaW = zX_like(W)
-        nablab = zX(outdim)
+        nablab = zX(outdim*4)
 
         delta = zX_like(O[-1])
         deltaC = zX_like(O[-1])
         deltaX = zX(time, batch, indim)
+        dgates = zX(time, batch, outdim*4)
 
-        for t in range(-1, -time, -1):
+        for t in range(time-1, -1, -1):
             E[t] += delta
-            deltaC += E[t] * o * bwCa[t]
-            state_yesterday = 0. if -t == time else C[t-1]
+            deltaC += E[t] * o[t] * bwCa[t]
+            state_yesterday = 0. if not t else C[t-1]
             df = state_yesterday * deltaC
             di = cand[t] * deltaC
             do = Ca[t] * E[t]
-            dcand = i * deltaC
+            dcand = i[t] * deltaC
 
-            dgates = np.concatenate((df, di, do, dcand), axis=-1) * bwgates[t]
+            dgates[t] = np.concatenate((df, di, do, dcand), axis=-1) * bwgates[t]
 
             deltaC *= f[t]
 
-            nablab += np.sum(dgates, axis=0)
-            nablaW += np.dot(Z[t].T, dgates)
+            nablaW += np.dot(Z[t].T, dgates[t])
+            nablab += np.sum(dgates[t], axis=0)
 
-            deltaZ = np.dot(dgates, W.T)
+            deltaZ = np.dot(dgates[t], W.T)
             deltaX[t] = deltaZ[:, :-outdim]
 
         return deltaX, nablaW, nablab
+

@@ -1,41 +1,44 @@
+import abc
+
 from ._llactivation import (
     sigmoid, sigmoid_p,
     tanh, tanh_p,
-    sqrt, sqrt_p,
     relu, relu_p,
     # softmax, softmax_p,
-    s1
 )
 
 
-class Sigmoid:
+class LLActivation(abc.ABC):
+    type = ""
+
+    def __init__(self):
+        self.llact, self.llactp = {
+            "sigmoid": (sigmoid, sigmoid_p),
+            "tanh": (tanh, tanh_p),
+            "relu": (relu, relu_p)
+        }[self.type]
+
+    def forward(self, X):
+        return self.llact(X.ravel()).reshape(X.shape)
+
+    def backward(self, A):
+        return self.llactp(A.ravel()).reshape(A.shape)
+
+
+class Sigmoid(LLActivation):
     type = "sigmoid"
-    forward = staticmethod(sigmoid)
-    backward = staticmethod(sigmoid_p)
 
 
-class Tanh:
+class Tanh(LLActivation):
     type = "tanh"
-    forward = staticmethod(tanh)
-    backward = staticmethod(tanh_p)
 
 
-class Sqrt:
+class Sqrt(LLActivation):
     type = "sqrt"
-    forward = staticmethod(sqrt)
-    backward = staticmethod(sqrt_p)
 
 
-class Linear:
-    type = "linear"
-    forward = staticmethod(lambda A: A)
-    backward = staticmethod(lambda E: s1)
-
-
-class ReLU:
+class ReLU(LLActivation):
     type = "relu"
-    forward = staticmethod(relu)
-    backward = staticmethod(relu_p)
 
 
 # class SoftMax:
@@ -47,5 +50,4 @@ class ReLU:
 #         return s1
 
 
-act_fns = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
-           "linear": Linear, "relu": ReLU}
+llactivations = {"sigmoid": Sigmoid, "tanh": Tanh, "relu": ReLU}

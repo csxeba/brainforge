@@ -60,10 +60,10 @@ class LayerBase(abc.ABC):
         return self.weights.size + self.biases.size
 
     @abc.abstractmethod
-    def feedforward(self, stimuli: np.ndarray) -> np.ndarray: raise NotImplementedError
+    def feedforward(self, X): raise NotImplementedError
 
     @abc.abstractmethod
-    def backpropagate(self, error) -> np.ndarray: raise NotImplementedError
+    def backpropagate(self, delta): raise NotImplementedError
 
     @property
     @abc.abstractmethod
@@ -94,7 +94,7 @@ class FFBase(LayerBase):
 
     """Base class for the fully connected layer types"""
 
-    def __init__(self, neurons, activation, **kw):
+    def __init__(self, neurons, activation="linear", **kw):
         LayerBase.__init__(self, activation, **kw)
         if not isinstance(neurons, int):
             neurons = np.prod(neurons)

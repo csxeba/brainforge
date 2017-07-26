@@ -8,51 +8,48 @@ s0 = scalX(0., floatX)
 s1 = scalX(1., floatX)
 s2 = scalX(2., floatX)
 
-finfout = "{t}({t})".format(t=Xd(1))
+finfout = "{t}({t})".format(t=nbfloatX)
+jitsig = "{t}({t})".format(t=Xd(1))
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def sigmoid(Z):
     return s1 / (s1 + np.exp(-Z))
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def sigmoid_p(A):
     return A * (s1 - A)
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def tanh(Z):
     return np.tanh(Z)
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def tanh_p(A):
     return s1 - A ** s2
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def sqrt(Z):
     return np.sqrt(Z)
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def sqrt_p(A):
     return s1 / (s2*A)
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def relu(Z):
-    return np.maximum(s0, Z)
+    return s0 if s0 >= Z else Z
 
 
-@nb.jit(finfout, nopython=True)
+@nb.vectorize(finfout, nopython=True)
 def relu_p(A):
-    J = np.ones_like(A, dtype=nbfloatX)
-    for i in range(len(A)):
-        if A[i] <= s0:
-            J[i] = s0
-    return J
+    return s0 if A < s0 else s1
 
 
 # @nb.jit("{f2}({f2})".format(f2=Xd(2)), nopython=True)

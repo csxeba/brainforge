@@ -7,13 +7,15 @@ from brainforge.atomic import (
     ConvolutionOp as NpConv,
     MaxPoolOp as NpPool,
     DenseOp as NpDense,
-    RecurrentOp as NpRec
+    RecurrentOp as NpRec,
+    LSTMOp as NpLSTM
 )
 from brainforge.llatomic import (
     ConvolutionOp as NbConv,
     MaxPoolOp as NbPool,
     DenseOp as NbDense,
-    RecurrentOp as NbRec
+    RecurrentOp as NbRec,
+    LSTMOp as NbLSTM
 )
 
 
@@ -82,6 +84,26 @@ class TestNumbaTensorOps(unittest.TestCase):
 
         npO, npZ = npop.forward(A, W, b)
         nbO, nbZ = nbop.forward(A, W, b)
+
+        self.assertTrue(np.allclose(npO, nbO))
+        self.assertTrue(np.allclose(npZ, nbZ))
+
+    def test_lstm_op(self):
+        npop = NpLSTM("tanh")
+        nbop = NbLSTM("tanh")
+
+        BSZE = 20
+        TIME = 5
+        DDIM = 10
+        NEUR = 15
+
+        X = np.random.randn(BSZE, TIME, DDIM)
+        W = np.random.randn(NEUR + DDIM, NEUR * 4)
+        b = np.random.randn(NEUR * 4)
+        # E = np.random.randn(BSZE, TIME, NEUR)
+
+        npO, npZ, cache = npop.forward(X, W, b)
+        nbO, nbZ, cache = nbop.forward(X, W, b)
 
         self.assertTrue(np.allclose(npO, nbO))
         self.assertTrue(np.allclose(npZ, nbZ))

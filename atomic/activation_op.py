@@ -1,9 +1,10 @@
 import numpy as np
 
-from ..util import scalX
+from ..util.typing import scalX, zX_like
 from ..config import floatX
 
 s0 = scalX(0.)
+s05 = scalX(0.5)
 s1 = scalX(1.)
 s2 = scalX(2.)
 
@@ -31,6 +32,19 @@ class Sigmoid(ActivationFunction):
     
     def backward(self, A: np.ndarray) -> np.ndarray:
         return A * (s1 - A)
+
+
+class HardSigmoid(ActivationFunction):
+
+    type = "hardsigmoid"
+
+    def forward(self, Z: np.ndarray):
+        return np.clip((Z+s1)*s05, s0, s1)
+
+    def backward(self, A: np.ndarray):
+        mask = zX_like(A)
+        mask[np.logical_and(A > 0., A < 1.)] = s05
+        return A * mask
 
 
 class Tanh(ActivationFunction):
@@ -74,9 +88,9 @@ class ReLU(ActivationFunction):
         return np.maximum(s0, Z)
     
     def backward(self, A) -> np.ndarray:
-        d = np.ones_like(A)
-        d[A <= s0] = s0
-        return d
+        J = np.ones_like(A, dtype=floatX)
+        J[A <= 0.] = s0
+        return J
 
 
 class SoftMax(ActivationFunction):
@@ -122,4 +136,5 @@ class OnePlus(ActivationFunction):
 
 
 activations = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
-               "linear": Linear, "relu": ReLU, "softmax": SoftMax}
+               "linear": Linear, "relu": ReLU, "softmax": SoftMax,
+               "hard_sigmoid": HardSigmoid}

@@ -36,9 +36,7 @@ class LayerStack(Model):
 
     def feedforward(self, X):
         for layer in self.layers:
-            assert X.dtype == "float64"
             X = layer.feedforward(X)
-        assert X.dtype == "float64"
         return X
 
     def get_weights(self, unfold=True):

@@ -42,12 +42,12 @@ class DenseLayer(FFBase):
 
 class Activation(NoParamMixin, LayerBase):
 
-    def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
-        self.output = self.activation.forward(stimuli)
+    def feedforward(self, X: np.ndarray) -> np.ndarray:
+        self.output = self.activation.forward(X)
         return self.output
 
-    def backpropagate(self, error) -> np.ndarray:
-        return error * self.activation.backward(self.output)
+    def backpropagate(self, delta) -> np.ndarray:
+        return delta * self.activation.backward(self.output)
 
     @property
     def outshape(self):
@@ -74,11 +74,11 @@ class Reshape(NoParamMixin, LayerBase):
             self.shape = np.prod(inshape),
         super().connect(to, inshape)
 
-    def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
-        return atomic.ReshapeOp.forward(stimuli, self.shape)
+    def feedforward(self, X: np.ndarray) -> np.ndarray:
+        return atomic.ReshapeOp.forward(X, self.shape)
 
-    def backpropagate(self, error) -> np.ndarray:
-        return atomic.ReshapeOp.forward(error, self.inshape)
+    def backpropagate(self, delta) -> np.ndarray:
+        return atomic.ReshapeOp.forward(delta, self.inshape)
 
     def capsule(self):
         return [self.inshape]

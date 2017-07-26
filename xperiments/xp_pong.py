@@ -26,7 +26,7 @@ def prepro_coroutine(I):
         dsI = ds(I)
 
 
-RENDER = False
+RENDER = True
 
 env = gym.make("Pong-v0")
 nactions = env.action_space.n

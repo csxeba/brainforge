@@ -23,25 +23,25 @@ class HighwayLayer(FFBase):
         self.biases = zX(self.neurons*3)
         FFBase.connect(self, to, inshape)
 
-    def feedforward(self, stimuli) -> np.ndarray:
-        self.inputs = rtm(stimuli)
+    def feedforward(self, X) -> np.ndarray:
+        self.inputs = rtm(X)
         self.gates = self.inputs.dot(self.weights) + self.biases
         self.gates[:, :self.neurons] = self.activation.forward(self.gates[:, :self.neurons])
         self.gates[:, self.neurons:] = sigmoid.forward(self.gates[:, self.neurons:])
         h, t, c = np.split(self.gates, 3, axis=1)
         self.output = h * t + self.inputs * c
-        return self.output.reshape(stimuli.shape)
+        return self.output.reshape(X.shape)
 
-    def backpropagate(self, error) -> np.ndarray:
-        shape = error.shape
-        error = rtm(error)
+    def backpropagate(self, delta) -> np.ndarray:
+        shape = delta.shape
+        delta = rtm(delta)
 
         h, t, c = np.split(self.gates, 3, axis=1)
 
-        dh = self.activation.backward(h) * t * error
-        dt = sigmoid.backward(t) * h * error
-        dc = sigmoid.backward(c) * self.inputs * error
-        dx = c * error
+        dh = self.activation.backward(h) * t * delta
+        dt = sigmoid.backward(t) * h * delta
+        dc = sigmoid.backward(c) * self.inputs * delta
+        dx = c * delta
 
         dgates = np.concatenate((dh, dt, dc), axis=1)
         self.nabla_w = self.inputs.T.dot(dgates)
@@ -70,15 +70,15 @@ class DropOut(NoParamMixin, LayerBase):
         self.inshape = inshape
         super().connect(to, inshape)
 
-    def feedforward(self, stimuli: np.ndarray) -> np.ndarray:
-        self.inputs = stimuli
+    def feedforward(self, X: np.ndarray) -> np.ndarray:
+        self.inputs = X
         self.mask = np.random.uniform(0, 1, self.inshape) < self.dropchance  # type: np.ndarray
         self.mask.astype(floatX)
-        self.output = stimuli * (self.mask if self.brain.learning else self.dropchance)
+        self.output = X * (self.mask if self.brain.learning else self.dropchance)
         return self.output
 
-    def backpropagate(self, error: np.ndarray) -> np.ndarray:
-        output = error * self.mask
+    def backpropagate(self, delta: np.ndarray) -> np.ndarray:
+        output = delta * self.mask
         self.mask = np.ones_like(self.mask) * self.dropchance
         return output
 

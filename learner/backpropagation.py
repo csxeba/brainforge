@@ -20,12 +20,7 @@ class BackpropNetwork(Learner):
         if w is not None:
             delta *= w[:, None]
         self.backpropagate(delta)
-        self.layers.set_weights(
-            self.optimizer.optimize(
-                self.layers.get_weights(unfold=True),
-                self.get_gradients(unfold=True), m
-            )
-        )
+        self.update(m)
         return self.cost(self.output, Y) / m
 
     def backpropagate(self, error):
@@ -34,8 +29,24 @@ class BackpropNetwork(Learner):
             error = layer.backpropagate(error)
         return error
 
+    def update(self, m):
+        W = self.layers.get_weights(unfold=True)
+        gW = self.get_gradients(unfold=True)
+        oW = self.optimizer.optimize(W, gW, m)
+        self.layers.set_weights(oW, fold=True)
+
+    def get_weights(self, unfold=True):
+        self.layers.get_weights(unfold=unfold)
+
+    def set_weigts(self, ws, fold=True):
+        self.layers.set_weights(ws=ws, fold=fold)
+
     def get_gradients(self, unfold=True):
         grads = [l.gradients for l in self.layers if l.trainable]
         if unfold:
             grads = np.concatenate(grads)
         return grads
+
+    @property
+    def nparams(self):
+        return self.layers.nparams
