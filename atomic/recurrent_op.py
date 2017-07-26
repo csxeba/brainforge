@@ -14,11 +14,14 @@ class RecurrentOp:
     def forward(self, X, W, b):
         outdim = W.shape[-1]
         time, batch, indim = X.shape
+
         O = zX(time, batch, outdim)
         Z = zX(time, batch, indim+outdim)
+
         for t in range(time):
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
             O[t] = self.actfn.forward(np.dot(Z[t], W) + b)
+
         return O, Z
 
     def backward(self, Z, O, E, W):
@@ -34,15 +37,14 @@ class RecurrentOp:
         deltaX = zX(time, batch, indim)
 
         for t in range(time-1, -1, -1):
-            delta += E[t]
-            delta *= bwO[t]
+            delta += E[t] * bwO[t]
 
             nablaW += np.dot(Z[t].T, delta)
             nablab += delta.sum(axis=0)
 
             deltaZ = np.dot(delta, W.T)
-            deltaX[t] = deltaZ[:, :-outdim]
-            delta = deltaZ[:, -outdim:]
+            deltaX[t] = deltaZ[:, :indim]
+            delta = deltaZ[:, indim:]
 
         return deltaX, nablaW, nablab
 

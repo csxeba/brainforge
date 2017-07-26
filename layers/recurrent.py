@@ -73,11 +73,6 @@ class RLayer(RecurrentBase):
         return self.output
 
     def backpropagate(self, error):
-        """
-        Backpropagation through time (BPTT)
-
-        :param error: the deltas flowing from the next layer
-        """
         error = super().backpropagate(error)
         dX, self.nabla_w, self.nabla_b = self.op.backward(
             self.Z, self.output, error, self.weights
