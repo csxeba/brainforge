@@ -15,20 +15,18 @@ class RecurrentBase(FFBase):
         super().__init__(neurons, activation)
         self.Z = 0
         self.Zs = []
-        self.cache = []
+        self.cache = None
         self.gates = []
 
         self.time = 0
         self.return_seq = return_seq
 
-        self.cache = None
-
     @abc.abstractmethod
-    def feedforward(self, stimuli):
-        self.inputs = stimuli.transpose(1, 0, 2)
+    def feedforward(self, X):
+        self.inputs = X.transpose(1, 0, 2)
         self.time = self.inputs.shape[0]
         self.Zs, self.gates, self.cache = [], [], []
-        return zX(len(stimuli), self.neurons)
+        return zX(len(X), self.neurons)
 
     @abc.abstractmethod
     def backpropagate(self, error):
@@ -43,10 +41,7 @@ class RecurrentBase(FFBase):
 
     @property
     def outshape(self):
-        if self.return_seq:
-            return self.time, self.neurons
-        else:
-            return self.neurons,
+        return self.neurons,
 
     def __str__(self):
         return self.__class__.__name__ + "-{}-{}".format(self.neurons, str(self.activation)[:4])
@@ -65,17 +60,47 @@ class RLayer(RecurrentBase):
         self.biases = zX(self.neurons)
         super().connect(to, inshape)
 
-    def feedforward(self, questions):
-        self.inputs = questions.transpose(1, 0, 2)
-        self.time = len(self.inputs)
-        o, self.Z = self.op.forward(self.inputs, self.weights, self.biases)
-        self.output = o.transpose(1, 0, 2) if self.return_seq else o[-1]
-        return self.output
+    def feedforward(self, X):
+        batch, self.time, dimi = X.shape
+
+        self.inputs = X.transpose((1, 0, 2))
+        self.Z = zX(self.time, batch, dimi+self.neurons)
+        self.output = zX(self.time, batch, self.neurons)
+
+        for t in range(self.time):
+            self.Z[t] = np.concatenate((self.inputs[t], self.output[t-1]), axis=-1)
+            self.output[t] = self.activation.forward(self.Z[t].dot(self.weights) + self.biases)
+
+        return self.output.transpose(1, 0, 2) if self.return_seq else self.output[-1]
+
+    def feedforward_o(self, X):
+        super().feedforward(X)
+        self.output, self.Z = self.op.forward(self.inputs, self.weights, self.biases)
+        return self.output.transpose(1, 0, 2) if self.return_seq else self.output[-1]
+
+    def backpropagate_o(self, error):
+        error = super().backpropagate(error)
+
+        dh = zX_like(error[-1])
+        dX = zX_like(self.inputs)
+
+        for t in range(self.time - 1, -1, -1):
+            dh += error[t]
+            dh *= self.activation.backward(self.output[t])
+
+            self.nabla_w += self.Z[t].T @ dh
+            self.nabla_b += dh.sum(axis=0)
+
+            deltaZ = dh @ self.weights.T
+            dX[t] = deltaZ[:, :-self.neurons]
+            dh = deltaZ[:, -self.neurons:]
+
+        return dX.transpose(1, 0, 2)
 
     def backpropagate(self, error):
         error = super().backpropagate(error)
         dX, self.nabla_w, self.nabla_b = self.op.backward(
-            self.Z, self.output, error, self.weights
+            Z=self.Z, O=self.output, E=error, W=self.weights
         )
         return dX.transpose(1, 0, 2)
 
@@ -247,8 +272,8 @@ class GRU(RecurrentBase):
 
 class ClockworkLayer(RecurrentBase):
 
-    def __init__(self, neurons, activaton, blocksizes=None, ticktimes=None, return_seq=False):
-        super().__init__(neurons, activaton, return_seq)
+    def __init__(self, neurons, activation, blocksizes=None, ticktimes=None, return_seq=False):
+        super().__init__(neurons, activation, return_seq)
 
         if blocksizes is None:
             block = neurons // 5
@@ -293,8 +318,8 @@ class ClockworkLayer(RecurrentBase):
 
         super().connect(to, inshape)
 
-    def feedforward(self, stimuli):
-        output = super().feedforward(stimuli)
+    def feedforward(self, X):
+        output = super().feedforward(X)
 
         for t in range(1, self.time + 1):
             time_gate = np.equal(t % self.tick_array, 0.)

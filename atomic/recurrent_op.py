@@ -15,8 +15,8 @@ class RecurrentOp:
         outdim = W.shape[-1]
         time, batch, indim = X.shape
 
-        O = zX(time, batch, outdim)
         Z = zX(time, batch, indim+outdim)
+        O = zX(time, batch, outdim)
 
         for t in range(time):
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
@@ -28,25 +28,42 @@ class RecurrentOp:
         outdim = W.shape[-1]
         time, batch, zdim = Z.shape
         indim = zdim - outdim
+
+        bwO = self.actfn.backward(O)
+
+        for t in range(time-1, -1, -1):
+            E[t] *= bwO[t]
+            deltaZ = np.dot(E[t], W.T)
+            E[t-1] += deltaZ[:, indim:] if t else 0.
+
+        dX = E[:, :, :indim]
+        nablaW = np.matmul(Z.transpose(0, 2, 1), E).sum(axis=0)
+        nablab = E.sum(axis=(0, 1))
+        return dX, nablaW, nablab
+
+    def backward_o(self, Z, O, E, W):
+        outdim = W.shape[-1]
+        time, batch, zdim = Z.shape
+        indim = zdim - outdim
+
         bwO = self.actfn.backward(O)
 
         nablaW = zX_like(W)
         nablab = zX(outdim)
 
-        delta = zX_like(E[-1])
-        deltaX = zX(time, batch, indim)
+        dX = zX(time, batch, indim)
 
         for t in range(time-1, -1, -1):
-            delta += E[t] * bwO[t]
+            E[t] *= bwO[t]
 
-            nablaW += np.dot(Z[t].T, delta)
-            nablab += delta.sum(axis=0)
+            nablaW += np.dot(Z[t].T, E[t])
+            nablab += E[t].sum(axis=0)
 
-            deltaZ = np.dot(delta, W.T)
-            deltaX[t] = deltaZ[:, :indim]
-            delta = deltaZ[:, indim:]
+            deltaZ = np.dot(E[t], W.T)
+            dX[t] = deltaZ[:, :indim]
+            E[t-1] += deltaZ[:, indim:]
 
-        return deltaX, nablaW, nablab
+        return dX, nablaW, nablab
 
 
 class LSTMOp:

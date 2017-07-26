@@ -18,7 +18,7 @@ class GradientCheck:
         self.eps = epsilon
         self.dsp = display
 
-    def run(self, X, Y):
+    def run(self, X, Y, throw=False):
         norm = np.linalg.norm
         analytic = analytical_gradients(self, X, Y)
         numeric = numerical_gradients(self, X, Y)
@@ -28,5 +28,6 @@ class GradientCheck:
 
         if self.dsp and not passed:
             analyze_difference_matrices(self, diff)
-
+        if throw and not passed:
+            raise RuntimeError("Gradient Check failed")
         return passed
