@@ -42,7 +42,7 @@ class ConvolutionOp:
         return ConvolutionOp.valid(pA, F)
 
     @staticmethod
-    def apply(A, F, mode="valid"):
+    def forward(A, F, mode="valid"):
         if mode == "valid":
             return ConvolutionOp.valid(A, F)
         return ConvolutionOp.full(A, F)
@@ -68,7 +68,7 @@ class MaxPoolOp:
         return "MaxPool"
 
     @staticmethod
-    def apply(A, fdim):
+    def forward(A, fdim):
         im, ic, iy, ix = A.shape
         oy, ox = iy // fdim, ix // fdim
         output = zX(im, ic, oy, ox)

@@ -34,7 +34,7 @@ def display_matrices(mats):
         mats = np.atleast_2d(mats)
         if mats.shape[0] > mats.shape[1]:
             mats = mats.T
-        pyplot.imshow(np.atleast_2d(mats), cmap="hot")
+        pyplot.imshow(np.sqrt(mats), cmap="hot")
         pyplot.show()
 
 

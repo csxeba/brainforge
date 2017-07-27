@@ -81,7 +81,11 @@ class LSTM(RecurrentBase):
         self.Zs = []
         self.gates = []
         self.bias_init_factor = bias_init_factor
-        self.op = llatomic.LSTMOp if self.compiled else atomic.LSTMOp(activation)
+        if self.compiled:
+            print("Compiling LSTM...")
+            self.op = llatomic.LSTMOp(activation)
+        else:
+            self.op = atomic.LSTMOp(activation)
 
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons

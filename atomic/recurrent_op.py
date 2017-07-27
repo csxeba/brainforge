@@ -77,8 +77,8 @@ class LSTMOp:
 
         C, f, i, o, cand, Ca = cache
         bwgates = np.concatenate((f, i, o, cand), axis=-1)
-        bwgates[..., :-outdim] = sigmoid.backward(bwgates[..., :-outdim])
-        bwgates[..., -outdim:] = self.actfn.backward(bwgates[..., -outdim:])
+        bwgates[..., -outdim:] = sigmoid.backward(bwgates[..., -outdim:])
+        bwgates[..., :-outdim] = self.actfn.backward(bwgates[..., :-outdim])
         bwCa = self.actfn.backward(Ca)
 
         deltaC = zX_like(O[-1])

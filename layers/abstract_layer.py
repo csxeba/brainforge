@@ -24,11 +24,10 @@ class LayerBase(abc.ABC):
         self.nabla_b = None
 
         self.compiled = kw.get("compiled", config.compiled)
+        self.trainable = kw.get("trainable", self.trainable)
 
-        if isinstance(activation, str):
-            self.activation = atomic.activations[activation]()
-        else:
-            self.activation = activation
+        self.activation = atomic.activations[activation]() \
+            if isinstance(activation, str) else activation
 
     def connect(self, to, inshape):
         self.brain = to

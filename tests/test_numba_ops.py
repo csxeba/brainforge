@@ -31,7 +31,7 @@ class TestNumbaTensorOps(unittest.TestCase):
         A = np.random.uniform(size=(1, 1, 12, 12))
         F = np.random.uniform(size=(1, 1, 3, 3))
 
-        npO = npop.apply(A, F, mode="full")
+        npO = npop.forward(A, F, mode="full")
         nbO = nbop.forward(A, F, mode="full")
 
         self.assertTrue(np.allclose(npO, nbO))
@@ -45,7 +45,7 @@ class TestNumbaTensorOps(unittest.TestCase):
 
         A = np.random.uniform(0., 1., (1, 1, 12, 12))
 
-        npO, npF = npop.apply(A, 2)
+        npO, npF = npop.forward(A, 2)
         nbO, nbF = nbop.forward(A, 2)
 
         npbF = npop.backward(npO, npF)

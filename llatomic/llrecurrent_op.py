@@ -1,11 +1,7 @@
 import numpy as np
 
-from ._llops import (
-    recurrent_forward_relu, recurrent_forward_tanh,
-    recurrent_backward,
-    lstm_forward_tanh,
-    lstm_backward
-)
+from llatomic._llrecurrent import recurrent_forward_relu, recurrent_forward_tanh, recurrent_backward
+from llatomic._lllstm import lstm_forward_tanh, lstm_backward
 from .llactivation_op import llactivations
 
 sigmoid = llactivations["sigmoid"]()

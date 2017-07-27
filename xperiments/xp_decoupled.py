@@ -13,21 +13,30 @@ class DNI:
     def __init__(self, bpropnet, synth):
         self.bpropnet = bpropnet
         self.synth = synth
+        self._predictor = None
+
+    def predictor_coro(self):
+        prediction = None
+        delta_backwards = None
+        while 1:
+            inputs = yield prediction, delta_backwards
+            prediction = self.bpropnet.predict(inputs)
+            synthesized_delta = self.synth.predict(prediction)
+            self.bpropnet.update(len(inputs))
+            delta_backwards = self.bpropnet.backpropagate(synthesized_delta)
 
     def predict(self, X):
-        while 1:
-            pred = self.bpropnet.predict(X)
-            syn_delta = self.synth.predict(pred)
-            self.bpropnet.update(len(X))
-            X = yield pred, self.bpropnet.backpropagate(syn_delta)
+        if self._predictor is None:
+            self._predictor = self.predictor_coro()
+            next(self._predictor)
+        return self._predictor.send(X)
 
-    def udpate(self, delta):
-        while 1:
-            sdelta = self.synth.cost.derivative(
-                self.synth.output, delta
-            )
-            self.synth.backpropagate(sdelta)
-            self.synth.update(len(delta))
+    def udpate(self, true_delta):
+        synthesizer_delta = self.synth.cost.derivative(
+            self.synth.output, true_delta
+        )
+        self.synth.backpropagate(synthesizer_delta)
+        self.synth.update(len(true_delta))
 
 
 def build_net(inshape, outshape):
@@ -45,4 +54,11 @@ def build_synth(inshape):
     return synth
 
 
-dni1 = DNI(build_net)
+X, Y = etalon
+
+predictor = build_net(X.shape[1:], Y.shape[1:])
+synthesizer = build_synth(predictor.nparams)
+dni = DNI(predictor, synthesizer)
+
+pred, delta = dni.predict(X)
+iter()
