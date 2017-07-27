@@ -97,7 +97,7 @@ class TestNumbaTensorOps(unittest.TestCase):
         DDIM = 10
         NEUR = 15
 
-        X = np.random.randn(BSZE, TIME, DDIM)
+        X = np.random.randn(TIME, BSZE, DDIM)
         W = np.random.randn(NEUR + DDIM, NEUR * 4)
         b = np.random.randn(NEUR * 4)
         # E = np.random.randn(BSZE, TIME, NEUR)
@@ -105,8 +105,8 @@ class TestNumbaTensorOps(unittest.TestCase):
         npO, npZ, cache = npop.forward(X, W, b)
         nbO, nbZ, cache = nbop.forward(X, W, b)
 
-        self.assertTrue(np.allclose(npO, nbO))
         self.assertTrue(np.allclose(npZ, nbZ))
+        self.assertTrue(np.allclose(npO, nbO))
 
 
 def visualize(A, O1, O2, supt=None):

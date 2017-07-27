@@ -53,30 +53,29 @@ class LSTMOp:
         time, batch, indim = X.shape
 
         Z = zX(time, batch, indim+outdim)
-        O, C, f, i, o, cand, Ca = zX(7, time, batch, outdim)
+        O = zX(time, batch, outdim)
+        C, f, i, o, cand, Ca = zX(6, time, batch, outdim)
 
         for t in range(time):
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
-
             p = np.dot(Z[t], W) + b
-            p[:, -outdim:] = sigmoid.forward(p[:, -outdim:])
-            p[:, :-outdim] = self.actfn.forward(p[:, :-outdim])
+            p[:, :outdim] = self.actfn.forward(p[:, :outdim])
 
-            f[t], i[t], o[t], cand[t] = np.split(p, 4, axis=1)
-
+            p[:, outdim:] = sigmoid.forward(p[:, outdim:])
+            cand[t], f[t], i[t], o[t] = np.split(p, 4, axis=1)
             C[t] = C[t-1] * f[t] + cand[t] * i[t]
-            Ca[t] = self.actfn.forward(C[t])
 
+            Ca[t] = self.actfn.forward(C[t])
             O[t] = Ca[t] * o[t]
 
-        return O, Z, np.stack((C, f, i, o, cand, Ca))
+        return O, Z, np.stack((C, Ca, cand, f, i, o))
 
     def backward(self, Z, O, E, W, cache):
         outdim = W.shape[-1] // 4
         time, batch, zdim = Z.shape
         indim = zdim - outdim
 
-        C, f, i, o, cand, Ca = cache
+        C, Ca, cand, f, i, o = cache
         bwgates = np.concatenate((f, i, o, cand), axis=-1)
         bwgates[..., -outdim:] = sigmoid.backward(bwgates[..., -outdim:])
         bwgates[..., :-outdim] = self.actfn.backward(bwgates[..., :-outdim])

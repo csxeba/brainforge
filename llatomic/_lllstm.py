@@ -15,21 +15,22 @@ def _lstm_update_state(p, T, outdim):
     return T
 
 
-@nb.jit(nopython=True, cache=True)
+# @nb.jit(nopython=True, cache=True)
 def lstm_forward_tanh(X, W, b):
     outdim = W.shape[-1] // 4
     time, batch, indim = X.shape
 
-    Z = np.zeros((time, batch, indim + outdim))
-    # C[0], Ca[1], cand[2], f[3], i[4], o[5]
+    Z = np.zeros((time, batch, indim+outdim))
     O = np.zeros((time, batch, outdim))
-    T = np.zeros((time, 6, batch, outdim))
+    T = np.zeros((time, 6, batch, outdim))  # C[0], Ca[1], cand[2], f[3], i[4], o[5]
 
     for t in range(time):
         Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
         p = np.dot(Z[t], W) + b
         p[:, :outdim] = tanh(p[:, :outdim])  # nonlin to candidate
+
         T[t] = _lstm_update_state(p, T[t], outdim)
+
         T[t, 1] = tanh(T[t, 0])  # nonlin to state
         O[t] = T[t, 1] * T[t, 5]  # O = f(C) * o
     return np.concatenate((O.ravel(), Z.ravel(), T.ravel()))
@@ -41,8 +42,8 @@ def lstm_forward_relu(X, W, b):
     time, batch, indim = X.shape
 
     Z = np.zeros((time, batch, indim + outdim))
-    # C[0], Ca[1], cand[2], f[3], i[4], o[5]
     O = np.zeros((time, batch, outdim))
+    # C[0], Ca[1], cand[2], f[3], i[4], o[5]
     T = np.zeros((time, 6, batch, outdim))
 
     for t in range(time):
@@ -57,6 +58,7 @@ def lstm_forward_relu(X, W, b):
 
 @nb.jit(nopython=True)
 def lstm_backward(Z, bwO, E, W, cache, bwcache):
+    # bwcache: bwCa, bwcand, bwf, bwi, bwo
     dimo = W.shape[-1] // 4
     time, batch, zdim = Z.shape
     indim = zdim - dimo
@@ -87,9 +89,6 @@ def lstm_backward(Z, bwO, E, W, cache, bwcache):
             nablab[ix] += dgates[:, ix].sum()
         deltaZ = np.dot(dgates, W.T)
         deltaX[t] = deltaZ[:, :-dimo]
-        delta = deltaZ[:, indim:]
-        if not t:
-            delta *= 0.
-        E[t-1] += delta
+        E[t-1] += deltaZ[:, indim:]
 
     return np.concatenate((deltaX.ravel(), nablaW.ravel(), nablab.ravel()))
