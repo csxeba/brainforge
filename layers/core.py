@@ -1,7 +1,6 @@
 import numpy as np
 
 from .. import atomic
-from .. import llatomic
 from ..util import zX, white
 
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
@@ -18,6 +17,7 @@ class DenseLayer(FFBase):
         self.biases = zX(self.neurons)
         super().connect(to, inshape)
         if self.compiled:
+            from .. import llatomic
             print("Compiling DenseLayer...")
             self.op = llatomic.DenseOp.forward
         else:

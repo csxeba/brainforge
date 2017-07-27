@@ -1,7 +1,7 @@
 import numpy as np
 
-from llatomic._llrecurrent import recurrent_forward_relu, recurrent_forward_tanh, recurrent_backward
-from llatomic._lllstm import lstm_forward_tanh, lstm_backward
+from ._llrecurrent import recurrent_forward_relu, recurrent_forward_tanh, recurrent_backward
+from ._lllstm import lstm_forward_tanh, lstm_backward
 from .llactivation_op import llactivations
 
 sigmoid = llactivations["sigmoid"]()
@@ -60,7 +60,7 @@ class LSTMOp(ROpBase):
 
         Oshape = (t, m, do)
         Zshape = (t, m, do+di)
-        cacheshape = (t, m, do*6)
+        cacheshape = (t, 6, m, do)
         Obord = np.prod(Oshape)
         Zbord = np.prod(Zshape) + Obord
 
@@ -69,18 +69,19 @@ class LSTMOp(ROpBase):
         O = vector[:Obord].reshape(*Oshape)
         Z = vector[Obord:Zbord].reshape(*Zshape)
         cache = vector[Zbord:].reshape(*cacheshape)
-        return O, Z, cache
+        return O, Z, cache.transpose(1, 0, 2, 3)
 
     def backward(self, Z, O, E, W, cache):
-        m, t, dz = Z.shape
         do = W.shape[-1] // 4
+        m, t, dz = Z.shape
         di = dz - do
         g = m*t*di
-        bwcache = cache[..., do:].copy()
-        bwcache[..., :2*do] = self.llact.backward(bwcache[..., :2*do])
-        bwcache[..., 2*do:] = sigmoid.backward(bwcache[..., 2*do:])
-        vector = lstm_backward(Z, self.llact.backward(O),
-                               E, W, cache, bwcache)
+
+        bwcache = cache[1:].copy()
+        bwcache[:2] = self.llact.backward(bwcache[:2])
+        bwcache[2:] = sigmoid.backward(bwcache[2:])
+        bwO = self.llact.backward(O)
+        vector = lstm_backward(Z, bwO, E, W, cache, np.concatenate(bwcache, axis=-1))
         dX = vector[:g].reshape(t, m, di)
         gW = vector[g:g+W.size].reshape(W.shape)
         gb = vector[g+W.size:]

@@ -88,6 +88,6 @@ def plotrun(agent, episodes=1000):
 
 if __name__ == '__main__':
     plotrun(AgentType(QannDense(), nactions, AgentConfig(
-        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
-        discount_factor=0.6, replay_memory_size=7200, training_batch_size=720,
+        epsilon_greedy_rate=2.0, epsilon_decay_factor=0.9999, epsilon_min=0.0,
+        discount_factor=0.9, replay_memory_size=7200, training_batch_size=720,
     )), episodes=2000)

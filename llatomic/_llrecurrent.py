@@ -32,14 +32,17 @@ def recurrent_forward_tanh(X, W, b):
 def recurrent_backward(Z, bwO, E, W):
     indim = Z.shape[-1] - bwO.shape[-1]
     nablaW = np.zeros_like(W)
+    nablab = np.zeros((W.shape[-1],))
+    dX = np.zeros((Z.shape[0], Z.shape[1], Z.shape[2]-bwO.shape[-1]))
 
     for t in range(Z.shape[0]-1, -1, -1):
         E[t] *= bwO[t]
         nablaW += np.dot(Z[t].T, E[t])
         deltaZ = np.dot(E[t], W.T)
+        for i in range(len(nablab)):
+            nablab[i] += E[t, :, i].sum()
         if t:
             E[t-1] += deltaZ[:, indim:]
 
-    dX = E[:, :, :indim]
-    nablab = np.sum(E, axis=(0, 1))
+    dX += E[..., :indim]
     return np.concatenate((dX.ravel(), nablaW.ravel(), nablab.ravel()))

@@ -1,9 +1,10 @@
 import numpy as np
 
 from .activation_op import activations
-from ..util.typing import zX, zX_like
+from ..util.typing import zX, zX_like, scalX
 
 sigmoid = activations["sigmoid"]()
+s0 = scalX(0.)
 
 
 class RecurrentOp:
@@ -52,7 +53,7 @@ class LSTMOp:
         time, batch, indim = X.shape
 
         Z = zX(time, batch, indim+outdim)
-        O, C, f, i, o, cand, Ca = [zX(time, batch, outdim) for _ in range(7)]
+        O, C, f, i, o, cand, Ca = zX(7, time, batch, outdim)
 
         for t in range(time):
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
@@ -87,10 +88,9 @@ class LSTMOp:
 
         for t in range(time-1, -1, -1):
             deltaC += E[t] * o[t] * bwCa[t]
-            state_yesterday = 0. if not t else C[t-1]
 
             do = Ca[t] * E[t]
-            df = deltaC * state_yesterday
+            df = deltaC * C[t-1] if t else s0
             di = deltaC * cand[t]
             dcand = deltaC * i[t]
 
@@ -99,7 +99,7 @@ class LSTMOp:
             deltaC *= f[t]
 
             deltaZ[t] = np.dot(dgates[t], W.T)
-            E[t-1] += deltaZ[t, :, indim:] if t else 0.
+            E[t-1] += deltaZ[t, :, indim:] if t else s0
 
         nablaW = np.matmul(Z.transpose(0, 2, 1), dgates).sum(axis=0)
         nablab = np.sum(dgates, axis=(0, 1))

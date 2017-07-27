@@ -1,5 +1,5 @@
 from ._llops import dense_forward
-from ..util.typing import zX
+from brainforge.util.typing import zX
 
 
 class DenseOp:

@@ -2,7 +2,7 @@ import numpy as np
 import numba as nb
 
 from ._llutil import floatX, Xd, nbfloatX
-from ..util.typing import scalX
+from brainforge.util.typing import scalX
 
 s0 = scalX(0., floatX)
 s1 = scalX(1., floatX)

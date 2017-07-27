@@ -3,7 +3,7 @@ import abc
 import numpy as np
 
 from .abstract_layer import FFBase
-from .. import atomic, llatomic
+from .. import atomic
 from ..util import ctx1, zX, zX_like, white, white_like
 
 sigmoid = atomic.Sigmoid()
@@ -12,7 +12,7 @@ sigmoid = atomic.Sigmoid()
 class RecurrentBase(FFBase):
 
     def __init__(self, neurons, activation, return_seq=False, **kw):
-        super().__init__(neurons, activation)
+        super().__init__(neurons, activation, **kw)
         self.Z = 0
         self.Zs = []
         self.cache = None
@@ -51,8 +51,12 @@ class RLayer(RecurrentBase):
 
     def __init__(self, neurons, activation, return_seq=False, **kw):
         super().__init__(neurons, activation, return_seq, **kw)
-        self.op = llatomic.RecurrentOp(activation) if self.compiled \
-            else atomic.RecurrentOp(activation)
+        if self.compiled:
+            from .. import llatomic
+            print("Compiling RLayer...")
+            self.op = llatomic.RecurrentOp(activation)
+        else:
+            self.opt = atomic.RecurrentOp(activation)
 
     def connect(self, to, inshape):
         self.Z = inshape[-1] + self.neurons
@@ -82,6 +86,7 @@ class LSTM(RecurrentBase):
         self.gates = []
         self.bias_init_factor = bias_init_factor
         if self.compiled:
+            from .. import llatomic
             print("Compiling LSTM...")
             self.op = llatomic.LSTMOp(activation)
         else:

@@ -65,7 +65,7 @@ class ConvLayer(LayerBase):
     def connect(self, to, inshape):
         if self.compiled:
             print("Compiling ConvLayer...")
-            from ..llatomic.lltensor_op import ConvolutionOp
+            from ..llatomic import ConvolutionOp
         else:
             from ..atomic import ConvolutionOp
         depth, iy, ix = inshape[-3:]

@@ -1,6 +1,6 @@
 import numba as nb
 
-from ..config.numeric import floatX
+from brainforge.config import floatX
 
 nbfloatX = nb.float32 if floatX == "float32" else nb.float64
 

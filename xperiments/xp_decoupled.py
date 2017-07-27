@@ -6,10 +6,6 @@ from brainforge.util import etalon
 
 class DNI:
 
-    """
-    Decoupled neural interface, implemented with coroutines
-    """
-
     def __init__(self, bpropnet, synth):
         self.bpropnet = bpropnet
         self.synth = synth
@@ -47,9 +43,9 @@ def build_net(inshape, outshape):
     return net
 
 
-def build_synth(inshape):
+def build_synth(inshape, outshape):
     synth = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(inshape)
+        DenseLayer(outshape)
     ], cost="mse", optimizer=Momentum(0.01))
     return synth
 
@@ -57,8 +53,8 @@ def build_synth(inshape):
 X, Y = etalon
 
 predictor = build_net(X.shape[1:], Y.shape[1:])
-synthesizer = build_synth(predictor.nparams)
+pred_os = predictor.layers[-1].outshape
+synthesizer = build_synth(pred_os, pred_os)
 dni = DNI(predictor, synthesizer)
 
 pred, delta = dni.predict(X)
-iter()

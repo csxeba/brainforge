@@ -35,8 +35,8 @@ class PG(AgentBase):
         R = np.array(self.rewards[1:] + [reward])
         if self.cfg.gamma > 0.:
             R = discount_rewards(R, self.cfg.gamma)
-            # R -= R.mean()
-            # R /= (R.std() + 1e-7)
+            R -= R.mean()
+            R /= (R.std() + 1e-7)
         X, Y = np.stack(self.X, axis=0), np.stack(self.Y, axis=0)
         N = len(X)
 

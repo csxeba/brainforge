@@ -5,61 +5,44 @@ import gym
 
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
-from brainforge.optimization import SGD
+from brainforge.optimization import Momentum
 from brainforge.reinforcement import PG, AgentConfig
 from matplotlib import pyplot
 
-env = gym.make("CartPole-v1")
+env = gym.make("MountainCar-v0")
 nactions = env.action_space.n
 
 
 def get_agent():
     brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
+        DenseLayer(60, activation="relu"),
         DenseLayer(nactions, activation="softmax")
-    ], cost="xent", optimizer=SGD(eta=0.0001))
+    ], cost="xent", optimizer=Momentum(eta=0.001))
     return brain
 
 
 def run(agent):
 
     episode = 1
-    wins = 0
     rewards = deque(maxlen=100)
 
     while 1:
         state = env.reset()
         done = False
-        steps = 1
         reward = None
+        rwsum = 0.
         while not done:
-            env.render()
-            # print(f"\rStep {steps:>4}", end="")
+            # env.render()
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
-            steps += 1
-
-        rewards.append(steps)
-        win = steps > 145
-        cost = agent.accumulate(state, 10. if win else -1.)
-        # agent.push_weights()
+            rwsum += reward
+        rewards.append(rwsum)
+        cost = agent.accumulate(state, reward)
         meanrwd = np.mean(rewards)
         print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}," +
               f" Cost: {cost:>6.4f}, Epsilon: {agent.cfg.epsilon:>6.4f}",
               end="")
-        # if episode % 100 == 0:
-        #     print(" Pulled pork")
-        #     agent.pull_weights()
-        if win:
-            print(" Win!")
-            wins += 1
-        else:
-            wins = 0
-        if wins >= 50:
-            break
         episode += 1
-    print("\n\n")
-    print("-" * 50)
-    print("Environment solved!")
 
 
 def plotrun(agent):
@@ -93,6 +76,5 @@ def plotrun(agent):
 
 if __name__ == '__main__':
     run(PG(get_agent(), nactions, AgentConfig(
-        epsilon_greedy_rate=1.0, epsilon_decay_factor=0.9998, epsilon_min=0.0,
-        discount_factor=0.6, replay_memory_size=1800, training_batch_size=180,
+        discount_factor=0.2, replay_memory_size=3600, training_batch_size=360,
     )))

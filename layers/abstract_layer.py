@@ -94,7 +94,7 @@ class FFBase(LayerBase):
     """Base class for the fully connected layer types"""
 
     def __init__(self, neurons, activation="linear", **kw):
-        LayerBase.__init__(self, activation, **kw)
+        super().__init__(activation, **kw)
         if not isinstance(neurons, int):
             neurons = np.prod(neurons)
         self.neurons = int(neurons)
