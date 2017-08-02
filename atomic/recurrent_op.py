@@ -58,11 +58,13 @@ class LSTMOp:
 
         for t in range(time):
             Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
+
             p = np.dot(Z[t], W) + b
             p[:, :outdim] = self.actfn.forward(p[:, :outdim])
-
             p[:, outdim:] = sigmoid.forward(p[:, outdim:])
+
             cand[t], f[t], i[t], o[t] = np.split(p, 4, axis=1)
+
             C[t] = C[t-1] * f[t] + cand[t] * i[t]
 
             Ca[t] = self.actfn.forward(C[t])
@@ -76,9 +78,9 @@ class LSTMOp:
         indim = zdim - outdim
 
         C, Ca, cand, f, i, o = cache
-        bwgates = np.concatenate((f, i, o, cand), axis=-1)
-        bwgates[..., -outdim:] = sigmoid.backward(bwgates[..., -outdim:])
-        bwgates[..., :-outdim] = self.actfn.backward(bwgates[..., :-outdim])
+        bwgates = np.concatenate(cache[2:], axis=-1)
+        bwgates[..., outdim:] = sigmoid.backward(bwgates[..., outdim:])
+        bwgates[..., :outdim] = self.actfn.backward(bwgates[..., :outdim])
         bwCa = self.actfn.backward(Ca)
 
         deltaC = zX_like(O[-1])
@@ -88,12 +90,12 @@ class LSTMOp:
         for t in range(time-1, -1, -1):
             deltaC += E[t] * o[t] * bwCa[t]
 
-            do = Ca[t] * E[t]
-            df = deltaC * C[t-1] if t else s0
-            di = deltaC * cand[t]
             dcand = deltaC * i[t]
+            df = deltaC * (C[t-1] if t else s0)
+            di = deltaC * cand[t]
+            do = Ca[t] * E[t]
 
-            dgates[t] = np.concatenate((df, di, do, dcand), axis=-1) * bwgates[t]
+            dgates[t] = np.concatenate((dcand, df, di, do), axis=-1) * bwgates[t]
 
             deltaC *= f[t]
 
@@ -144,4 +146,3 @@ class LSTMOp:
             deltaX[t] = deltaZ[:, :-outdim]
 
         return deltaX, nablaW, nablab
-
