@@ -3,19 +3,19 @@ from collections import deque
 import numpy as np
 import gym
 
+from matplotlib import pyplot
+
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
 from brainforge.optimization import Momentum
 from brainforge.reinforcement import PG, AgentConfig
-from matplotlib import pyplot
 
-env = gym.make("MountainCar-v0")
+env = gym.make("CartPole-v0")
 nactions = env.action_space.n
 
 
 def get_agent():
     brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
-        DenseLayer(60, activation="relu"),
         DenseLayer(nactions, activation="softmax")
     ], cost="xent", optimizer=Momentum(eta=0.001))
     return brain
@@ -32,7 +32,7 @@ def run(agent):
         reward = None
         rwsum = 0.
         while not done:
-            # env.render()
+            env.render()
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
             rwsum += reward
@@ -75,6 +75,7 @@ def plotrun(agent):
 
 
 if __name__ == '__main__':
-    run(PG(get_agent(), nactions, AgentConfig(
+    plotrun(PG(get_agent(), nactions, AgentConfig(
+        epsilon=1.5, epsilon_decay_rate=0.9999, epsilon_min=0.,
         discount_factor=0.2, replay_memory_size=3600, training_batch_size=360,
     )))
