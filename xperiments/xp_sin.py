@@ -5,14 +5,15 @@ from matplotlib import pyplot as plt
 from brainforge import BackpropNetwork
 from brainforge.layers import DenseLayer
 
+np.random.seed(1234)
 
 X = np.linspace(-6., 6., 100)[:, None]
 Y = np.sin(X)
 
-net = BackpropNetwork([DenseLayer(45, activation="tanh"),
-                       DenseLayer(30, activation="tanh"),
+net = BackpropNetwork([DenseLayer(12, activation="tanh"),
+                       DenseLayer(8, activation="tanh"),
                        DenseLayer(1, activation="linear")],
-                      input_shape=1, optimizer="adagrad")
+                      input_shape=1, optimizer="momentum")
 
 pred = net.predict(X)
 plt.ion()
