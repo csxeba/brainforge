@@ -80,7 +80,7 @@ class RMSprop(Adagrad):
 
 class Adam(_SGD):
 
-    def __init__(self, eta=0.1, decay_memory=0.9, decay_velocity=0.999, epsilon=1e-8):
+    def __init__(self, eta=0.1, decay_memory=0.999, decay_velocity=0.9, epsilon=1e-8):
         super().__init__(eta)
         self.decay_velocity = decay_velocity
         self.decay_memory = decay_memory
