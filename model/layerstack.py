@@ -39,6 +39,10 @@ class LayerStack(Model):
             X = layer.feedforward(X)
         return X
 
+    def get_states(self, unfold=True):
+        hs = [layer.output for layer in self.layers]
+        return np.concatenate(hs) if unfold else ws
+
     def get_weights(self, unfold=True):
         ws = [layer.get_weights(unfold=unfold) for
               layer in self.layers if layer.trainable]
