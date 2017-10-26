@@ -48,6 +48,6 @@ while 1:
         vcost = net.cost(vpred, vY) / len(vpred)
         tobj.set_data(tX, tpred)
         vobj.set_data(vX, vpred)
-        plt.pause(0.01)
+        plt.pause(0.1)
         t.set_text(templ.format(batchno, tcost, vcost))
         batchno += 1

@@ -41,6 +41,7 @@ def run(agent, **kw):
         step = 0
         reward = None
         for step in range(1, 201):
+            env.render()
             action = agent.sample(state, reward)
             state, reward, done, info = env.step(action)
             if done:
