@@ -19,18 +19,21 @@ class BackpropNetwork(Learner):
         delta = self.cost.derivative(preds, Y)
         if w is not None:
             delta *= w[:, None]
-        self.layers.set_weights(
-            self.optimizer.optimize(
-                self.layers.get_weights(unfold=True),
-                self.backpropagate(delta), m
-            )
-        )
+        self.backpropagate(delta)
+        self.update(m)
         return self.cost(self.output, Y) / m
+
+    def update(self, m):
+        W = self.layers.get_weights(unfold=True)
+        gW = self.get_gradients(unfold=True)
+        self.layers.set_weights(self.optimizer.optimize(W, gW, m))
 
     def backpropagate(self, error):
         # TODO: optimize this, skip untrainable layers at the beginning
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
+            if error is None:
+                break
         return self.get_gradients(unfold=True)
 
     def get_gradients(self, unfold=True):
