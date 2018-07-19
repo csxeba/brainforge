@@ -15,7 +15,7 @@ nactions = env.action_space.n
 
 def QannRecurrent():
     brain = BackpropNetwork(env.observation_space.shape, layers=[
-        ClockworkLayer(120, activaton="tanh"),
+        ClockworkLayer(120, activation="tanh"),
         DenseLayer(60, activation="relu"),
         DenseLayer(nactions, activation="linear")
     ], cost="mse", optimizer=RMSprop(eta=0.0001))

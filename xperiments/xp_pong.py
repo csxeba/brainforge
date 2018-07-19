@@ -35,7 +35,7 @@ print("Pong stateshape =", stateshape)
 brain = BackpropNetwork(input_shape=stateshape, layerstack=[
     DenseLayer(200, activation="tanh"),
     DenseLayer(nactions, activation="softmax")
-], cost="xent", optimizer="sgd")
+], cost="cxent", optimizer="adam")
 agent = PG(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
                                         epsilon_greedy_rate=1., epsilon_decay=0.99,
                                         epsilon_min=0.01, replay_memory_size=3000))

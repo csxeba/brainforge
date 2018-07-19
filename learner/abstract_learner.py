@@ -2,9 +2,9 @@ import abc
 
 import numpy as np
 
-from brainforge.model.layerstack import LayerStack
-from brainforge.cost import cost_functions, CostFunction
-from brainforge.util import batch_stream
+from ..model.layerstack import LayerStack
+from ..cost import costs, CostFunction
+from ..util import batch_stream
 
 
 class Learner:
@@ -17,7 +17,7 @@ class Learner:
         self.layers = layerstack
         self.name = name
         self.age = 0
-        self.cost = cost if isinstance(cost, CostFunction) else cost_functions[cost]
+        self.cost = cost if isinstance(cost, CostFunction) else costs[cost]
 
     def fit_generator(self, generator, lessons_per_epoch, epochs=30, classify=True, validation=(), verbose=1, **kw):
         epcosts = []
@@ -34,28 +34,28 @@ class Learner:
         return self.fit_generator(datastream, len(X), epochs, classify, validation, verbose, **kw)
 
     def epoch(self, generator, no_lessons, classify=True, validation=None, verbose=1, **kw):
-        costs = []
+        losses = []
         done = 0
 
         self.layers.learning = True
         while done < no_lessons:
             batch = next(generator)
             cost = self.learn_batch(*batch, **kw)
-            costs.append(cost)
+            losses.append(cost)
 
             done += len(batch[0])
             if verbose:
                 print("\rDone: {0:>6.1%} Cost: {1: .5f}\t "
-                      .format(done/no_lessons, np.mean(costs)), end="")
+                      .format(done/no_lessons, np.mean(losses)), end="")
         self.layers.learning = False
         if verbose:
-            print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(costs)), end="")
+            print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(losses)), end="")
             if validation:
                 self._print_progress(validation, classify)
             print()
 
         self.age += no_lessons
-        return costs
+        return losses
 
     def _print_progress(self, validation, classify):
         results = self.evaluate(*validation, classify=classify)
@@ -101,5 +101,13 @@ class Learner:
         return self.layers[-1].output
 
     @property
+    def outshape(self):
+        return self.layers.outshape
+
+    @property
     def nparams(self):
         return self.layers.nparams
+
+    @property
+    def trainable_layers(self):
+        return self.layers.trainable_layers

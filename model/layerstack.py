@@ -41,7 +41,7 @@ class LayerStack(Model):
 
     def get_states(self, unfold=True):
         hs = [layer.output for layer in self.layers]
-        return np.concatenate(hs) if unfold else ws
+        return np.concatenate(hs) if unfold else hs
 
     def get_weights(self, unfold=True):
         ws = [layer.get_weights(unfold=unfold) for
@@ -75,6 +75,14 @@ class LayerStack(Model):
     def nparams(self):
         return sum(layer.nparams for layer in self.layers if layer.trainable)
 
+    @property
+    def output(self):
+        return self.layers[-1].output
+
+    @property
+    def trainable_layers(self):
+        return (layer for layer in self.layers if layer.trainable)
+
     def __iter__(self):
         return self
 
@@ -90,3 +98,5 @@ class LayerStack(Model):
 
     def __getitem__(self, item):
         return self.layers.__getitem__(item)
+
+    predict = feedforward

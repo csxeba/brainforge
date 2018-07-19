@@ -68,8 +68,8 @@ class LayerBase(abc.ABC):
     @abc.abstractmethod
     def outshape(self): raise NotImplementedError
 
-    @abc.abstractmethod
-    def __str__(self): raise NotImplementedError
+    def __str__(self):
+        return self.__class__.__name__
 
 
 class NoParamMixin(abc.ABC):
