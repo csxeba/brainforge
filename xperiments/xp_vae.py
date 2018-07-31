@@ -16,9 +16,9 @@ class Sampler(NoParamMixin, LayerBase):
         self._outshape = None
         self.epsilon = None
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self._outshape = inshape
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X):
         """O = M + V * E"""

@@ -12,6 +12,7 @@ class LayerBase(abc.ABC):
     def __init__(self, activation="linear", **kw):
 
         self.brain = None
+        self.previous = None
         self.inputs = None
         self.output = None
         self.inshape = None
@@ -29,9 +30,9 @@ class LayerBase(abc.ABC):
         self.activation = atomic.activations[activation]() \
             if isinstance(activation, str) else activation
 
-    def connect(self, to, inshape):
-        self.brain = to
-        self.inshape = inshape
+    def connect(self, brain):
+        self.brain = brain
+        self.inshape = brain.outshape
 
     def shuffle(self) -> None:
         self.weights = white_like(self.weights)
@@ -50,9 +51,20 @@ class LayerBase(abc.ABC):
         else:
             self.weights, self.biases = w
 
+    def get_gradients(self, unfold=True):
+        nabla = [self.nabla_w, self.nabla_b]
+        return nabla if not unfold else np.concatenate([grad.ravel() for grad in nabla])
+
+    def set_gradients(self, nabla, fold=True):
+        if fold:
+            self.nabla_w = nabla[:self.nabla_w.size].reshape(self.nabla_w.shape)
+            self.nabla_b = nabla[self.nabla_w.size:].reshape(self.nabla_b.shape)
+        else:
+            self.nabla_w, self.nabla_b = nabla
+
     @property
     def gradients(self):
-        return np.concatenate([self.nabla_w.ravel(), self.nabla_b.ravel()])
+        return self.get_gradients(unfold=True)
 
     @property
     def nparams(self):
@@ -82,7 +94,9 @@ class NoParamMixin(abc.ABC):
 
     def set_weights(self, w, fold=True): pass
 
-    def gradients(self): pass
+    def get_gradients(self): pass
+
+    def set_gradients(self): pass
 
     @property
     def nparams(self):
@@ -100,8 +114,8 @@ class FFBase(LayerBase):
         self.neurons = int(neurons)
 
     @abc.abstractmethod
-    def connect(self, to, inshape):
-        LayerBase.connect(self, to, inshape)
+    def connect(self, brain):
+        super().connect(brain)
         self.nabla_w = zX_like(self.weights)
         self.nabla_b = zX_like(self.biases)
 

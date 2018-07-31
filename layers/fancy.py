@@ -17,11 +17,11 @@ class HighwayLayer(FFBase):
         FFBase.__init__(self, 1, activation, **kw)
         self.gates = None
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self.neurons = np.prod(inshape)
         self.weights = white(self.neurons, self.neurons*3)
         self.biases = zX(self.neurons*3)
-        FFBase.connect(self, to, inshape)
+        FFBase.connect()
 
     def feedforward(self, X) -> np.ndarray:
         self.inputs = rtm(X)
@@ -66,9 +66,9 @@ class DropOut(NoParamMixin, LayerBase):
         self.inshape = None
         self.training = True
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self.inshape = inshape
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X: np.ndarray) -> np.ndarray:
         self.inputs = X

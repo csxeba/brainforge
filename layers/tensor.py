@@ -15,13 +15,13 @@ class PoolLayer(NoParamMixin, LayerBase):
         self.filter = None
         self.op = MaxPoolOp()
 
-    def connect(self, to, inshape):
-        ic, iy, ix = inshape[-3:]
+    def connect(self, brain):
+        ic, iy, ix = brain.outshape[-3:]
         if any((iy % self.fdim, ix % self.fdim)):
             raise RuntimeError(
                 "Incompatible shapes: {} % {}".format((ix, iy), self.fdim)
             )
-        LayerBase.connect(self, to, inshape)
+        LayerBase.connect(self, brain)
         self.output = zX(ic, iy // self.fdim, ix // self.fdim)
 
     def feedforward(self, questions):
@@ -53,7 +53,7 @@ class PoolLayer(NoParamMixin, LayerBase):
 class ConvLayer(LayerBase):
 
     def __init__(self, nfilters, filterx=3, filtery=3, **kw):
-        LayerBase.__init__(self, activation=kw.get("activation", "linear"), **kw)
+        super().__init__(activation=kw.get("activation", "linear"), **kw)
         self.nfilters = nfilters
         self.fx = filterx
         self.fy = filtery
@@ -62,42 +62,37 @@ class ConvLayer(LayerBase):
         self.inshape = None
         self.op = None
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         if self.compiled:
             print("Compiling ConvLayer...")
             from ..llatomic import ConvolutionOp
         else:
             from ..atomic import ConvolutionOp
-        depth, iy, ix = inshape[-3:]
+        depth, iy, ix = brain.outshape[-3:]
         if any((iy < self.fy, ix < self.fx)):
             raise RuntimeError(
                 "Incompatible shapes: iy ({}) < fy ({}) OR ix ({}) < fx ({})"
                 .format(iy, self.fy, ix, self.fx)
             )
-        LayerBase.connect(self, to, inshape)
+        super().connect(brain)
         self.op = ConvolutionOp()
-        self.inshape = inshape
+        self.inshape = brain.outshape
         self.depth = depth
         self.weights = white(self.nfilters, self.depth, self.fx, self.fy)
-        self.biases = zX(self.nfilters)
+        self.biases = zX(self.nfilters)[None, :, None, None]
         self.nabla_b = zX_like(self.biases)
         self.nabla_w = zX_like(self.weights)
 
     def feedforward(self, X):
         self.inputs = X
         self.output = self.activation.forward(self.op.forward(X, self.weights, "valid"))
+        self.output += self.biases
         return self.output
 
     def backpropagate(self, delta):
         delta *= self.activation.backward(self.output)
-        self.nabla_w = self.op.forward(
-            self.inputs.transpose(1, 0, 2, 3),
-            delta.transpose(1, 0, 2, 3),
-            mode="valid"
-        ).transpose(1, 0, 2, 3)
-        # self.nabla_b = error.sum()  # TODO: why is this commented out???
-        rW = self.weights[:, :, ::-1, ::-1].transpose(1, 0, 2, 3)
-        return self.op.forward(delta, rW, "full")
+        self.nabla_w, self.nabla_b, dX = self.op.backward(self.inputs, delta, self.weights)
+        return dX
 
     @property
     def outshape(self):

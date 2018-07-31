@@ -20,13 +20,12 @@ class LayerStack(Model):
         if isinstance(input_shape, int) or isinstance(input_shape, np.int64):
             input_shape = (input_shape,)
         from ..layers.core import InputLayer
-        inl = InputLayer()
-        inl.connect(to=self, inshape=input_shape)
+        inl = InputLayer(input_shape)
         self.layers.append(inl)
         self.architecture.append(str(inl))
 
     def add(self, layer):
-        layer.connect(self, inshape=self.layers[-1].outshape)
+        layer.connect(self)
         self.layers.append(layer)
         self.architecture.append(str(layer))
 
@@ -81,7 +80,7 @@ class LayerStack(Model):
 
     @property
     def trainable_layers(self):
-        return (layer for layer in self.layers if layer.trainable)
+        return [layer for layer in self.layers if layer.trainable]
 
     def __iter__(self):
         return self

@@ -48,6 +48,21 @@ class ConvolutionOp:
         return ConvolutionOp.full(A, F)
 
     @staticmethod
+    def backward(X, E, F):
+        dF = ConvolutionOp.forward(
+            A=X.transpose(1, 0, 2, 3),
+            F=E.transpose(1, 0, 2, 3),
+            mode="valid"
+        ).transpose(1, 0, 2, 3)
+        db = E.sum(axis=0)
+        dX = ConvolutionOp.forward(
+            A=E,
+            F=F[:, :, ::-1, ::-1].transpose(1, 0, 2, 3),
+            mode="full"
+        )
+        return dF, db, dX
+
+    @staticmethod
     def outshape(inshape, fshape, mode="valid"):
         ic, iy, ix = inshape[-3:]
         fx, fy, fc, nf = fshape

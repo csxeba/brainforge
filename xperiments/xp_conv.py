@@ -1,17 +1,17 @@
-from csxdata import CData, roots
-
 from brainforge import BackpropNetwork
 from brainforge.layers import ConvLayer, PoolLayer, Flatten, DenseLayer, Activation
 from brainforge.optimization import RMSprop
 
-data = CData(roots["misc"] + "mnist.pkl.gz", cross_val=10000, fold=True, floatX="float64")
-ins, ous = data.neurons_required
-net = BackpropNetwork(input_shape=ins, layerstack=[
-    ConvLayer(3, 8, 8, compiled=True),
-    PoolLayer(3, compiled=True), Activation("tanh"),
-    Flatten(), DenseLayer(60, activation="tanh"),
-    DenseLayer(ous, activation="softmax")
-], cost="xent", optimizer=RMSprop(eta=0.01))
+from csxdata.utilities.loader import pull_mnist_data
 
-net.fit_generator(data.batchgen(bsize=20, infinite=True), lessons_per_epoch=1000, epochs=10,
-                  validation=data.table("testing", m=1000))
+
+lX, lY, tX, tY = pull_mnist_data(fold=True)
+ins, ous = lX.shape[1:], lY.shape[1:]
+net = BackpropNetwork(input_shape=ins, layerstack=[
+    ConvLayer(3, 8, 8, compiled=False),
+    PoolLayer(3, compiled=False), Activation("tanh"),
+    Flatten(), DenseLayer(60, activation="tanh"),
+    DenseLayer(ous[0], activation="softmax")
+], cost="cxent", optimizer=RMSprop(eta=0.01))
+
+net.fit(lX, lY, batch_size=32, epochs=10, validation=(tX, tY))

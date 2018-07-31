@@ -9,9 +9,11 @@ class DirectFeedbackAlignment(BackpropNetwork):
     def __init__(self, layerstack, cost, optimizer, name="", **kw):
         super().__init__(layerstack, cost, optimizer, name, **kw)
         self.backwards_weights = [white(self.outshape[0], np.prod(layer.outshape))
-                                  for layer in self.trainable_layers]
+                                  for layer in self.trainable_layers[:-1]]
 
     def backpropagate(self, error):
-        for layer, weight in zip(self.trainable_layers, self.backwards_weights):
+        m = len(error)
+        self.layers[-1].backpropagate(error)
+        for layer, weight in zip(list(self.trainable_layers)[:-1], self.backwards_weights):
             delta = error @ weight
-            layer.backpropagate(delta)
+            layer.backpropagate(delta.reshape((m,) + layer.outshape))

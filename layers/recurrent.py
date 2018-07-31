@@ -58,11 +58,11 @@ class RLayer(RecurrentBase):
         else:
             self.opt = atomic.RecurrentOp(activation)
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons)
         self.biases = zX(self.neurons)
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X):
         super().feedforward(X)
@@ -92,11 +92,11 @@ class LSTM(RecurrentBase):
         else:
             self.op = atomic.LSTMOp(activation)
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self.Z = inshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
         self.biases = zX(self.neurons * 4) + self.bias_init_factor
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X):
         super().feedforward(X)
@@ -118,10 +118,10 @@ class GRU(RecurrentBase):
     def __init__(self, neurons, activation, return_seq=False):
         super().__init__(neurons, activation, return_seq)
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
         self.weights = white(inshape[-1] + self.neurons, self.neurons * 3)
         self.biases = zX(self.neurons * 3)
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X):
         output = super().feedforward(X)
@@ -223,7 +223,7 @@ class ClockworkLayer(RecurrentBase):
         print("CW blocks:", self.blocksizes)
         print("CW ticks :", self.ticks)
 
-    def connect(self, to, inshape):
+    def connect(self, brain):
 
         self.Z = inshape[-1] + self.neurons
 
@@ -239,7 +239,7 @@ class ClockworkLayer(RecurrentBase):
         self.weights = np.concatenate((W, U), axis=0)
         self.biases = zX(self.neurons)
 
-        super().connect(to, inshape)
+        super().connect()
 
     def feedforward(self, X):
         output = super().feedforward(X)
@@ -294,8 +294,8 @@ class Reservoir(RLayer):
         RLayer.__init__(self, neurons, activation, return_seq)
         self.r = r
 
-    def connect(self, to, inshape):
-        super().connect(to, inshape)
+    def connect(self, brain):
+        super().connect()
         wx, wy = self.weights.shape
         # Create a sparse weight matrix (biases are included)
         W = np.random.binomial(1, self.r, size=(wx, wy + 1)).astype(float)

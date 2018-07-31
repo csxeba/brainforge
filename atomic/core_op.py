@@ -14,7 +14,10 @@ class DenseOp:
 
     @staticmethod
     def backward(X, E, W):
-        raise NotImplementedError("No backwards for DenseOp!")
+        dW = X.T @ E
+        dX = E @ W.T
+        db = E.sum(axis=0)
+        return dW, db, dX
 
 
 class ReshapeOp:
