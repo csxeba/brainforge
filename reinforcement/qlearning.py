@@ -1,6 +1,6 @@
 import numpy as np
 
-from .experience import xp_factory
+from .experience import replay_memory_factory
 from .abstract_agent import AgentBase
 
 
@@ -10,36 +10,36 @@ class DQN(AgentBase):
 
     type = "DQN"
 
-    def __init__(self, network, nactions, agentconfig=None, **kw):
+    def __init__(self, network, num_actions, agentconfig=None, **kw):
         super().__init__(network, agentconfig, **kw)
-        self.X = []
-        self.Q = []
-        self.R = []
-        self.A = []
-        self.nactions = nactions
+        self.inputs = []
+        self.predictions = []
+        self.rewards = []
+        self.actions = []
+        self.num_actions = num_actions
 
     def reset(self):
-        self.X = []
-        self.Q = []
-        self.R = []
-        self.A = []
+        self.inputs = []
+        self.predictions = []
+        self.rewards = []
+        self.actions = []
 
     def sample(self, state, reward):
-        self.X.append(state)
-        self.R.append(reward)
+        self.inputs.append(state)
+        self.rewards.append(reward)
         Q = self.net.predict(state[None, ...])[0]
-        self.Q.append(Q)
+        self.predictions.append(Q)
         action = (np.argmax(Q) if np.random.uniform() > self.cfg.decaying_epsilon
-                  else np.random.randint(0, self.nactions))
-        self.A.append(action)
+                  else np.random.randint(0, self.num_actions))
+        self.actions.append(action)
         return action
 
     def accumulate(self, state, reward):
         q = self.net.predict(state[None, ...])[0]
-        X = np.stack(self.X, axis=0)
-        Q = np.stack(self.Q[1:] + [q], axis=0)
-        R = np.array(self.R[1:] + [reward])
-        ix = tuple(self.A)
+        X = np.stack(self.inputs, axis=0)
+        Q = np.stack(self.predictions[1:] + [q], axis=0)
+        R = np.array(self.rewards[1:] + [reward])
+        ix = tuple(self.actions)
         Y = Q.copy()
         Y[range(len(Y)), ix] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, ix[-1]] = -reward
@@ -53,11 +53,11 @@ class DDQN(DQN):
 
     type = "DDQN"
 
-    def __init__(self, network, nactions, agentconfig, **kw):
+    def __init__(self, network, num_actions, agentconfig, **kw):
         from pickle import loads, dumps
-        super().__init__(network, nactions, agentconfig, **kw)
+        super().__init__(network, num_actions, agentconfig, **kw)
         self.double = [network, loads(dumps(network))]
-        self.doublexp = [xp_factory(agentconfig.xpsize, "drop", agentconfig.time) for _ in range(2)]
+        self.doublexp = [replay_memory_factory(agentconfig.xpsize, "drop", agentconfig.time) for _ in range(2)]
         self.xp = self.doublexp[0]
         self.ix_actor = False
 
@@ -71,12 +71,12 @@ class DDQN(DQN):
         return self.double[not self.ix_actor]
 
     def accumulate(self, state, reward):
-        X = np.stack(self.X + [state], axis=0)
-        R = np.array(self.R[1:] + [reward])
+        X = np.stack(self.inputs + [state], axis=0)
+        R = np.array(self.rewards[1:] + [reward])
 
         Y = self.critic.predict(X[1:])
-        Y[range(len(Y)), (tuple(self.A))] = -(R + Y.max(axis=1) * self.cfg.gamma)
-        Y[-1, self.A[-1]] = -reward
+        Y[range(len(Y)), (tuple(self.actions))] = -(R + Y.max(axis=1) * self.cfg.gamma)
+        Y[-1, self.actions[-1]] = -reward
 
         self.xp.remember(X[1:], Y)
         cost = self.learn_batch()

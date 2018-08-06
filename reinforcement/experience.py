@@ -1,13 +1,14 @@
 import numpy as np
 
 
-class _Experience:
+class Experience:
 
-    def __init__(self, limit=40000, mode="drop"):
+    def __init__(self, limit=40000, mode="drop", downsample=0):
         self.limit = limit
         self.X = []
         self.Y = []
         self._adder = {"drop": self._add_drop, "mix in": self._mix_in}[mode]
+        self.downsample = downsample
 
     @property
     def N(self):
@@ -43,6 +44,8 @@ class _Experience:
         self._adder(X, Y)
 
     def remember(self, X, Y):
+        if self.downsample > 1:
+            X, Y = X[::self.downsample], Y[::self.downsample]
         assert len(X) == len(Y)
         if len(self.X) < 1:
             self.initialize(X, Y)
@@ -58,10 +61,10 @@ class _Experience:
         return self.X[batch_args], self.Y[batch_args]
 
 
-class _TimeExperience(_Experience):
+class TimeExperience(Experience):
 
-    def __init__(self, time, limit=1600):
-        super().__init__(limit, mode="drop")
+    def __init__(self, time, limit=1600, downsample=0):
+        super().__init__(limit, mode="drop", downsample=downsample)
         self.time = time
 
     def replay(self, batch_size):
@@ -75,8 +78,8 @@ class _TimeExperience(_Experience):
         return np.stack(X, axis=0), np.stack(Y, axis=0)
 
 
-def xp_factory(limit, mode, time):
+def replay_memory_factory(limit, mode, time, downsample=0):
     if time > 1:
-        return _TimeExperience(time, limit)
+        return TimeExperience(time, limit, downsample)
     else:
-        return _Experience(limit, mode)
+        return Experience(limit, mode, downsample)

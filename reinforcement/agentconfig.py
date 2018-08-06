@@ -1,38 +1,30 @@
-def _parameter_alias(item):
-    return {"training_batch_size": "bsize",
-            "discount_factor": "gamma",
-            "knowledge_transfer_rate": "tau",
-            "epsilon_greedy_rate": "epsilon",
-            "epsilon_decay": "epsilon_decay",
-            "epsilon_decay_factor": "epsilon_decay",
-            "replay_memory_size": "xpsize"}.get(item, item)
+from .experience import replay_memory_factory, Experience
 
 
 class AgentConfig:
 
-    def __init__(self, **kw):
+    def __init__(self, batch_size=128,
+                 discount_factor=0.99,
+                 knowledge_transfer_rate=0.1,
+                 epsilon_greedy_rate=0.9,
+                 epsilon_decay=1.0,
+                 epsilon_min=0.01,
+                 replay_memory=None,
+                 timestep=1):
 
-        self.bsize = 300
-        self.gamma = 0.99
-        self.tau = 0.1
-        self.epsilon = 0.9
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 1.0
-        self.xpsize = 9000
-        self.time = 1
-        self.__dict__.update({_parameter_alias(k): v for k, v in kw.items() if k != "self"})
+        self.bsize = batch_size
+        self.gamma = discount_factor
+        self.tau = knowledge_transfer_rate
+        self.epsilon = epsilon_greedy_rate
+        self.epsilon_decay = epsilon_decay
+        self.epsilon_min = epsilon_min
+        self.replay_memory = replay_memory if isinstance(replay_memory, Experience) else replay_memory_factory(replay_memory)
+        self.time = timestep
 
     @property
     def decaying_epsilon(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
             return self.epsilon
-
         self.epsilon = self.epsilon_min
         return self.epsilon_min
-
-    def __getitem__(self, item):
-        return self.__dict__[_parameter_alias(item)]
-
-    def __setitem__(self, key, value):
-        self.__dict__[_parameter_alias(key)] = value

@@ -3,7 +3,7 @@ import abc
 import numpy as np
 
 from .agentconfig import AgentConfig
-from .experience import xp_factory
+from .experience import replay_memory_factory
 
 
 class AgentBase(abc.ABC):
@@ -14,8 +14,8 @@ class AgentBase(abc.ABC):
         if agentconfig is None:
             agentconfig = AgentConfig(**kw)
         self.net = network
-        self.shadow_net = network.layers.get_weights()
-        self.xp = xp_factory(agentconfig.xpsize, "drop", agentconfig.time)
+        # self.shadow_net = network.layers.get_weights()
+        self.xp = agentconfig.replay_memory
         self.cfg = agentconfig
 
     @abc.abstractmethod
@@ -35,9 +35,9 @@ class AgentBase(abc.ABC):
         N = len(X)
         if N < self.cfg.bsize:
             return 0.
-        costs = self.net.fit(X, Y, verbose=0, epochs=1)
-        # return np.mean(cost.history["loss"])
-        return np.mean(costs)
+        cost = self.net.fit(X, Y, batch_size=32, verbose=0, epochs=1)
+        return np.mean(cost.history["loss"])
+        # return np.mean(costs)
 
     def push_weights(self):
         W = self.net.layers.get_weights(unfold=True)

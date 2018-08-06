@@ -12,7 +12,6 @@ class LayerBase(abc.ABC):
     def __init__(self, activation="linear", **kw):
 
         self.brain = None
-        self.previous = None
         self.inputs = None
         self.output = None
         self.inshape = None
