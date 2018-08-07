@@ -23,7 +23,7 @@ class Graph(Model):
 
     @property
     def nparams(self):
-        return sum(node.nparams for node in self.nodes)
+        return sum(node.num_params for node in self.nodes)
 
     def get_weights(self, unfold=True):
         return []

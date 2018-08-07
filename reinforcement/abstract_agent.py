@@ -30,8 +30,8 @@ class AgentBase(abc.ABC):
     def accumulate(self, state, reward):
         raise NotImplementedError
 
-    def learn_batch(self):
-        X, Y = self.xp.replay(self.cfg.bsize)
+    def learn_batch(self, batch_size=None):
+        X, Y = self.xp.replay(batch_size or self.cfg.bsize)
         N = len(X)
         if N < self.cfg.bsize:
             return 0.

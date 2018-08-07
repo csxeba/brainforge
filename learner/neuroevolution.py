@@ -10,7 +10,7 @@ class NeuroEvolution(Learner):
         fw = kw.pop("fitness_weights", [1.])
         oa = kw.pop("on_accuracy", False)
         self.population = Population(
-            loci=self.layers.nparams,
+            loci=self.layers.num_params,
             fitness_function=ff,
             fitness_weights=fw,
             limit=population_size, **kw

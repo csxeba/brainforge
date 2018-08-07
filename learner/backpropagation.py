@@ -11,7 +11,7 @@ class BackpropNetwork(Learner):
         self.optimizer = (
             optimizer if isinstance(optimizer, GradientDescent) else optimizers[optimizer]()
         )
-        self.optimizer.initialize(nparams=self.layers.nparams)
+        self.optimizer.initialize(nparams=self.layers.num_params)
 
     def learn_batch(self, X, Y, w=None):
         m = len(X)
@@ -49,4 +49,4 @@ class BackpropNetwork(Learner):
 
     @property
     def nparams(self):
-        return self.layers.nparams
+        return self.layers.num_params

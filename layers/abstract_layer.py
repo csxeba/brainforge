@@ -66,7 +66,7 @@ class LayerBase(abc.ABC):
         return self.get_gradients(unfold=True)
 
     @property
-    def nparams(self):
+    def num_params(self):
         return self.weights.size + self.biases.size
 
     @abc.abstractmethod

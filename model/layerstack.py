@@ -52,7 +52,7 @@ class LayerStack(Model):
         if fold:
             start = 0
             for layer in trl:
-                end = start + layer.nparams
+                end = start + layer.num_params
                 layer.set_weights(ws[start:end])
                 start = end
         else:
@@ -72,7 +72,7 @@ class LayerStack(Model):
 
     @property
     def nparams(self):
-        return sum(layer.nparams for layer in self.layers if layer.trainable)
+        return sum(layer.num_params for layer in self.layers if layer.trainable)
 
     @property
     def output(self):

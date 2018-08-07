@@ -16,7 +16,7 @@ class PG(AgentBase):
         self.X = []
         self.Y = []
         self.rewards = []
-        self.grad = np.zeros((network.nparams,))
+        self.grad = np.zeros((network.num_params,))
 
     def reset(self):
         self.X = []

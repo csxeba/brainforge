@@ -40,13 +40,11 @@ class DQN(AgentBase):
         Q = np.stack(self.predictions[1:] + [q], axis=0)
         R = np.array(self.rewards[1:] + [reward])
         ix = tuple(self.actions)
-        Y = Q.copy()
+        Y = Q
         Y[range(len(Y)), ix] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, ix[-1]] = -reward
         self.xp.remember(X, Y)
         self.reset()
-        cost = self.learn_batch()
-        return cost
 
 
 class DDQN(DQN):
