@@ -12,13 +12,14 @@ class AgentConfig:
                  replay_memory=None,
                  timestep=1):
 
-        self.bsize = batch_size
+        self.batch_size = batch_size
         self.gamma = discount_factor
         self.tau = knowledge_transfer_rate
         self.epsilon = epsilon_greedy_rate
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
-        self.replay_memory = replay_memory if isinstance(replay_memory, Experience) else replay_memory_factory(replay_memory)
+        self.replay_memory = (replay_memory if isinstance(replay_memory, Experience)
+                              else replay_memory_factory(replay_memory, mode="drop", time=timestep))
         self.time = timestep
 
     @property
