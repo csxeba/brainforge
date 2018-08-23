@@ -7,7 +7,7 @@ from csxdata.utilities.loader import pull_mnist_data
 
 def build_layerstack(input_shape, output_dim):
     return LayerStack(input_shape, [
-        DenseLayer(60, activation="tanh"),
+        DenseLayer(64, activation="tanh", compiled=True),
         DenseLayer(output_dim, activation="softmax")])
 
 

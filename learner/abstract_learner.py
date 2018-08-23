@@ -105,7 +105,7 @@ class Learner:
         return self.layers.outshape
 
     @property
-    def nparams(self):
+    def num_params(self):
         return self.layers.nparams
 
     @property

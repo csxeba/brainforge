@@ -22,7 +22,7 @@ class Model(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def nparams(self):
+    def num_params(self):
         raise NotImplementedError
 
     @property

@@ -71,7 +71,7 @@ class LayerStack(Model):
         return self.layers[-1].outshape
 
     @property
-    def nparams(self):
+    def num_params(self):
         return sum(layer.num_params for layer in self.layers if layer.trainable)
 
     @property

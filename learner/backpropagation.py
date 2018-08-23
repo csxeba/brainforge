@@ -24,7 +24,6 @@ class BackpropNetwork(Learner):
         return self.cost(self.output, Y) / m
 
     def backpropagate(self, error):
-        # TODO: optimize this, skip untrainable layers at the beginning
         for layer in self.layers[-1:0:-1]:
             error = layer.backpropagate(error)
         return error
@@ -48,5 +47,5 @@ class BackpropNetwork(Learner):
         return grads
 
     @property
-    def nparams(self):
+    def num_params(self):
         return self.layers.num_params
