@@ -3,7 +3,6 @@ import abc
 import numpy as np
 
 from .agentconfig import AgentConfig
-from .experience import replay_memory_factory
 
 
 class AgentBase(abc.ABC):
@@ -16,7 +15,8 @@ class AgentBase(abc.ABC):
         self.net = network
         # self.shadow_net = network.layers.get_weights()
         self.xp = agentconfig.replay_memory
-        self.cfg = agentconfig
+        self.cfg = agentconfig  # type: AgentConfig
+        self.shadow_net = None
 
     @abc.abstractmethod
     def reset(self):
@@ -33,7 +33,7 @@ class AgentBase(abc.ABC):
     def learn_batch(self, batch_size=None, callbacks=None):
         X, Y = self.xp.replay(batch_size or self.cfg.bsize)
         N = len(X)
-        if N < self.cfg.bsize:
+        if N < self.cfg.batch_size:
             return 0.
         cost = self.net.fit(X, Y, batch_size=32, verbose=0, epochs=1, callbacks=callbacks)
         return np.mean(cost.history["loss"])

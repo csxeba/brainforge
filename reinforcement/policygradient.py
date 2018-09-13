@@ -1,4 +1,5 @@
 import numpy as np
+
 from .abstract_agent import AgentBase
 from ..util.rl_util import discount_rewards
 
@@ -41,7 +42,7 @@ class PG(AgentBase):
         N = len(X)
 
         cost = 0.
-        m = self.cfg.bsize
+        m = self.cfg.batch_size
         for start in range(0, N, m):
             y = Y[start:start+m]
             pred = self.net.predict(X[start:start + m])
