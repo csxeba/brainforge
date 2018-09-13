@@ -30,12 +30,12 @@ class AgentBase(abc.ABC):
     def accumulate(self, state, reward):
         raise NotImplementedError
 
-    def learn_batch(self, batch_size=None):
+    def learn_batch(self, batch_size=None, callbacks=None):
         X, Y = self.xp.replay(batch_size or self.cfg.bsize)
         N = len(X)
         if N < self.cfg.bsize:
             return 0.
-        cost = self.net.fit(X, Y, batch_size=32, verbose=0, epochs=1)
+        cost = self.net.fit(X, Y, batch_size=32, verbose=0, epochs=1, callbacks=callbacks)
         return np.mean(cost.history["loss"])
         # return np.mean(costs)
 
