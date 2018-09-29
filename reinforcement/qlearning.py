@@ -34,6 +34,19 @@ class DQN(AgentBase):
         self.actions.append(action)
         return action
 
+    def sample_multiple(self, states, rewards):
+        N = len(states)
+        self.inputs.extend(list(states))
+        self.rewards.extend(list(rewards))
+        Q = self.net.predict(states)
+        self.predictions.extend(list(Q))
+        epsilon_mask = np.random.uniform(size=N) < self.cfg.decaying_epsilon
+        actions = np.argmax(Q, axis=1)
+        assert len(actions) == N
+        actions[epsilon_mask] = np.random.randint(0, self.num_actions, size=sum(epsilon_mask))
+        self.actions.extend(actions)
+        return actions
+
     def accumulate(self, state, reward):
         q = self.net.predict(state[None, ...])[0]
         X = np.stack(self.inputs, axis=0)
@@ -44,6 +57,19 @@ class DQN(AgentBase):
         Y[range(len(Y)), ix] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, ix[-1]] = -reward
         self.xp.remember(X, Y)
+        self.reset()
+
+    def accumulate_multiple(self, states, rewards):
+        N = len(states)
+        qs = self.net.predict(states)
+        self.inputs = np.stack(self.inputs)
+        Q = np.stack(self.predictions[N:] + list(qs))
+        self.rewards = np.array(self.rewards[N:] + list(rewards))
+        ix = tuple(self.actions)
+        Y = Q
+        Y[range(len(Y)), ix] = -(self.rewards + Y.max(axis=1) * self.cfg.gamma)
+        Y[-N:, ix[-1]] = -rewards
+        self.xp.remember(self.inputs, Y)
         self.reset()
 
 
