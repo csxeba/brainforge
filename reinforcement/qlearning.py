@@ -29,7 +29,7 @@ class DQN(AgentBase):
         self.rewards.append(reward)
         Q = self.net.predict(state[None, ...])[0]
         self.predictions.append(Q)
-        action = (np.argmax(Q) if np.random.uniform() > self.cfg.decaying_epsilon
+        action = (np.argmax(Q) if np.random.uniform() > self.cfg.epsilon
                   else np.random.randint(0, self.num_actions))
         self.actions.append(action)
         return action
@@ -57,6 +57,7 @@ class DQN(AgentBase):
         Y[range(len(Y)), ix] = -(R + Y.max(axis=1) * self.cfg.gamma)
         Y[-1, ix[-1]] = -reward
         self.xp.remember(X, Y)
+        self.cfg.epsilon *= self.cfg.epsilon_decay
         self.reset()
 
     def accumulate_multiple(self, states, rewards):
