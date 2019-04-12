@@ -1,4 +1,4 @@
-import numpy as np
+from brainforge import backend as xp
 from matplotlib import pyplot as plt
 
 from brainforge.atomic import (
@@ -34,13 +34,13 @@ def test_convolutions():
     print("Testing ConvOps")
     npop = NPConv()
     nbop = NBConv()
-    A = np.random.uniform(0., 1., (1, 1, 12, 12))
-    F = np.random.uniform(0., 1., (1, 1, 3, 3))
+    A = xp.random.uniform(0., 1., (1, 1, 12, 12))
+    F = xp.random.uniform(0., 1., (1, 1, 3, 3))
 
     npO = npop.apply(A, F, mode="full")
     nbO = nbop.apply(A, F, mode="full")
 
-    dC = np.abs(npO - nbO)
+    dC = xp.abs(npO - nbO)
 
     visualize(A, dC, npO, nbO, supt="ConvTest")
 
@@ -50,19 +50,19 @@ def test_pooling():
     npop = NpPool()
     nbop = NbPool()
 
-    A = np.random.uniform(0., 1., (1, 1, 12, 12))
+    A = xp.random.uniform(0., 1., (1, 1, 12, 12))
 
     npO, npF = npop.apply(A, 2)
     nbO, nbF = nbop.apply(A, 2)
 
-    assert np.allclose(npF, nbF)
+    assert xp.allclose(npF, nbF)
 
     npbF = npop.backward(npO, npF)
     nbbF = nbop.backward(nbO, nbF)
 
-    assert np.allclose(npbF, nbbF)
+    assert xp.allclose(npbF, nbbF)
 
-    dP = np.abs(npO - nbO)
+    dP = xp.abs(npO - nbO)
 
     visualize(A, dP, npO, nbO, supt="PoolTest")
 

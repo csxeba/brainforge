@@ -270,17 +270,17 @@ implemented:
 ## Examples
 ### Fit shallow backprop net to the XOR problem
 ```python
-import numpy as np
+from brainforge import backend as xp
 
 from brainforge import LayerStack, BackpropNetwork
 from brainforge.layers import DenseLayer
 
 def input_stream(batchsize=20):
-    Xs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    Ys = np.array([[1, 0], [0, 1], [0, 1], [1, 0]])
+    Xs = xp.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    Ys = xp.array([[1, 0], [0, 1], [0, 1], [1, 0]])
 
     while 1:
-        arg = np.random.randint(len(Xs), size=batchsize)
+        arg = xp.random.randint(len(Xs), size=batchsize)
         yield Xs[arg], Ys[arg]
 
 layers = LayerStack(input_shape=2, layers=[
@@ -375,7 +375,7 @@ dimensions, this can be quite a RAM-hog.
 ```python
 import time
 
-import numpy as np
+from brainforge import backend as xp
 from matplotlib import pyplot as plt
 
 from brainforge import BackpropNetwork
@@ -416,7 +416,7 @@ def fitness(genotype):
     cost, acc = net.evaluate(*frame.table("testing", m=10), classify=True)
     error_rate = 1. - acc
     time_req = time.time() - start
-    l2 = np.linalg.norm(net.layers.get_weights(unfold=True), ord=2)
+    l2 = xp.linalg.norm(net.layers.get_weights(unfold=True), ord=2)
     return error_rate, time_req, l2
 
 # Build a population of 15 individuals. grade_function and mate_function are
@@ -432,7 +432,7 @@ means, stds, bests = pop.run(epochs=30,
                              mutation_rate=0.05,
                              force_update_at_every=3)
 
-Xs = np.arange(1, len(means)+1)
+Xs = xp.arange(1, len(means)+1)
 plt.title("Population grade dynamics of\nevolutionary hyperparameter optimization")
 plt.plot(Xs, means, color="blue")
 plt.plot(Xs, means+stds, color="green", linestyle="--")

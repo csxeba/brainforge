@@ -1,4 +1,4 @@
-import numpy as np
+from brainforge import backend as xp
 
 from brainforge.atomic.activation import OnePlus
 
@@ -13,10 +13,10 @@ class DNC:
         self.memory = None
         self.usage = None
         self.link = None
-        self.reads = np.zeros(())
+        self.reads = xp.zeros(())
 
     def forward_step(self, x, reads):
-        Z = np.concatenate((x, reads.flat))
+        Z = xp.concatenate((x, reads.flat))
 
     def feedforward(self, X):
         pass

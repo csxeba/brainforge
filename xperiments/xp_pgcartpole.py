@@ -1,10 +1,10 @@
 from collections import deque
 
-import numpy as np
+from brainforge import backend as xp
 import gym
 
 from brainforge import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Linear
 from brainforge.optimization import SGD
 from brainforge.reinforcement import PG, AgentConfig
 from matplotlib import pyplot
@@ -15,7 +15,7 @@ nactions = env.action_space.n
 
 def get_agent():
     brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
-        DenseLayer(nactions, activation="softmax")
+        Linear(nactions, activation="softmax")
     ], cost="xent", optimizer=SGD(eta=0.0001))
     return brain
 
@@ -42,7 +42,7 @@ def run(agent):
         win = steps > 145
         cost = agent.accumulate(state, 10. if win else -1.)
         # agent.push_weights()
-        meanrwd = np.mean(rewards)
+        meanrwd = xp.mean(rewards)
         print(f"\rEpisode {episode:>6}, running reward: {meanrwd:.2f}," +
               f" Cost: {cost:>6.4f}, Epsilon: {agent.cfg.epsilon:>6.4f}",
               end="")
@@ -80,11 +80,11 @@ def plotrun(agent):
         else:
             win = True
         rewards.append(reward_sum)
-        rwmean.append(np.mean(rewards[-10:]))
+        rwmean.append(xp.mean(rewards[-10:]))
         cost = agent.accumulate(state, (-1. if not win else 1.))
         print(f"\r{episode / EPISODES:.1%}, Cost: {cost:8>.4f}, Epsilon: {agent.cfg.epsilon:8.6f}", end="")
     print()
-    Xs = np.arange(len(rewards))
+    Xs = xp.arange(len(rewards))
     pyplot.scatter(Xs, rewards, marker=".", s=3, c="r", alpha=0.5)
     pyplot.plot(Xs, rwmean, color="b", linewidth=2)
     pyplot.title(agent.type)

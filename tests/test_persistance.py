@@ -3,7 +3,7 @@ import pickle
 
 from brainforge.util import etalon, persistance
 from brainforge import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Linear
 
 
 class TestPersistance(unittest.TestCase):
@@ -11,8 +11,8 @@ class TestPersistance(unittest.TestCase):
     def setUp(self):
         X, Y = etalon
         self.net = BackpropNetwork(input_shape=(4,), layers=[
-            DenseLayer(30, activation="sigmoid"),
-            DenseLayer(3, activation="softmax")
+            Linear(30, activation="sigmoid"),
+            Linear(3, activation="softmax")
         ], cost="xent", optimizer="sgd")
         self.net.fit(X, Y, batch_size=len(X)//2, epochs=3, validation=etalon)
         self.cost1, self.acc1 = self.net.evaluate(*etalon)

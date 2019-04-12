@@ -7,7 +7,7 @@ from csxdata.utilities.parsers import mnist_tolearningtable
 
 from brainforge.util import numerical_gradients, analytical_gradients
 from brainforge.model import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Linear
 
 
 class TestNetwork(unittest.TestCase):
@@ -18,20 +18,20 @@ class TestNetwork(unittest.TestCase):
         self.X, self.Y = self.data.table("testing", m=5, shuff=False)
 
         self.net = BackpropNetwork(self.data.neurons_required[0], name="NumGradTestNetwork")
-        self.net.add(DenseLayer(30, activation="sigmoid"))
+        self.net.add(Linear(30, activation="sigmoid"))
 
     def test_mse_with_sigmoid_output(self):
-        self.net.add(DenseLayer(self.data.neurons_required[1], activation="sigmoid"))
+        self.net.add(Linear(self.data.neurons_required[1], activation="sigmoid"))
         self.net.finalize(cost="mse", optimizer="sgd")
         self._run_numerical_gradient_test()
 
     def test_xent_with_sigmoid_output(self):
-        self.net.add(DenseLayer(self.data.neurons_required[1], activation="sigmoid"))
+        self.net.add(Linear(self.data.neurons_required[1], activation="sigmoid"))
         self.net.finalize(cost="xent", optimizer="sgd")
         self._run_numerical_gradient_test()
 
     def test_xent_with_softmax_output(self):
-        self.net.add(DenseLayer(self.data.neurons_required[1], activation="softmax"))
+        self.net.add(Linear(self.data.neurons_required[1], activation="softmax"))
         self.net.finalize(cost="xent", optimizer="sgd")
         self._run_numerical_gradient_test()
 

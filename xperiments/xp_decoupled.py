@@ -3,11 +3,11 @@ from collections import deque
 from csxdata.utilities.loader import pull_mnist_data
 
 from brainforge import BackpropNetwork
-from brainforge.layers.abstract_layer import LayerBase, NoParamMixin
-from brainforge.layers import DenseLayer
+from brainforge.layers.abstract_layer import Layer, NoParamMixin
+from brainforge.layers import Linear
 
 
-class DNI(NoParamMixin, LayerBase):
+class DNI(NoParamMixin, Layer):
 
     def __init__(self, synth: BackpropNetwork=None, **kw):
         super().__init__(**kw)
@@ -18,8 +18,8 @@ class DNI(NoParamMixin, LayerBase):
 
     def _default_synth(self):
         synth = BackpropNetwork(input_shape=self.inshape, layerstack=[
-            DenseLayer(self.inshape[0], activation="tanh"),
-            DenseLayer(self.inshape[0], activation="linear"),
+            Linear(self.inshape[0], activation="tanh"),
+            Linear(self.inshape[0], activation="linear"),
         ], cost="mse", optimizer="sgd")
         return synth
 
@@ -29,14 +29,14 @@ class DNI(NoParamMixin, LayerBase):
         if self.synth is None:
             self.synth = self._default_synth()
 
-    def feedforward(self, X):
+    def forward(self, X):
         delta = self.synth.predict(X)
-        self._previous.backpropagate(delta)
+        self._previous.backward(delta)
         if self.brain.learning:
             self.memory.append(delta)
         return X
 
-    def backpropagate(self, delta):
+    def backward(self, delta):
         m = self.memory.popleft()
         print(f"\rSynth cost: {self.synth.cost(m, delta).sum():.4f}", end="")
         self.synth.learn_batch(m, delta)
@@ -55,16 +55,16 @@ class DNI(NoParamMixin, LayerBase):
 
 def build_decoupled_net(inshape, outshape):
     net = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(60, activation="tanh"), DNI(),
-        DenseLayer(outshape, activation="softmax")
+        Linear(60, activation="tanh"), DNI(),
+        Linear(outshape, activation="softmax")
     ], cost="xent", optimizer="adam")
     return net
 
 
 def build_normal_net(inshape, outshape):
     net = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(60, activation="tanh"),
-        DenseLayer(outshape, activation="softmax")
+        Linear(60, activation="tanh"),
+        Linear(outshape, activation="softmax")
     ], cost="xent", optimizer="adam")
     return net
 

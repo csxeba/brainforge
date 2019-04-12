@@ -1,10 +1,10 @@
 from collections import deque
 
 import gym
-import numpy as np
+from brainforge import backend as xp
 
 from brainforge import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Linear
 from brainforge.reinforcement import PG, AgentConfig
 
 
@@ -19,7 +19,7 @@ def prepro_coroutine(I):
         return downsmpl
 
     dsI = ds(I)
-    pI = dsI.copy()  # type: np.ndarray
+    pI = dsI.copy()  # type: xp.ndarray
     while 1:
         I = yield (dsI - pI).ravel()
         pI = dsI
@@ -33,8 +33,8 @@ nactions = env.action_space.n
 stateshape = 6400
 print("Pong stateshape =", stateshape)
 brain = BackpropNetwork(input_shape=stateshape, layerstack=[
-    DenseLayer(200, activation="tanh"),
-    DenseLayer(nactions, activation="softmax")
+    Linear(200, activation="tanh"),
+    Linear(nactions, activation="softmax")
 ], cost="xent", optimizer="sgd")
 agent = PG(brain, nactions, AgentConfig(training_batch_size=3000, discount_factor=0.99,
                                         epsilon_greedy_rate=1., epsilon_decay=0.99,

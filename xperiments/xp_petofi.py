@@ -2,7 +2,7 @@ import os
 from csxdata import LazyText
 
 from brainforge import BackpropNetwork
-from brainforge.layers import LSTM, DenseLayer
+from brainforge.layers import LSTM, Linear
 from brainforge.optimization import RMSprop
 
 from keras.models import Sequential
@@ -15,8 +15,8 @@ inshape, outshape = data.neurons_required
 def run_brainforge():
     net = BackpropNetwork(input_shape=inshape, layerstack=[
         LSTM(60, activation="tanh"),
-        DenseLayer(60, activation="tanh"),
-        DenseLayer(outshape, activation="softmax")
+        Linear(60, activation="tanh"),
+        Linear(outshape, activation="softmax")
     ], cost="xent", optimizer=RMSprop(eta=0.01))
 
     net.fit_generator(data.batchgen(20), lessons_per_epoch=data.N)
