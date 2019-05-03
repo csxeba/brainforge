@@ -54,7 +54,7 @@ class ConvolutionOp:
             F=E.transpose(1, 0, 2, 3),
             mode="valid"
         ).transpose(1, 0, 2, 3)
-        db = E.sum(axis=0)
+        db = E.sum(axis=(0, 2, 3), keepdims=True)
         dX = ConvolutionOp.forward(
             A=E,
             F=F[:, :, ::-1, ::-1].transpose(1, 0, 2, 3),

@@ -32,7 +32,7 @@ class DenseLayer(FFBase):
         return self.output
 
     def backpropagate(self, delta):
-        delta = delta * self.activation.backward(self.output)
+        delta *= self.activation.backward(self.output)
         self.nabla_w, self.nabla_b, dX = self.op.backward(self.inputs, delta, self.weights)
         # self.nabla_w = self.inputs.T @ delta
         # self.nabla_b = delta.sum(axis=0)

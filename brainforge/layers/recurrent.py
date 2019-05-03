@@ -56,13 +56,13 @@ class RLayer(RecurrentBase):
             print("Compiling RLayer...")
             self.op = llatomic.RecurrentOp(activation)
         else:
-            self.opt = atomic.RecurrentOp(activation)
+            self.op = atomic.RecurrentOp(activation)
 
     def connect(self, brain):
-        self.Z = inshape[-1] + self.neurons
+        self.Z = brain.outshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons)
         self.biases = zX(self.neurons)
-        super().connect()
+        super().connect(brain)
 
     def feedforward(self, X):
         super().feedforward(X)
@@ -93,10 +93,10 @@ class LSTM(RecurrentBase):
             self.op = atomic.LSTMOp(activation)
 
     def connect(self, brain):
-        self.Z = inshape[-1] + self.neurons
+        self.Z = brain.outshape[-1] + self.neurons
         self.weights = white(self.Z, self.neurons * 4)
         self.biases = zX(self.neurons * 4) + self.bias_init_factor
-        super().connect()
+        super().connect(brain)
 
     def feedforward(self, X):
         super().feedforward(X)
@@ -115,13 +115,10 @@ class LSTM(RecurrentBase):
 
 class GRU(RecurrentBase):
 
-    def __init__(self, neurons, activation, return_seq=False):
-        super().__init__(neurons, activation, return_seq)
-
     def connect(self, brain):
-        self.weights = white(inshape[-1] + self.neurons, self.neurons * 3)
+        self.weights = white(brain.outshape[-1] + self.neurons, self.neurons * 3)
         self.biases = zX(self.neurons * 3)
-        super().connect()
+        super().connect(brain)
 
     def feedforward(self, X):
         output = super().feedforward(X)
@@ -225,10 +222,10 @@ class ClockworkLayer(RecurrentBase):
 
     def connect(self, brain):
 
-        self.Z = inshape[-1] + self.neurons
+        self.Z = brain.outshape[-1] + self.neurons
 
         W = zX(self.neurons, self.neurons)
-        U = white(inshape[-1], self.neurons)
+        U = white(brain.outshape[-1], self.neurons)
 
         for i, bls in enumerate(self.blocksizes):
             start = i * bls
@@ -239,7 +236,7 @@ class ClockworkLayer(RecurrentBase):
         self.weights = np.concatenate((W, U), axis=0)
         self.biases = zX(self.neurons)
 
-        super().connect()
+        super().connect(brain)
 
     def feedforward(self, X):
         output = super().feedforward(X)
@@ -295,7 +292,7 @@ class Reservoir(RLayer):
         self.r = r
 
     def connect(self, brain):
-        super().connect()
+        super().connect(brain)
         wx, wy = self.weights.shape
         # Create a sparse weight matrix (biases are included)
         W = np.random.binomial(1, self.r, size=(wx, wy + 1)).astype(float)

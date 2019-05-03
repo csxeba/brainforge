@@ -1,6 +1,6 @@
 import numpy as np
 
-from brainforge import LayerStack, BackpropNetwork, config
+from brainforge.model import LayerStack, BackpropNetwork, config
 from brainforge.layers import (
     ConvLayer, PoolLayer, DenseLayer, Activation, Flatten
 )

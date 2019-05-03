@@ -33,7 +33,7 @@ def correlate(A, F):
     # output = np.zeros((im, oy*ox, nf), dtype=nbfloatX)
     Frsh = F.reshape(nf, fx * fy * fc)
 
-    output = np.zeros((im, oy*ox, nf))
+    output = np.empty((im, oy*ox, nf))
     for m in range(im):
         output[m] = np.dot(rfields[m], Frsh.T)
 
@@ -45,7 +45,7 @@ def correlate(A, F):
 def maxpool(A, fdim):
     im, ic, iy, ix = A.shape
     oy, ox = iy // fdim, ix // fdim
-    output = np.zeros((im, ic, oy, ox), dtype=nbfloatX)
+    output = np.empty((im, ic, oy, ox), dtype=nbfloatX)
     filt = np.zeros_like(A, dtype=nbfloatX)
     for m in range(im):
         for c in range(ic):
@@ -74,28 +74,39 @@ def inflate(A, filt):
 
 class ConvolutionOp:
 
-    @staticmethod
-    def valid(A, F):
-        return correlate(A, F)
+    _FLIP = {"valid": "full", "full": "valid", "same": "same"}
 
     @staticmethod
-    def full(A, F):
+    def valid(X, F):
+        return correlate(X, F)
+
+    @staticmethod
+    def full(X, F):
         # fx, fy, fc, nf = F.shape
         nf, fc, fy, fx = F.shape
         py, px = fy - 1, fx - 1
-        pA = np.pad(A, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
+        pA = np.pad(X, pad_width=((0, 0), (0, 0), (py, py), (px, px)),
                     mode="constant", constant_values=0.)
         return correlate(pA, F)
 
-    def forward(self, A, F, mode="valid"):
-        if not A.flags["C_CONTIGUOUS"]:
-            A = A.copy()
+    def forward(self, X, F, mode="valid"):
+        if not X.flags["C_CONTIGUOUS"]:
+            X = X.copy()
         if not F.flags["C_CONTIGUOUS"]:
             F = F.copy()
-        Z = self.valid(A, F) if mode == "valid" else self.full(A, F)
-        oc, oy, ox = self.outshape(A.shape, F.shape, mode=mode)
+        Z = self.valid(X, F) if mode == "valid" else self.full(X, F)
+        oc, oy, ox = self.outshape(X.shape, F.shape, mode=mode)
         # Z: [im, oy*ox, nf]
-        return Z.transpose((0, 2, 1)).reshape(A.shape[0], oc, oy, ox)
+        return Z.transpose((0, 2, 1)).reshape((-1, oc, oy, ox))
+
+    def backward(self, E, X, F, mode="valid"):
+        X_transposed = X.transpose((1, 0, 2, 3))
+        E_transposed = E.transpose((1, 0, 2, 3))
+        dF = self.forward(X_transposed, E_transposed, mode).transpose((1, 0, 2, 3))
+        F_flipped = F[..., ::-1, ::-1].transpose((1, 0, 2, 3))
+        dX = self.forward(E, F_flipped, mode=self._FLIP[mode])
+        db = E.sum(axis=(0, 2, 3))
+        return dF, db, dX
 
     @staticmethod
     def outshape(inshape, fshape, mode="valid"):

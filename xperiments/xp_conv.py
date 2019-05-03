@@ -1,17 +1,18 @@
-from brainforge import BackpropNetwork
+import numpy as np
+
+from brainforge.learner import BackpropNetwork
 from brainforge.layers import ConvLayer, PoolLayer, Flatten, DenseLayer, Activation
 from brainforge.optimization import RMSprop
+from brainforge.gradientcheck import GradientCheck
 
-from csxdata.utilities.loader import pull_mnist_data
-
-
-lX, lY, tX, tY = pull_mnist_data(fold=True)
-ins, ous = lX.shape[1:], lY.shape[1:]
+X, Y = np.random.randn(5, 3, 12, 12), np.ones((5, 2))
+ins, ous = X.shape[1:], Y.shape[1:]
 net = BackpropNetwork(input_shape=ins, layerstack=[
-    ConvLayer(3, 8, 8, compiled=False),
-    PoolLayer(3, compiled=False), Activation("tanh"),
-    Flatten(), DenseLayer(60, activation="tanh"),
-    DenseLayer(ous[0], activation="softmax")
-], cost="cxent", optimizer=RMSprop(eta=0.01))
+    ConvLayer(3, 3, 3, compiled=1),
+    PoolLayer(2, compiled=1),
+    Activation("tanh"),
+    Flatten(),
+    DenseLayer(ous[0], activation="linear", trainable=True)
+], cost="mse", optimizer=RMSprop(eta=0.01))
 
-net.fit(lX, lY, batch_size=32, epochs=10, validation=(tX, tY))
+GradientCheck(net, epsilon=1e-5).run(X, Y, throw=True)

@@ -91,7 +91,7 @@ class ConvLayer(LayerBase):
 
     def backpropagate(self, delta):
         delta *= self.activation.backward(self.output)
-        self.nabla_w, self.nabla_b, dX = self.op.backward(self.inputs, delta, self.weights)
+        self.nabla_w, self.nabla_b, dX = self.op.backward(X=self.inputs, E=delta, F=self.weights)
         return dX
 
     @property
