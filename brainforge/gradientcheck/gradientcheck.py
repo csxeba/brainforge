@@ -9,7 +9,7 @@ from .analyze_difference import analyze_difference_matrices, get_results
 class GradientCheck:
 
     def __init__(self, network, epsilon=1e-5, display=True):
-        if network.age <= 1:
+        if network.age < 1:
             warnings.warn(
                 "\nPerforming gradient check on an untrained neural network!",
                 RuntimeWarning
