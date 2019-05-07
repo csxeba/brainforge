@@ -5,7 +5,7 @@ import gym
 
 from matplotlib import pyplot
 
-from brainforge import BackpropNetwork
+from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer
 from brainforge.optimization import Momentum
 from brainforge.reinforcement import PG, AgentConfig
