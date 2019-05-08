@@ -22,7 +22,7 @@ def sigmoid_p(A):
     return A * (s1 - A)
 
 
-@nb.vectorize(finfout, nopython=True)
+@nb.jit(nopython=True)
 def tanh(Z):
     return np.tanh(Z)
 

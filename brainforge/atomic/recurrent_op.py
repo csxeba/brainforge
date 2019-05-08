@@ -63,7 +63,11 @@ class LSTMOp:
             p[:, :outdim] = self.actfn.forward(p[:, :outdim])
             p[:, outdim:] = sigmoid.forward(p[:, outdim:])
 
-            cand[t], f[t], i[t], o[t] = np.split(p, 4, axis=1)
+            cand[t] = p[:, :outdim]
+            f[t] = p[:, outdim:2*outdim]
+            i[t] = p[:, 2*outdim:3*outdim]
+            o[t] = p[:, 3*outdim:]
+            # cand[t], f[t], i[t], o[t] = np.split(p, 4, axis=1)
 
             C[t] = C[t-1] * f[t] + cand[t] * i[t]
 

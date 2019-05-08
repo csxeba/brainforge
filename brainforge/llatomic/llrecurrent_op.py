@@ -1,7 +1,7 @@
 import numpy as np
 
 from ._llrecurrent import recurrent_forward_relu, recurrent_forward_tanh, recurrent_backward
-from ._lllstm import lstm_forward_tanh, lstm_backward
+from ._lllstm import lstm_forward, lstm_backward
 from .llactivation_op import llactivations
 
 sigmoid = llactivations["sigmoid"]()
@@ -48,12 +48,6 @@ class RecurrentOp(ROpBase):
 
 class LSTMOp(ROpBase):
 
-    def __init__(self, activation):
-        super().__init__(activation)
-        self.fwlow = {
-            "tanh": lstm_forward_tanh
-        }[activation.lower()]
-
     def forward(self, X, W, b):
         do = W.shape[-1] // 4
         t, m, di = X.shape
@@ -64,7 +58,7 @@ class LSTMOp(ROpBase):
         Obord = np.prod(Oshape)
         Zbord = np.prod(Zshape) + Obord
 
-        vector = self.fwlow(X, W, b)
+        vector = lstm_forward(X, W, b, self.llact.llact)
 
         O = vector[:Obord].reshape(*Oshape)
         Z = vector[Obord:Zbord].reshape(*Zshape)

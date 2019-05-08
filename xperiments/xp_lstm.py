@@ -12,7 +12,7 @@ X = np.random.randn(*DSHAPE)
 Y = np.random.randn(*OUTSHP)
 
 net = BackpropNetwork(input_shape=DSHAPE[1:], layerstack=[
-    LSTM(16, activation="tanh"),
+    LSTM(16, activation="tanh", compiled=1),
     DenseLayer(OUTSHP[1:], activation="linear", trainable=0)
 ], cost="mse", optimizer="sgd")
 

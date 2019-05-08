@@ -93,7 +93,7 @@ class TestNumbaTensorOps(unittest.TestCase):
         nbop = NbLSTM("tanh")
 
         BSZE = 20
-        TIME = 5
+        TIME = 2
         DDIM = 10
         NEUR = 15
 
@@ -102,24 +102,30 @@ class TestNumbaTensorOps(unittest.TestCase):
         b = np.random.randn(NEUR * 4)
         # E = np.random.randn(BSZE, TIME, NEUR)
 
-        npO, npZ, cache = npop.forward(X, W, b)
-        nbO, nbZ, cache = nbop.forward(X, W, b)
+        npO, npZ, npcache = npop.forward(X, W, b)
+        nbO, nbZ, nbcache = nbop.forward(X, W, b)
 
+        # visualize(X, npZ, nbZ)
+        for i, array_type in enumerate(["C", "Ca", "cand", "f", "i", "o"]):
+            for t in range(TIME):
+                d = np.sum(np.abs(npcache[i, t] - nbcache[i, t]))
+                print("{} diff @ t {}: {}".format(array_type, t, d))
+        self.assertTrue(np.allclose(npcache, nbcache))
         self.assertTrue(np.allclose(npZ, nbZ))
         self.assertTrue(np.allclose(npO, nbO))
 
 
 def visualize(A, O1, O2, supt=None):
+    TAKE = 0
     d = O1 - O2
     vmax, vmin = max(O1.max(), O2.max()), min(O1.min(), O2.min())
     fig, axarr = plt.subplots(2, 2)
-    axarr[0][0].imshow(A[0, 0], vmin=0, vmax=1, cmap="autumn")
-    axarr[0][0].set_title("A")
-    axarr[0][1].imshow(d[0, 0], cmap="seismic")
+    print("Total deviance:", d.sum())
+    axarr[0][1].imshow(d[TAKE], cmap="seismic")
     axarr[0][1].set_title("d")
-    axarr[1][0].imshow(O1[0, 0], vmin=vmin, vmax=vmax, cmap="hot")
+    axarr[1][0].imshow(O1[TAKE], vmin=vmin, vmax=vmax, cmap="hot")
     axarr[1][0].set_title("npO")
-    axarr[1][1].imshow(O2[0, 0], vmin=vmin, vmax=vmax, cmap="hot")
+    axarr[1][1].imshow(O2[TAKE], vmin=vmin, vmax=vmax, cmap="hot")
     axarr[1][1].set_title("nbO")
     plt.suptitle(supt)
     plt.tight_layout()

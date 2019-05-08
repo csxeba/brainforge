@@ -3,20 +3,8 @@ import numpy as np
 from ._llactivation import sigmoid, tanh, relu
 
 
-@nb.jit(nopython=True, cache=True)
-def _lstm_update_state(p, T, outdim):
-    # C[0], Ca[1], cand[2], f[3], i[4], o[5]
-    p[:, outdim:] = sigmoid(p[:, outdim:])  # sigmoid to gates
-    T[2] = p[:, :outdim]  # candidate
-    T[3] = p[:, outdim:2*outdim]  # forget
-    T[4] = p[:, 2*outdim:3*outdim]  # input
-    T[5] = p[:, 3*outdim:]  # output
-    T[0] = T[0] * T[3] + T[2] * T[4]  # Ct = Ct-1 * f + cand * i
-    return T
-
-
-# @nb.jit(nopython=True, cache=True)
-def lstm_forward_tanh(X, W, b):
+@nb.jit(nopython=True)
+def lstm_forward(X, W, b, activation):
     outdim = W.shape[-1] // 4
     time, batch, indim = X.shape
 
@@ -27,31 +15,16 @@ def lstm_forward_tanh(X, W, b):
     for t in range(time):
         Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
         p = np.dot(Z[t], W) + b
-        p[:, :outdim] = tanh(p[:, :outdim])  # nonlin to candidate
+        p[:, :outdim] = activation(p[:, :outdim])  # nonlin to candidate
 
-        T[t] = _lstm_update_state(p, T[t], outdim)
+        p[:, outdim:] = sigmoid(p[:, outdim:])  # sigmoid to gates
+        T[t, 2] = p[:, :outdim]  # candidate
+        T[t, 3] = p[:, outdim:2*outdim]  # forget
+        T[t, 4] = p[:, 2*outdim:3*outdim]  # input
+        T[t, 5] = p[:, 3*outdim:]  # output
+        T[t, 0] = T[t-1, 0] * T[t, 3] + T[t, 2] * T[t, 4]  # Ct = Ct-1 * f + cand * i
 
-        T[t, 1] = tanh(T[t, 0])  # nonlin to state
-        O[t] = T[t, 1] * T[t, 5]  # O = f(C) * o
-    return np.concatenate((O.ravel(), Z.ravel(), T.ravel()))
-
-
-@nb.jit(nopython=True)
-def lstm_forward_relu(X, W, b):
-    outdim = W.shape[-1] // 4
-    time, batch, indim = X.shape
-
-    Z = np.zeros((time, batch, indim + outdim))
-    O = np.zeros((time, batch, outdim))
-    # C[0], Ca[1], cand[2], f[3], i[4], o[5]
-    T = np.zeros((time, 6, batch, outdim))
-
-    for t in range(time):
-        Z[t] = np.concatenate((X[t], O[t-1]), axis=-1)
-        p = np.dot(Z[t], W) + b
-        p[:, :outdim] = relu(p[:, :outdim])  # nonlin to candidate
-        T[t] = _lstm_update_state(p, T[t], outdim)
-        T[t, 1] = relu(T[t, 0])  # nonlin to state
+        T[t, 1] = activation(T[t, 0])  # nonlin to state
         O[t] = T[t, 1] * T[t, 5]  # O = f(C) * o
     return np.concatenate((O.ravel(), Z.ravel(), T.ravel()))
 
