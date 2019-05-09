@@ -2,7 +2,7 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 
-from brainforge import BackpropNetwork
+from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer
 
 np.random.seed(1234)

@@ -3,7 +3,7 @@ from collections import deque
 import numpy as np
 import gym
 
-from brainforge import BackpropNetwork
+from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer, ClockworkLayer
 from brainforge.optimization import RMSprop
 from brainforge.reinforcement import AgentConfig, DDQN as AgentType
