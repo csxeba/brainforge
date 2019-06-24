@@ -1,3 +1,4 @@
+from brainforge.util import emptyX
 from .abstract_layer import LayerBase, NoParamMixin
 from ..util import zX, zX_like, white
 
@@ -25,21 +26,10 @@ class PoolLayer(NoParamMixin, LayerBase):
         self.output = zX(ic, iy // self.fdim, ix // self.fdim)
 
     def feedforward(self, questions):
-        """
-        Implementation of a max pooling layer.
-
-        :param questions: numpy.ndarray, a batch of outsize from the previous layer
-        :return: numpy.ndarray, max pooled batch
-        """
         self.output, self.filter = self.op.forward(questions, self.fdim)
         return self.output
 
     def backpropagate(self, delta):
-        """
-        Calculates the error of the previous layer.
-        :param delta:
-        :return: numpy.ndarray, the errors of the previous layer
-        """
         return self.op.backward(delta, self.filter)
 
     @property
@@ -101,3 +91,20 @@ class ConvLayer(LayerBase):
 
     def __str__(self):
         return "Conv({}x{}x{})-{}".format(self.nfilters, self.fy, self.fx, str(self.activation)[:4])
+
+
+class GlobalAveragePooling(NoParamMixin, LayerBase):
+
+    def __init__(self):
+        super().__init__()
+        self.dynamic_input_shape = None
+
+    def feedforward(self, X):
+        self.dynamic_input_shape = X.shape
+        return X.mean(axis=(2, 3))
+
+    def backpropagate(self, delta):
+        canvas = emptyX(*self.inputs.shape)
+        nxy = self.dynamic_input_shape[-2] * self.dynamic_input_shape[-1]
+        for mm, cc in ((m, c) for c in range(delta.shape[1]) for m in range(delta.shape[0])):
+            canvas.flat[mm, cc] = delta[mm, cc] / nxy

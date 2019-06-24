@@ -1,7 +1,7 @@
 import numpy as np
 
 from .abstract_learner import Learner
-from brainforge.optimization import optimizers, GradientDescent
+from ..optimizers import optimizers, GradientDescent
 
 
 class BackpropNetwork(Learner):
@@ -13,7 +13,7 @@ class BackpropNetwork(Learner):
         )
         self.optimizer.initialize(nparams=self.layers.num_params)
 
-    def learn_batch(self, X, Y, w=None):
+    def learn_batch(self, X, Y, w=None, metrics=()):
         m = len(X)
         preds = self.predict(X)
         delta = self.cost.derivative(preds, Y)
@@ -21,7 +21,11 @@ class BackpropNetwork(Learner):
             delta *= w[:, None]
         self.backpropagate(delta)
         self.update(m)
-        return self.cost(self.output, Y) / m
+        train_metrics = {"cost": self.cost(self.output, Y) / m}
+        if metrics:
+            for metric in metrics:
+                train_metrics[str(metric).lower()] = metric(preds, Y) / m
+        return train_metrics
 
     def backpropagate(self, error):
         for layer in self.layers[-1:0:-1]:

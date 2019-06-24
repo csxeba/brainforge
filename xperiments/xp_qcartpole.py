@@ -5,7 +5,7 @@ import gym
 
 from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer, ClockworkLayer
-from brainforge.optimization import RMSprop
+from brainforge.optimizers import RMSprop
 from brainforge.reinforcement import AgentConfig, DDQN as AgentType
 from matplotlib import pyplot
 

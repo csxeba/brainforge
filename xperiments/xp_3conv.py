@@ -4,7 +4,7 @@ from brainforge.model import LayerStack, BackpropNetwork, config
 from brainforge.layers import (
     ConvLayer, PoolLayer, DenseLayer, Activation, Flatten
 )
-from brainforge.optimization import Momentum
+from brainforge.optimizers import Momentum
 from brainforge.util import batch_stream
 
 config.floatX = "float64"

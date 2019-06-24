@@ -1,5 +1,3 @@
-import abc
-
 import numpy as np
 
 from ..util.typing import scalX
@@ -10,7 +8,7 @@ s1 = scalX(1.)
 s2 = scalX(2.)
 
 
-class CostFunction(abc.ABC):
+class CostFunction:
 
     def __call__(self, outputs, targets): pass
 
@@ -22,7 +20,7 @@ class CostFunction(abc.ABC):
         return outputs - targets
 
 
-class MeanSquaredError(CostFunction):
+class _MeanSquaredError(CostFunction):
 
     def __call__(self, outputs, targets):
         return s05 * np.linalg.norm(outputs - targets) ** s2
@@ -32,7 +30,7 @@ class MeanSquaredError(CostFunction):
         return outputs - targets
 
 
-class CategoricalCrossEntropy(CostFunction):
+class _CategoricalCrossEntropy(CostFunction):
 
     def __call__(self, outputs: np.ndarray, targets: np.ndarray):
         return -(targets * np.log(outputs)).sum()
@@ -44,7 +42,7 @@ class CategoricalCrossEntropy(CostFunction):
         return enum / denom
 
 
-class BinaryCrossEntropy(CostFunction):
+class _BinaryCrossEntropy(CostFunction):
 
     def __call__(self, outputs: np.ndarray, targets: np.ndarray):
         return -(targets * np.log(outputs) + (s1 - targets) * np.log(s1 - outputs)).sum()
@@ -54,7 +52,7 @@ class BinaryCrossEntropy(CostFunction):
         raise NotImplementedError
 
 
-class Hinge(CostFunction):
+class _Hinge(CostFunction):
 
     def __call__(self, outputs, targets):
         return (np.maximum(s0, s1 - targets * outputs)).sum()
@@ -70,11 +68,22 @@ class Hinge(CostFunction):
         return out
 
 
-mean_squared_error = MeanSquaredError()
-categorical_crossentropy = CategoricalCrossEntropy()
-binary_crossentropy = BinaryCrossEntropy()
-hinge = Hinge()
+mean_squared_error = _MeanSquaredError()
+categorical_crossentropy = _CategoricalCrossEntropy()
+binary_crossentropy = _BinaryCrossEntropy()
+hinge = _Hinge()
 
 mse = mean_squared_error
 cxent = categorical_crossentropy
 bxent = binary_crossentropy
+
+_costs = {k: v for k, v in locals().items() if k[0] != "_" and k != "CostFunction"}
+
+
+def get(cost_function):
+    if isinstance(cost_function, CostFunction):
+        return cost_function
+    cost = _costs.get(cost_function)
+    if cost is None:
+        raise ValueError("No such cost function: {}".format(cost))
+    return cost

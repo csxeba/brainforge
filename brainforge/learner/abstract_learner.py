@@ -1,10 +1,6 @@
-import abc
-
-import numpy as np
-
 from ..model.layerstack import LayerStack
-from ..cost import costs, CostFunction
-from ..util import batch_stream
+from ..metrics import costs as _costs, metrics as _metrics
+from ..util import batch_stream, logging
 
 
 class Learner:
@@ -17,83 +13,81 @@ class Learner:
         self.layers = layerstack
         self.name = name
         self.age = 0
-        self.cost = cost if isinstance(cost, CostFunction) else costs[cost]
+        self.cost = _costs.get(cost)
 
-    def fit_generator(self, generator, lessons_per_epoch, epochs=30, classify=True, validation=(), verbose=1, **kw):
-        epcosts = []
+    def fit_generator(self, generator, lessons_per_epoch, epochs=30, metrics=(), validation=(), verbose=1, **kw):
+        metrics = [_metrics.get(metric) for metric in metrics]
+        history = logging.MetricLogs.from_metric_list(lessons_per_epoch, ("cost",), metrics)
         lstr = len(str(epochs))
         for epoch in range(1, epochs+1):
             if verbose:
                 print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
-            epcosts += self.epoch(generator, no_lessons=lessons_per_epoch, classify=classify,
-                                  validation=validation, verbose=verbose, **kw)
-        return epcosts
+            epoch_history = self.epoch(generator, updates_per_epoch=lessons_per_epoch, metrics=metrics,
+                                       validation=validation, verbose=verbose, **kw)
+            history.update(epoch_history)
 
-    def fit(self, X, Y, batch_size=20, epochs=30, classify=True, validation=(), verbose=1, shuffle=True, **kw):
+        return history
+
+    def fit(self, X, Y, batch_size=20, epochs=30, metrics=(), validation=(), verbose=1, shuffle=True, **kw):
+        metrics = [_metrics.get(metric) for metric in metrics]
         datastream = batch_stream(X, Y, m=batch_size, shuffle=shuffle)
-        return self.fit_generator(datastream, len(X), epochs, classify, validation, verbose, **kw)
+        return self.fit_generator(datastream, len(X) // batch_size, epochs, metrics, validation, verbose, **kw)
 
-    def epoch(self, generator, no_lessons, classify=True, validation=None, verbose=1, **kw):
-        losses = []
+    def epoch(self, generator, updates_per_epoch, metrics=(), validation=None, verbose=1, **kw):
+        metrics = [_metrics.get(metric) for metric in metrics]
+        history = logging.MetricLogs.from_metric_list(updates_per_epoch, ["cost"], metrics)
         done = 0
 
         self.layers.learning = True
-        while done < no_lessons:
+        batch_size = 0
+        for i in range(updates_per_epoch):
             batch = next(generator)
-            cost = self.learn_batch(*batch, **kw)
-            losses.append(cost)
-
-            done += len(batch[0])
+            batch_size = len(batch[0])
+            epoch_metrics = self.learn_batch(*batch, metrics=metrics, **kw)
+            history.record(epoch_metrics)
             if verbose:
-                print("\rDone: {0:>6.1%} Cost: {1: .5f}\t "
-                      .format(done/no_lessons, np.mean(losses)), end="")
+                history.log(prefix="\r", end="")
+
         self.layers.learning = False
-        if verbose:
-            print("\rDone: {0:>6.1%} Cost: {1: .5f}\t ".format(1., np.mean(losses)), end="")
-            if validation:
-                self._print_progress(validation, classify)
+        if verbose and validation:
+            history = self.evaluate(*validation, batch_size=batch_size, metrics=metrics)
+            history.log(prefix=" ", suffix="")
             print()
 
-        self.age += no_lessons
-        return losses
-
-    def _print_progress(self, validation, classify):
-        results = self.evaluate(*validation, classify=classify)
-
-        chain = "Testing cost: {0:.5f}"
-        if classify:
-            tcost, tacc = results
-            accchain = " accuracy: {0:.2%}".format(tacc)
-        else:
-            tcost = results
-            accchain = ""
-        print(chain.format(tcost) + accchain, end="")
+        self.age += updates_per_epoch
+        return history
 
     def predict(self, X):
         return self.layers.feedforward(X)
 
-    def evaluate(self, X, Y, batch_size=32, classify=True, shuffle=False, verbose=False):
+    def evaluate_batch(self, x, y, metrics=()):
+        m = len(x)
+        preds = self.predict(x)
+        eval_metrics = {"cost": self.cost(self.output, y) / m}
+        if metrics:
+            for metric in metrics:
+                eval_metrics[str(metric).lower()] = metric(preds, y) / m
+        return eval_metrics
+
+    def evaluate(self, X, Y, batch_size=32, metrics=(), verbose=False):
+        metrics = [_metrics.get(metric) for metric in metrics]
         N = X.shape[0]
-        batches = batch_stream(X, Y, m=batch_size, shuffle=shuffle, infinite=False)
+        batch_size = min(batch_size, N)
+        steps = int(round(N / batch_size))
+        history = logging.MetricLogs.from_metric_list(steps, ["cost"], metrics)
 
-        cost, acc = [], []
-        for bno, (x, y) in enumerate(batches, start=1):
+        for x, y in batch_stream(X, Y, m=batch_size, shuffle=False, infinite=False):
+            eval_metrics = self.evaluate_batch(x, y, metrics)
+            history.record(eval_metrics)
             if verbose:
-                print("\rEvaluating: {:>7.2%}".format((bno*batch_size) / N), end="")
-            pred = self.predict(x)
-            cost.append(self.cost(pred, y) / len(x))
-            if classify:
-                pred_classes = np.argmax(pred, axis=1)
-                trgt_classes = np.argmax(y, axis=1)
-                eq = np.equal(pred_classes, trgt_classes)
-                acc.append(eq.mean())
-        results = np.mean(cost)
-        if classify:
-            results = (results, np.mean(acc))
-        return results
+                history.log("\r", end="")
 
-    @abc.abstractmethod
-    def learn_batch(self, X, Y, **kw):
+        if verbose:
+            print()
+        history.reduce_mean()
+        return history
+
+    def learn_batch(self, X, Y, metrics=(), **kw) -> dict:
         raise NotImplementedError
 
     @property
@@ -106,7 +100,7 @@ class Learner:
 
     @property
     def num_params(self):
-        return self.layers.nparams
+        return self.layers.num_params
 
     @property
     def trainable_layers(self):

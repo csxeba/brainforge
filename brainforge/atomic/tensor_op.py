@@ -20,17 +20,15 @@ class ConvolutionOp:
             err += "input depth: {} != {} :filter depth".format(ic, fc)
             raise ValueError(err)
 
-        for i, pic in enumerate(A):
-            for sy in range(oy):
-                for sx in range(ox):
-                    rfields[i][sy*ox + sx] = pic[:, sy:sy+fy, sx:sx+fx].ravel()
+        for i, sy, sx in ((idx, shy, shx) for shx in range(ox) for shy in range(oy) for idx in range(im)):
+            rfields[i][sy*ox + sx] = A[i, :, sy:sy+fy, sx:sx+fx].ravel()
 
-        output = np.zeros((im, oy*ox, nf))
-        for m in range(im):
-            output[m] = np.dot(rfields[m], Frsh.T)
+        # output = np.zeros((im, oy*ox, nf))
+        # for m in range(im):
+        #     output[m] = np.dot(rfields[m], Frsh.T)
 
-        # output = np.matmul(rfields, F.reshape(nf, recfield_size).T)
-        output = output.transpose((0, 2, 1)).reshape(im, nf, oy, ox)
+        output = np.matmul(rfields, Frsh.T)
+        output = output.transpose((0, 2, 1)).reshape((im, nf, oy, ox))
         return output
 
     @staticmethod
@@ -81,6 +79,15 @@ class MaxPoolOp:
 
     def __str__(self):
         return "MaxPool"
+
+    @staticmethod
+    def predict(A):
+        return np.max([
+            A[:, :, 0::2, 0::2],
+            A[:, :, 0::2, 1::2],
+            A[:, :, 1::2, 0::2],
+            A[:, :, 1::2, 1::2],
+        ], axis=0)
 
     @staticmethod
     def forward(A, fdim):

@@ -25,8 +25,8 @@ class ReshapeOp:
     type = "Reshape"
 
     @staticmethod
-    def forward(X, outshape):
-        return X.reshape(X.shape[0], *outshape)
+    def forward(X: np.ndarray, outshape: tuple):
+        return X.reshape(-1, *outshape)
 
     @staticmethod
     def backward(E, inshape):

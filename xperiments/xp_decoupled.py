@@ -1,6 +1,6 @@
 from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer
-from brainforge.optimization import Momentum
+from brainforge.optimizers import Momentum
 from brainforge.util import etalon
 
 

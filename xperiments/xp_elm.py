@@ -35,6 +35,6 @@ lX, lY, tX, tY = pull_mnist(0.1)
 elm = ExtremeLearningMachine(layers, cost="mse")
 elm.learn_batch(tX, tY)
 pred = elm.predict(tX)
-print("ELM cost:", elm.cost(pred, tY))
+print("ELM metrics:", elm.cost(pred, tY))
 print("ELM acc :", np.mean(tY.argmax(axis=0) == pred.argmax(axis=0)))
 pass

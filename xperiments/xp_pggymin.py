@@ -7,7 +7,7 @@ from matplotlib import pyplot
 
 from brainforge.learner import BackpropNetwork
 from brainforge.layers import DenseLayer
-from brainforge.optimization import Momentum
+from brainforge.optimizers import Momentum
 from brainforge.reinforcement import PG, AgentConfig
 
 env = gym.make("CartPole-v0")

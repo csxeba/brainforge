@@ -35,3 +35,7 @@ def white(*dims, dtype=floatX) -> np.ndarray:
 
 def white_like(array, dtype=floatX):
     return white(*array.shape, dtype=dtype)
+
+
+def emptyX(*dims):
+    return np.empty(dims, dtype=floatX)

@@ -1,7 +1,5 @@
 import numpy as np
-from csxdata.utilities.loader import pull_mnist_data
-
-from homyd import FlatDataset
+from verres.data import generators
 
 from brainforge import LayerStack, BackpropNetwork
 from brainforge.layers.abstract_layer import LayerBase, NoParamMixin
@@ -52,7 +50,7 @@ decoder = BackpropNetwork(input_shape=Z, layerstack=[DenseLayer(30, activation="
                                                      DenseLayer(784, activation="linear")],
                           cost="mse", optimizer="momentum")
 
-ds = FlatDataset.from_multiarrays(*pull_mnist_data(split=0))
+
 for epoch in range(10):
     print("\n\nEpoch", epoch)
     for i, (x, y) in enumerate(ds.batch_stream(batchsize=32)):
@@ -74,5 +72,4 @@ for epoch in range(10):
         stdev_z.update(m)
         decoder.update(m)
 
-        print("\rDone: {:.2%} Cost: {:4f}".format(i*32 / len(ds),
-                                                  decoder.cost(dcd, x)), end="")
+        print("\rDone: {:.2%} Cost: {:4f}".format(i*32 / len(ds), decoder.cost(dcd, x)), end="")

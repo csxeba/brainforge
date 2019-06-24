@@ -42,12 +42,12 @@ t = plt.title(templ.format(0, 0., 0.))
 plt.legend()
 batchno = 1
 while 1:
-        tcost = net.learn_batch(tX, tY)
+        tmetrics = net.learn_batch(tX, tY)
         tpred = net.predict(tX)
         vpred = net.predict(vX)
         vcost = net.cost(vpred, vY) / len(vpred)
         tobj.set_data(tX, tpred)
         vobj.set_data(vX, vpred)
         plt.pause(0.1)
-        t.set_text(templ.format(batchno, tcost, vcost))
+        t.set_text(templ.format(batchno, tmetrics["cost"], vcost))
         batchno += 1

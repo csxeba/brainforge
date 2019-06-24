@@ -19,7 +19,7 @@ class Capsule:
     def encapsulate(cls, network, dumppath=None):
         capsule = cls(**{
             "name": network.name,
-            "cost": network.cost,
+            "metrics": network.cost,
             "optimizer": network.optimizer,
             "architecture": network.layers.architecture[:],
             "layers": [layer.capsule() for layer in network.layers.layers]})
@@ -51,7 +51,7 @@ class Capsule:
 
 def load(capsule):
     from ..learner import BackpropNetwork
-    from ..optimization import optimizers
+    from ..optimizers import optimizers
     from ..util.shame import translate_architecture as trsl
 
     if not isinstance(capsule, Capsule):
