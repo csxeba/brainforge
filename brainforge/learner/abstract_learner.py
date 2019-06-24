@@ -52,6 +52,7 @@ class Learner:
         if verbose and validation:
             history = self.evaluate(*validation, batch_size=batch_size, metrics=metrics)
             history.log(prefix=" ", suffix="")
+        if verbose:
             print()
 
         self.age += updates_per_epoch

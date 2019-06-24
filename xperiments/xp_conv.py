@@ -15,10 +15,12 @@ net = BackpropNetwork(input_shape=ins, layerstack=[
     PoolLayer(2, compiled=1),
     Activation("tanh"),
     Flatten(),
-    DenseLayer(ous[0], activation="linear", trainable=True)
-], cost="mse", optimizer=RMSprop(eta=0.01))
+    DenseLayer(ous[0], activation="softmax")
+], cost="cxent", optimizer="adam")
 
 net.learn_batch(X[-5:], Y[-5:])
 net.age += 1
 
-GradientCheck(net, epsilon=1e-5).run(X[:5], Y[:5], throw=True)
+# GradientCheck(net, epsilon=1e-5).run(X[:5], Y[:5], throw=True)
+
+net.fit(X, Y, batch_size=32, epochs=10, metrics=["acc"])
