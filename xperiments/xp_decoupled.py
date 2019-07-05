@@ -39,7 +39,7 @@ def build_net(inshape, outshape):
     net = BackpropNetwork(input_shape=inshape, layerstack=[
         DenseLayer(30, activation="tanh"),
         DenseLayer(outshape, activation="softmax")
-    ], cost="xent", optimizer=Momentum(0.01))
+    ], cost="cxent", optimizer=Momentum(0.01))
     return net
 
 

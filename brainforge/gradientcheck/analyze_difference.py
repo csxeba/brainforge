@@ -1,17 +1,17 @@
 import numpy as np
 
 
-def analyze_difference_matrices(gcobj, dvec):
-    dmats = fold_difference_matrices(gcobj, np.abs(dvec))
+def analyze_difference_matrices(network, dvec):
+    dmats = fold_difference_matrices(network, np.abs(dvec))
     for i, d in enumerate(dmats):
         print("Sum of difference matrix no {0}: {1:.4e}".format(i, d.sum()))
         display_matrices(d)
 
 
-def fold_difference_matrices(gcobj, dvec):
+def fold_difference_matrices(network, dvec):
     diffs = []
     start = 0
-    for layer in gcobj.net.layers[1:]:
+    for layer in network.layers[1:]:
         if not layer.trainable:
             continue
         iweight = start + layer.weights.size

@@ -1,8 +1,7 @@
 import numpy as np
 
 
-def analytical_gradients(gcobj, X, Y):
-    network = gcobj.net
+def analytical_gradients(network, X, Y):
     print("Calculating analytical gradients...")
     print("Forward pass:", end=" ")
     preds = network.predict(X)
@@ -13,8 +12,7 @@ def analytical_gradients(gcobj, X, Y):
     return network.get_gradients(unfold=True)
 
 
-def numerical_gradients(gcobj, X, Y):
-    network = gcobj.net
+def numerical_gradients(network, X, Y, epsilon):
     ws = network.layers.get_weights(unfold=True)
     numgrads = np.zeros_like(ws)
     perturb = np.zeros_like(ws)
@@ -24,7 +22,7 @@ def numerical_gradients(gcobj, X, Y):
     print("Calculating numerical gradients...")
     for i in range(nparams):
         print("\r{0:>{1}} / {2}".format(i + 1, lstr, nparams), end=" ")
-        perturb[i] += gcobj.eps
+        perturb[i] += epsilon
 
         network.layers.set_weights(ws + perturb, fold=True)
         pred1 = network.predict(X)

@@ -1,10 +1,12 @@
 import numpy as np
-from verres.data import generators
+from matplotlib import pyplot as plt
+from verres.data import inmemory
 
 from brainforge import LayerStack, BackpropNetwork
 from brainforge.layers.abstract_layer import LayerBase, NoParamMixin
 from brainforge.layers import DenseLayer
-from brainforge.util.typing import white_like
+from brainforge.optimizers import Adam
+from brainforge.metrics import costs
 
 
 class Sampler(NoParamMixin, LayerBase):
@@ -13,6 +15,7 @@ class Sampler(NoParamMixin, LayerBase):
         super().__init__()
         self._outshape = None
         self.epsilon = None
+        self.cached_variance = None
 
     def connect(self, brain):
         self._outshape = brain.outshape
@@ -20,56 +23,132 @@ class Sampler(NoParamMixin, LayerBase):
 
     def feedforward(self, X):
         """O = M + V * E"""
-        self.inputs = X.copy()
-        self.epsilon = white_like(X[0])
-        return X[0] + X[1] * self.epsilon
+        mean, log_variance = X
+        self.epsilon = np.random.randn(*mean.shape)
+        self.cached_variance = np.exp(log_variance)
+        return mean + self.cached_variance * self.epsilon
 
     @property
     def outshape(self):
         return self._outshape
 
     def backpropagate(self, delta):
-        return np.stack([delta, delta * self.epsilon], axis=0)
+        return delta, delta * self.cached_variance * self.epsilon
 
 
-Z = 2
+class KLD(costs.CostFunction):
 
-layers = LayerStack(784, [
-    DenseLayer(60, activation="relu"),
-    DenseLayer(30, activation="relu")
-])
-encoder = BackpropNetwork(layers, cost="mse", optimizer="momentum")
+    def __call__(self, mean, log_variance):
+        return 0.5 * (np.exp(log_variance) + mean**2 - log_variance - 1).sum() / len(mean)
 
-mean_z = BackpropNetwork(input_shape=30, layerstack=[DenseLayer(Z)], cost="mse", optimizer="momentum")
-stdev_z = BackpropNetwork(input_shape=30, layerstack=[DenseLayer(Z)], cost="mse", optimizer="momentum")
+    def derivative(self, mean, log_variance):
+        """
+        d_KL/d_mean = mean
+        d_KL/d_var = exp(log_var) - 1
 
-sampler = BackpropNetwork(input_shape=Z, layerstack=[Sampler()], cost="mse", optimizer="momentum")
-
-decoder = BackpropNetwork(input_shape=Z, layerstack=[DenseLayer(30, activation="relu"),
-                                                     DenseLayer(60, activation="relu"),
-                                                     DenseLayer(784, activation="linear")],
-                          cost="mse", optimizer="momentum")
+        """
+        m = len(mean)
+        return mean / m, (np.exp(log_variance) - 1) / m
 
 
-for epoch in range(10):
-    print("\n\nEpoch", epoch)
-    for i, (x, y) in enumerate(ds.batch_stream(batchsize=32)):
+class VAE:
+
+    def __init__(self, Z):
+        self.encoder = BackpropNetwork([DenseLayer(60, activation="relu"),
+                                        DenseLayer(30, activation="relu")], optimizer=Adam(1e-4))
+
+        self.mean_z = BackpropNetwork(input_shape=30, layerstack=[DenseLayer(Z)], optimizer=Adam(1e-4))
+        self.stdev_z = BackpropNetwork(input_shape=30, layerstack=[DenseLayer(Z)], optimizer=Adam(1e-4))
+        self.sampler = BackpropNetwork(input_shape=Z, layerstack=[Sampler()])
+        self.decoder = BackpropNetwork(input_shape=Z, layerstack=[DenseLayer(30, activation="relu"),
+                                                                  DenseLayer(60, activation="relu"),
+                                                                  DenseLayer(784, activation="linear")],
+                                       optimizer=Adam(1e-4))
+        self.kld = KLD()
+        self.mse = costs.mean_squared_error
+
+        self.optimizers = [module.optimizer for module in [
+            self.encoder, self.mean_z, self.stdev_z, self.sampler, self.decoder
+        ]]
+
+    def reconstruct(self, x, return_loss=True):
+        x = x.reshape(len(x), -1)
+
+        z = self.encoder.predict(x)
+        s = self.stdev_z.predict(z)
+        z = self.mean_z.predict(z)
+        r = self.decoder.predict(z)
+
+        result = [r]
+        if return_loss:
+            result.append(self.mse(x, r))
+            result.append(self.kld(z, s))
+
+        return result
+
+    def train_on_batch(self, x):
         m = len(x)
-        enc = encoder.predict(x)
-        mean = mean_z.predict(enc)
-        stdev = stdev_z.predict(enc)
-        smpl = sampler.predict(np.stack([mean, stdev], axis=0))
-        dcd = decoder.predict(smpl)
+        x = x.reshape(m, -1)
+        enc = self.encoder.predict(x)
+        mean = self.mean_z.predict(enc)
+        log_variance = self.stdev_z.predict(enc)
+        smpl = self.sampler.predict([mean, log_variance])
+        dcd = self.decoder.predict(smpl)
 
-        delta = decoder.cost.derivative(dcd, x)
-        delta = decoder.backpropagate(delta)
-        d_mean, d_std = sampler.backpropagate(delta)
-        delta = mean_z.backpropagate(d_mean) + stdev_z.backpropagate(d_std)
-        encoder.backpropagate(delta)
+        delta_reconstruction = self.mse.derivative(dcd, x)
+        delta = self.decoder.backpropagate(delta_reconstruction)
+        reconstruction_grandient = self.sampler.backpropagate(delta)
+        variational_gradient = self.kld.derivative(mean, log_variance)
+        delta = self.mean_z.backpropagate(reconstruction_grandient[0] + variational_gradient[0])
+        delta += self.stdev_z.backpropagate(reconstruction_grandient[1] + variational_gradient[1])
+        self.encoder.backpropagate(delta)
 
-        encoder.update(m)
-        mean_z.update(m)
-        stdev_z.update(m)
-        decoder.update(m)
+        self.encoder.update(m)
+        self.mean_z.update(m)
+        self.stdev_z.update(m)
+        self.decoder.update(m)
 
-        print("\rDone: {:.2%} Cost: {:4f}".format(i*32 / len(ds), decoder.cost(dcd, x)), end="")
+        return self.mse(dcd, x), self.kld(mean, log_variance)
+
+
+def main():
+    vae = VAE(Z=32)
+
+    data = inmemory.MNIST()
+    steps_per_epoch = data.steps_per_epoch(32, "train")
+    loss_history = {"recon": [], "kld": []}
+    for epoch in range(1, 31):
+        print("\n\nEpoch", epoch)
+        for i, (x, y) in enumerate(data.stream(batch_size=32, subset="train")):
+            recon, kld = vae.train_on_batch(x)
+            loss_history["recon"].append(recon)
+            loss_history["kld"].append(kld)
+            print("\rDone: {:.2%} Reconstruction loss: {:.4f} KL-divergence: {:.4f}"
+                  .format(i / steps_per_epoch,
+                          np.mean(loss_history["recon"][-100:]),
+                          np.mean(loss_history["kld"][-100:])), end="")
+            if i == steps_per_epoch:
+                break
+        if epoch == 20:
+            for optimizer in vae.optimizers:
+                print("DROPPED!!!")
+                optimizer.eta *= 0.1
+
+    for x, y in data.stream(subset="val", batch_size=1):
+        r, mse, kld = vae.reconstruct(x, return_loss=True)
+        r = r.reshape(x.shape)[0]
+
+        r, x = data.deprocess(r).squeeze(), data.deprocess(x[0]).squeeze()
+
+        fig, (left, right) = plt.subplots(1, 2, sharex="all", sharey="all", figsize=(16, 9))
+        left.imshow(x)
+        right.imshow(r)
+        left.set_title("original")
+        right.set_title("reconstruction")
+        plt.suptitle("MSE: {:.4f} KLD: {:.4f}".format(mse, kld))
+        plt.tight_layout()
+        plt.show()
+
+
+if __name__ == '__main__':
+    main()

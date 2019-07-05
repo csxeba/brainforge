@@ -1,6 +1,7 @@
 import numpy as np
 
 from .abstract_model import Model
+from ..layers.abstract_layer import LayerBase
 
 
 class LayerStack(Model):
@@ -85,7 +86,7 @@ class LayerStack(Model):
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __next__(self) -> LayerBase:
         if self._iterme is None:
             self._iterme = iter(self.layers)
         try:
@@ -99,3 +100,4 @@ class LayerStack(Model):
         return self.layers.__getitem__(item)
 
     predict = feedforward
+    output_shape = outshape

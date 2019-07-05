@@ -10,7 +10,8 @@ s2 = scalX(2.)
 
 class CostFunction:
 
-    def __call__(self, outputs, targets): pass
+    def __call__(self, outputs, targets):
+        raise NotImplementedError
 
     def __str__(self):
         return self.__class__.__name__

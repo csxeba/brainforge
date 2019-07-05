@@ -9,9 +9,9 @@ X, Y = MNIST().table("train")
 X = X[..., 0][:, None, ...]
 ins, ous = X.shape[1:], Y.shape[1:]
 net = BackpropNetwork(input_shape=ins, layerstack=[
-    ConvLayer(3, 3, 3, compiled=1),
+    ConvLayer(32, 3, 3, compiled=1),
     Activation("tanh"),
-    ConvLayer(3, 3, 3, compiled=1),
+    ConvLayer(64, 3, 3, compiled=1),
     PoolLayer(2, compiled=1),
     Activation("tanh"),
     Flatten(),

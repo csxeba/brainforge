@@ -26,7 +26,6 @@ class ExtremeLearningMachine(Learner):
         self.layers[-1].set_weights([W, np.array([0] * self.layers[-1].neurons)], fold=False)
 
     def learn_batch(self, X, Y, **kwarg):
-        H = X.copy()
         for layer in self.layers[:-1]:
-            H = layer.feedforward(H)
-        self.solve(H, Y)
+            X = layer.feedforward(X)
+        self.solve(X, Y)
