@@ -2,7 +2,7 @@ import numpy as np
 
 from brainforge.model import LayerStack, BackpropNetwork, config
 from brainforge.layers import (
-    ConvLayer, PoolLayer, DenseLayer, Activation, Flatten
+    ConvLayer, PoolLayer, Dense, Activation, Flatten
 )
 from brainforge.optimizers import Momentum
 from brainforge.util import batch_stream
@@ -12,14 +12,6 @@ config.compiled = True
 
 dshape = (200, 5, 10, 10)
 opt_lr = 0.001
-
-connectivity = [
-    [0, 0, 0, 1, 0],  # C1
-    [0, 0, 0, 1, 0],  # C2
-    [0, 0, 0, 1, 0],  # C3
-    [0, 0, 0, 0, 1],  # FH
-]
-
 
 def fake_data():
     X = np.random.randn(*dshape)
@@ -43,8 +35,8 @@ def build_network():
     conv = [C1, C2, C3]
 
     FF = LayerStack(input_shape=sum(np.prod(C.layers.outshape) for C in conv),
-                    layers=[DenseLayer(60, activation="tanh"),
-                            DenseLayer(2, activation="softmax")])
+                    layers=[Dense(60, activation="tanh"),
+                            Dense(2, activation="softmax")])
     return conv, BackpropNetwork(FF, cost="xent", optimizer=Momentum(opt_lr))
 
 

@@ -8,7 +8,7 @@ from ..config import floatX
 sigmoid = Sigmoid()
 
 
-class HighwayLayer(FFBase):
+class Highway(FFBase):
     """
     Neural Highway Layer based on Srivastava et al., 2015
     """
@@ -67,8 +67,8 @@ class DropOut(NoParamMixin, LayerBase):
         self.training = True
 
     def connect(self, brain):
-        self.inshape = inshape
-        super().connect()
+        self.inshape = brain.outshape
+        super().connect(brain)
 
     def feedforward(self, X: np.ndarray) -> np.ndarray:
         self.inputs = X

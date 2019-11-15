@@ -3,7 +3,7 @@ import numpy as np
 from keras.datasets import mnist
 
 from brainforge import LayerStack
-from brainforge.layers import DenseLayer, ConvLayer, Activation, Flatten
+from brainforge.layers import Dense, ConvLayer, Activation, Flatten
 from brainforge.learner.extreme_learning_machine import ExtremeLearningMachine
 from brainforge.util import typing
 
@@ -32,8 +32,8 @@ def pull_mnist(split=0.1, flatten=True):
 
 def build_dense_layerstack():
     return LayerStack(input_shape=(784,), layers=[
-        DenseLayer(1024, activation="tanh", trainable=False),
-        DenseLayer(10, activation="linear", trainable=True)
+        Dense(1024, activation="tanh", trainable=False),
+        Dense(10, activation="linear", trainable=True)
     ])
 
 
@@ -42,7 +42,7 @@ def build_conv_layerstack():
         ConvLayer(16, 7, 7, trainable=False),
         Activation("tanh"),
         Flatten(),
-        DenseLayer(10, activation="linear")
+        Dense(10, activation="linear")
     ])
 
 

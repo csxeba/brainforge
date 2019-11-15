@@ -1,7 +1,7 @@
 import numpy as np
 
 from brainforge.learner import BackpropNetwork
-from brainforge.layers import LSTM, DenseLayer
+from brainforge.layers import LSTM, Dense
 from brainforge.gradientcheck import GradientCheck
 
 # np.random.seed(1337)
@@ -13,7 +13,7 @@ Y = np.random.randn(*OUTSHP)
 
 net = BackpropNetwork(input_shape=DSHAPE[1:], layerstack=[
     LSTM(16, activation="tanh", compiled=1),
-    DenseLayer(OUTSHP[1:], activation="linear", trainable=0)
+    Dense(OUTSHP[1:], activation="linear", trainable=0)
 ], cost="mse", optimizer="sgd")
 
 net.fit(X, Y, epochs=1, verbose=0)

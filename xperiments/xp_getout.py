@@ -5,15 +5,15 @@ from matplotlib import pyplot as plt
 from grund import getout
 
 from brainforge import BackpropNetwork
-from brainforge.layers import DenseLayer, Flatten
+from brainforge.layers import Dense, Flatten
 from brainforge.reinforcement import DQN, AgentConfig
 
 env = getout.GetOut((10, 10))
 agent = DQN(
     BackpropNetwork(input_shape=env.neurons_required[0], layerstack=[
         Flatten(),
-        DenseLayer(30, activation="tanh"),
-        DenseLayer(env.neurons_required[-1], activation="linear")
+        Dense(30, activation="tanh"),
+        Dense(env.neurons_required[-1], activation="linear")
     ], cost="mse", optimizer="rmsprop"), len(env.actions),
     AgentConfig(epsilon=1., epsilon_decay=0.999, epsilon_min=0.1)
 )

@@ -7,7 +7,7 @@ from ..learner import BackpropNetwork
 
 def run(network: BackpropNetwork, X=None, Y=None, epsilon=1e-5, throw=False, display=True):
     if X is None:
-        X = np.random.normal(scale=0.1, size=network.)
+        X = np.random.normal(scale=0.1, size=network.input_shape)
     if Y is None:
         Y = np.random.normal(scale=0.1, size=network.output_shape)
     norm = np.linalg.norm

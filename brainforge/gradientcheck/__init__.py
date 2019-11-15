@@ -1,1 +1,1 @@
-from .gradientcheck import GradientCheck
+from .gradientcheck import run

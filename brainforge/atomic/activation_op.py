@@ -88,8 +88,27 @@ class ReLU(ActivationFunction):
         return np.maximum(s0, Z)
     
     def backward(self, A) -> np.ndarray:
-        J = np.ones_like(A, dtype=floatX)
-        J[A <= 0.] = s0
+        return (A > 0.).astype(A.dtype)
+
+
+class LeakyReLU(ActivationFunction):
+
+    type = "leakyrelu"
+
+    def __init__(self, alpha=0.3):
+        self.alpha = alpha
+
+    def forward(self, Z: np.ndarray) -> np.ndarray:
+        output = np.empty_like(Z)
+        p = Z > 0.
+        n = ~p
+        output[p] = Z[p]
+        output[n] = self.alpha * Z[n]
+        return output
+
+    def backward(self, A: np.ndarray) -> np.ndarray:
+        J = np.ones_like(A)
+        J[A <= 0.] = self.alpha
         return J
 
 
@@ -136,5 +155,5 @@ class OnePlus(ActivationFunction):
 
 
 activations = {"sigmoid": Sigmoid, "tanh": Tanh, "sqrt": Sqrt,
-               "linear": Linear, "relu": ReLU, "softmax": SoftMax,
-               "hard_sigmoid": HardSigmoid}
+               "linear": Linear, "relu": ReLU, "leakyrelu": LeakyReLU,
+               "softmax": SoftMax, "hard_sigmoid": HardSigmoid}

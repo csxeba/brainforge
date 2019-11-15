@@ -1,5 +1,5 @@
 from brainforge.learner import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Dense
 from brainforge.optimizers import Momentum
 from brainforge.util import etalon
 
@@ -37,15 +37,15 @@ class DNI:
 
 def build_net(inshape, outshape):
     net = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(30, activation="tanh"),
-        DenseLayer(outshape, activation="softmax")
+        Dense(30, activation="tanh"),
+        Dense(outshape, activation="softmax")
     ], cost="cxent", optimizer=Momentum(0.01))
     return net
 
 
 def build_synth(inshape, outshape):
     synth = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(outshape)
+        Dense(outshape)
     ], cost="mse", optimizer=Momentum(0.01))
     return synth
 

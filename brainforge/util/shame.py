@@ -1,10 +1,10 @@
 def translate_architecture(arch):
     from ..layers.core import (
-        InputLayer, DenseLayer, Activation, Flatten, Reshape
+        InputLayer, Dense, Activation, Flatten, Reshape
     )
 
     from ..layers.fancy import (
-        DropOut, HighwayLayer
+        DropOut, Highway
     )
 
     from ..layers.recurrent import (
@@ -16,9 +16,9 @@ def translate_architecture(arch):
 
     dictionary = {
         "Inpu": InputLayer,
-        "Dens": DenseLayer,
+        "Dens": Dense,
         "Acti": Activation,
-        "High": HighwayLayer,
+        "High": Highway,
         "Drop": DropOut,
         "Flat": Flatten,
         "Resh": Reshape,

@@ -6,7 +6,7 @@ from ..util import zX, white
 from .abstract_layer import LayerBase, NoParamMixin, FFBase
 
 
-class DenseLayer(FFBase):
+class Dense(FFBase):
 
     def connect(self, brain):
         inshape = brain.outshape

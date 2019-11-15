@@ -6,7 +6,7 @@ import gym
 from matplotlib import pyplot
 
 from brainforge.learner import BackpropNetwork
-from brainforge.layers import DenseLayer
+from brainforge.layers import Dense
 from brainforge.optimizers import Momentum
 from brainforge.reinforcement import PG, AgentConfig
 
@@ -16,7 +16,7 @@ nactions = env.action_space.n
 
 def get_agent():
     brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
-        DenseLayer(nactions, activation="softmax")
+        Dense(nactions, activation="softmax")
     ], cost="cxent", optimizer=Momentum(eta=0.001))
     return brain
 

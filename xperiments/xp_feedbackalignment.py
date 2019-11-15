@@ -1,6 +1,6 @@
 from brainforge.model import LayerStack
 from brainforge.learner import DirectFeedbackAlignment
-from brainforge.layers import DenseLayer, Flatten
+from brainforge.layers import Dense, Flatten
 
 from verres.data import inmemory
 
@@ -8,8 +8,8 @@ from verres.data import inmemory
 def build_layerstack(input_shape, output_dim):
     return LayerStack(input_shape, [
         Flatten(),
-        DenseLayer(64, activation="tanh", compiled=True),
-        DenseLayer(output_dim, activation="softmax")])
+        Dense(64, activation="tanh", compiled=True),
+        Dense(output_dim, activation="softmax")])
 
 
 def build_dfa_net(input_shape, output_dim):
