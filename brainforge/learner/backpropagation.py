@@ -42,7 +42,7 @@ class Backpropagation(Learner):
         self.zero_gradients()
 
     def get_weights(self, unfold=True):
-        self.layers.get_weights(unfold=unfold)
+        return self.layers.get_weights(unfold=unfold)
 
     def set_weigts(self, ws, fold=True):
         self.layers.set_weights(ws=ws, fold=fold)

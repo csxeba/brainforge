@@ -34,7 +34,7 @@ def numerical_gradients(network, X, Y, epsilon):
         numgrads[i] = (cost1 - cost2)
         perturb[i] = 0.
 
-    numgrads /= 2. * gcobj.eps
+    numgrads /= 2. * epsilon
     network.layers.set_weights(ws, fold=True)
 
     print("Done!")
