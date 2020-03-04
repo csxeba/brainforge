@@ -9,16 +9,13 @@ X = X[..., 0][:, None, ...]
 ins, ous = X.shape[1:], Y.shape[1:]
 net = BackpropNetwork(input_shape=ins, layerstack=[
     ConvLayer(32, 3, 3, compiled=1),
-    Activation("tanh"),
+    Activation("relu"),
     ConvLayer(64, 3, 3, compiled=1),
     PoolLayer(2, compiled=1),
-    Activation("tanh"),
+    Activation("relu"),
     Flatten(),
     Dense(ous[0], activation="softmax")
 ], cost="cxent", optimizer="adam")
-
-net.learn_batch(X[-5:], Y[-5:])
-net.age += 1
 
 gradientcheck.run(net, X[:5], Y[:5], epsilon=1e-5, throw=True)
 

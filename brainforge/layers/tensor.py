@@ -1,18 +1,18 @@
-from brainforge.util import emptyX
+import numpy as np
+
 from .abstract_layer import LayerBase, NoParamMixin
-from ..util import zX, zX_like, white
+from ..util import zX, zX_like, white, scalX
 
 
 class PoolLayer(NoParamMixin, LayerBase):
 
-    def __init__(self, fdim, compiled=True):
+    def __init__(self, filter_size, compiled=True):
         LayerBase.__init__(self, activation="linear", trainable=False)
         if compiled:
-            print("Compiling PoolLayer...")
             from ..llatomic.lltensor_op import MaxPoolOp
         else:
             from ..atomic import MaxPoolOp
-        self.fdim = fdim
+        self.fdim = filter_size
         self.filter = None
         self.op = MaxPoolOp()
 
@@ -43,7 +43,7 @@ class PoolLayer(NoParamMixin, LayerBase):
 class ConvLayer(LayerBase):
 
     def __init__(self, nfilters, filterx=3, filtery=3, compiled=True, **kw):
-        super().__init__(activation=kw.get("activation", "linear"), compiled=compiled, **kw)
+        super().__init__(compiled=compiled, **kw)
         self.nfilters = nfilters
         self.fx = filterx
         self.fy = filtery
@@ -54,7 +54,6 @@ class ConvLayer(LayerBase):
 
     def connect(self, brain):
         if self.compiled:
-            print("Compiling ConvLayer...")
             from ..llatomic import ConvolutionOp
         else:
             from ..atomic import ConvolutionOp
@@ -96,15 +95,20 @@ class ConvLayer(LayerBase):
 class GlobalAveragePooling(NoParamMixin, LayerBase):
 
     def __init__(self):
-        super().__init__()
-        self.dynamic_input_shape = None
+        LayerBase.__init__(self)
+        NoParamMixin.__init__(self)
+        self.repeats = 0
 
     def feedforward(self, X):
-        self.dynamic_input_shape = X.shape
+        self.repeats = np.prod(X.shape[2:])
         return X.mean(axis=(2, 3))
 
     def backpropagate(self, delta):
-        canvas = emptyX(*self.inputs.shape)
-        nxy = self.dynamic_input_shape[-2] * self.dynamic_input_shape[-1]
-        for mm, cc in ((m, c) for c in range(delta.shape[1]) for m in range(delta.shape[0])):
-            canvas.flat[mm, cc] = delta[mm, cc] / nxy
+        m = len(delta)
+        delta = np.repeat(delta / scalX(self.repeats), self.repeats)
+        delta = delta.reshape((m,) + self.inshape)
+        return delta
+
+    @property
+    def outshape(self):
+        return self.inshape[0],

@@ -320,10 +320,10 @@ inshape, outshape = images.neurons_required
 
 model = BackpropNetwork(input_shape=inshape, layerstack=(
     ConvLayer(nfilters=10, filterx=3, filtery=3, compiled=True),
-    PoolLayer(fdim=2, compiled=True),
+    PoolLayer(filter_size=2, compiled=True),
     Activation("relu"),
     ConvLayer(nfilters=10, filterx=5, filtery=5, compiled=True),
-    PoolLayer(fdim=3, compiled=True),
+    PoolLayer(filter_size=3, compiled=True),
     Activation("relu"),
     Flatten(),
     DenseLayer(120, activation="tanh"),
