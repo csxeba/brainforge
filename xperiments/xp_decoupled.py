@@ -1,4 +1,4 @@
-from brainforge.learner import BackpropNetwork
+from brainforge.learner import Backpropagation
 from brainforge.layers import Dense
 from brainforge.optimizers import Momentum
 from brainforge.util import etalon
@@ -36,7 +36,7 @@ class DNI:
 
 
 def build_net(inshape, outshape):
-    net = BackpropNetwork(input_shape=inshape, layerstack=[
+    net = Backpropagation(input_shape=inshape, layerstack=[
         Dense(30, activation="tanh"),
         Dense(outshape, activation="softmax")
     ], cost="cxent", optimizer=Momentum(0.01))
@@ -44,7 +44,7 @@ def build_net(inshape, outshape):
 
 
 def build_synth(inshape, outshape):
-    synth = BackpropNetwork(input_shape=inshape, layerstack=[
+    synth = Backpropagation(input_shape=inshape, layerstack=[
         Dense(outshape)
     ], cost="mse", optimizer=Momentum(0.01))
     return synth

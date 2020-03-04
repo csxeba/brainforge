@@ -4,7 +4,7 @@ from .abstract_learner import Learner
 from ..optimizers import optimizers, GradientDescent
 
 
-class BackpropNetwork(Learner):
+class Backpropagation(Learner):
 
     def __init__(self, layerstack, cost="mse", optimizer="sgd", name="", **kw):
         super().__init__(layerstack, cost, name, **kw)

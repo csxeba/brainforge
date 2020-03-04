@@ -1,10 +1,10 @@
 import numpy as np
 
-from .backpropagation import BackpropNetwork
+from .backpropagation import Backpropagation
 from ..metrics import mse
 
 
-class LocalCorrelationAligment(BackpropNetwork):
+class LocalCorrelationAligment(Backpropagation):
 
     def backpropagate(self, error):
         m = len(error)

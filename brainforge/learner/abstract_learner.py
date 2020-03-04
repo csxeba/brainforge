@@ -15,7 +15,15 @@ class Learner:
         self.age = 0
         self.cost = _costs.get(cost)
 
-    def fit_generator(self, generator, lessons_per_epoch, epochs=30, metrics=(), validation=(), verbose=1, **kw):
+    def fit_generator(self,
+                      generator,
+                      lessons_per_epoch,
+                      epochs=30,
+                      metrics=(),
+                      validation=(),
+                      validation_steps=None,
+                      verbose=1, **kw):
+
         metrics = [_metrics.get(metric) for metric in metrics]
         history = logging.MetricLogs.from_metric_list(lessons_per_epoch, ("cost",), metrics)
         lstr = len(str(epochs))
@@ -23,20 +31,29 @@ class Learner:
             if verbose:
                 print("Epoch {:>{w}}/{}".format(epoch, epochs, w=lstr))
             epoch_history = self.epoch(generator, updates_per_epoch=lessons_per_epoch, metrics=metrics,
-                                       validation=validation, verbose=verbose, **kw)
+                                       validation=validation, validation_steps=validation_steps, verbose=verbose, **kw)
             history.update(epoch_history)
 
         return history
 
-    def fit(self, X, Y, batch_size=20, epochs=30, metrics=(), validation=(), verbose=1, shuffle=True, **kw):
+    def fit(self, X, Y,
+            batch_size=20,
+            epochs=30,
+            metrics=(),
+            validation=(),
+            validation_steps=None,
+            verbose=1,
+            shuffle=True,
+            **kw):
+
         metrics = [_metrics.get(metric) for metric in metrics]
         datastream = batch_stream(X, Y, m=batch_size, shuffle=shuffle)
-        return self.fit_generator(datastream, len(X) // batch_size, epochs, metrics, validation, verbose, **kw)
+        return self.fit_generator(datastream, len(X) // batch_size, epochs, metrics, validation, validation_steps,
+                                  verbose, **kw)
 
-    def epoch(self, generator, updates_per_epoch, metrics=(), validation=None, verbose=1, **kw):
+    def epoch(self, generator, updates_per_epoch, metrics=(), validation=None, validation_steps=None, verbose=1, **kw):
         metrics = [_metrics.get(metric) for metric in metrics]
         history = logging.MetricLogs.from_metric_list(updates_per_epoch, ["cost"], metrics)
-        done = 0
 
         self.layers.learning = True
         batch_size = 0
@@ -50,8 +67,13 @@ class Learner:
 
         self.layers.learning = False
         if verbose and validation:
-            history = self.evaluate(*validation, batch_size=batch_size, metrics=metrics)
-            history.log(prefix=" ", suffix="")
+            if type(validation) in (tuple, list):
+                eval_history = self.evaluate(*validation, batch_size=batch_size, metrics=metrics, verbose=False)
+            else:
+                if validation_steps is None:
+                    raise RuntimeError("If validating on a stream, validation_steps must be set to a positive integer.")
+                eval_history = self.evaluate_stream(validation, validation_steps, metrics, verbose=False)
+            eval_history.log(prefix=" ", suffix="")
         if verbose:
             print()
 
@@ -70,23 +92,27 @@ class Learner:
                 eval_metrics[str(metric).lower()] = metric(preds, y) / m
         return eval_metrics
 
-    def evaluate(self, X, Y, batch_size=32, metrics=(), verbose=False):
-        metrics = [_metrics.get(metric) for metric in metrics]
-        N = X.shape[0]
-        batch_size = min(batch_size, N)
-        steps = int(round(N / batch_size))
+    def evaluate_stream(self, stream, steps, metrics=(), verbose=False):
         history = logging.MetricLogs.from_metric_list(steps, ["cost"], metrics)
-
-        for x, y in batch_stream(X, Y, m=batch_size, shuffle=False, infinite=False):
+        metrics = [_metrics.get(metric) for metric in metrics]
+        for x, y in stream:
             eval_metrics = self.evaluate_batch(x, y, metrics)
             history.record(eval_metrics)
             if verbose:
                 history.log("\r", end="")
-
         if verbose:
             print()
         history.reduce_mean()
         return history
+
+    def evaluate(self, X, Y, batch_size=32, metrics=(), verbose=False):
+        N = X.shape[0]
+        batch_size = min(batch_size, N)
+        steps = int(round(N / batch_size))
+
+        stream = batch_stream(X, Y, m=batch_size, shuffle=False, infinite=False)
+
+        return self.evaluate_stream(stream, steps, metrics, verbose)
 
     def learn_batch(self, X, Y, metrics=(), **kw) -> dict:
         raise NotImplementedError

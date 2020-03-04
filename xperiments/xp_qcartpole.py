@@ -3,7 +3,7 @@ from collections import deque
 import numpy as np
 import gym
 
-from brainforge.learner import BackpropNetwork
+from brainforge.learner import Backpropagation
 from brainforge.layers import Dense, ClockworkLayer
 from brainforge.optimizers import RMSprop
 from brainforge.reinforcement import AgentConfig, DDQN as AgentType
@@ -14,7 +14,7 @@ nactions = env.action_space.n
 
 
 def QannRecurrent():
-    brain = BackpropNetwork(env.observation_space.shape, layers=[
+    brain = Backpropagation(env.observation_space.shape, layers=[
         ClockworkLayer(120, activation="tanh"),
         Dense(60, activation="relu"),
         Dense(nactions, activation="linear")
@@ -23,7 +23,7 @@ def QannRecurrent():
 
 
 def QannDense():
-    brain = BackpropNetwork(input_shape=env.observation_space.shape, layerstack=[
+    brain = Backpropagation(input_shape=env.observation_space.shape, layerstack=[
         Dense(24, activation="tanh"),
         Dense(nactions, activation="linear")
     ], cost="mse", optimizer=RMSprop(eta=0.0001))

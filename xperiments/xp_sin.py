@@ -2,7 +2,7 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 
-from brainforge.learner import BackpropNetwork
+from brainforge.learner import Backpropagation
 from brainforge.layers import Dense
 
 np.random.seed(1234)
@@ -21,7 +21,7 @@ vX, vY = rX[varg], rY[varg]
 
 tX += np.random.randn(*tX.shape) / np.sqrt(tX.size*0.25)
 
-net = BackpropNetwork([Dense(120, activation="tanh"),
+net = Backpropagation([Dense(120, activation="tanh"),
                        Dense(120, activation="tanh"),
                        Dense(1, activation="linear")],
                       input_shape=1, optimizer="adam")

@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from verres.data import inmemory
 
-from brainforge import LayerStack, BackpropNetwork
+from brainforge import LayerStack, Backpropagation
 from brainforge.layers.abstract_layer import LayerBase, NoParamMixin
 from brainforge.layers import Dense
 from brainforge.optimizers import Adam
@@ -54,13 +54,13 @@ class KLD(costs.CostFunction):
 class VAE:
 
     def __init__(self, Z):
-        self.encoder = BackpropNetwork([Dense(60, activation="relu"),
+        self.encoder = Backpropagation([Dense(60, activation="relu"),
                                         Dense(30, activation="relu")], optimizer=Adam(1e-4))
 
-        self.mean_z = BackpropNetwork(input_shape=30, layerstack=[Dense(Z)], optimizer=Adam(1e-4))
-        self.stdev_z = BackpropNetwork(input_shape=30, layerstack=[Dense(Z)], optimizer=Adam(1e-4))
-        self.sampler = BackpropNetwork(input_shape=Z, layerstack=[Sampler()])
-        self.decoder = BackpropNetwork(input_shape=Z, layerstack=[Dense(30, activation="relu"),
+        self.mean_z = Backpropagation(input_shape=30, layerstack=[Dense(Z)], optimizer=Adam(1e-4))
+        self.stdev_z = Backpropagation(input_shape=30, layerstack=[Dense(Z)], optimizer=Adam(1e-4))
+        self.sampler = Backpropagation(input_shape=Z, layerstack=[Sampler()])
+        self.decoder = Backpropagation(input_shape=Z, layerstack=[Dense(30, activation="relu"),
                                                                   Dense(60, activation="relu"),
                                                                   Dense(784, activation="linear")],
                                        optimizer=Adam(1e-4))

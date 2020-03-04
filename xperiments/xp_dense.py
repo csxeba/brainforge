@@ -1,4 +1,4 @@
-from brainforge.learner import BackpropNetwork
+from brainforge.learner import Backpropagation
 from brainforge.layers import Dense
 from brainforge.gradientcheck import GradientCheck
 from brainforge.util import etalon
@@ -6,7 +6,7 @@ from brainforge.util import etalon
 X, Y = etalon
 inshape, outshape = X.shape[1:], Y.shape[1:]
 
-network = BackpropNetwork(input_shape=inshape, layerstack=[
+network = Backpropagation(input_shape=inshape, layerstack=[
     Dense(32, activation="sigmoid", trainable=1),
     Dense(32, activation="sigmoid", trainable=1),
     Dense(outshape, activation="linear", trainable=1)

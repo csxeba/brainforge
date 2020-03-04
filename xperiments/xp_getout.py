@@ -4,13 +4,13 @@ from matplotlib import pyplot as plt
 
 from grund import getout
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import Dense, Flatten
 from brainforge.reinforcement import DQN, AgentConfig
 
 env = getout.GetOut((10, 10))
 agent = DQN(
-    BackpropNetwork(input_shape=env.neurons_required[0], layerstack=[
+    Backpropagation(input_shape=env.neurons_required[0], layerstack=[
         Flatten(),
         Dense(30, activation="tanh"),
         Dense(env.neurons_required[-1], activation="linear")

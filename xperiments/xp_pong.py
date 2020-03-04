@@ -3,7 +3,7 @@ from collections import deque
 import gym
 import numpy as np
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import Dense
 from brainforge.reinforcement import PG, AgentConfig
 
@@ -32,7 +32,7 @@ env = gym.make("Pong-v0")
 nactions = env.action_space.n
 stateshape = 6400
 print("Pong stateshape =", stateshape)
-brain = BackpropNetwork(input_shape=stateshape, layerstack=[
+brain = Backpropagation(input_shape=stateshape, layerstack=[
     Dense(200, activation="tanh"),
     Dense(nactions, activation="softmax")
 ], cost="cxent", optimizer="adam")

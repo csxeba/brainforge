@@ -1,13 +1,13 @@
 from verres.data import MNIST
 
-from brainforge.learner import BackpropNetwork
+from brainforge.learner import Backpropagation
 from brainforge.layers import ConvLayer, PoolLayer, Flatten, Dense, Activation
 from brainforge import gradientcheck
 
 X, Y = MNIST().table("train")
 X = X[..., 0][:, None, ...]
 ins, ous = X.shape[1:], Y.shape[1:]
-net = BackpropNetwork(input_shape=ins, layerstack=[
+net = Backpropagation(input_shape=ins, layerstack=[
     ConvLayer(32, 3, 3, compiled=1),
     Activation("relu"),
     ConvLayer(64, 3, 3, compiled=1),

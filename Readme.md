@@ -277,7 +277,7 @@ implemented:
 ```python
 import numpy as np
 
-from brainforge import LayerStack, BackpropNetwork
+from brainforge import LayerStack, Backpropagation
 from brainforge.layers import DenseLayer
 
 def input_stream(batchsize=20):
@@ -307,7 +307,7 @@ For more complicated tasks, the use of the dataframe library csxdata is suggeste
 ```python
 from csxdata import CData
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import (
     DenseLayer, DropOut, Activation,
     PoolLayer, ConvLayer, Flatten
@@ -340,7 +340,7 @@ model.fit(X, Y, batch_size=20, epochs=30, validation=valid,
 ```python
 from csxdata import Sequence
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer, LSTM
 
 datapath = "path/to/text/file.txt"
@@ -383,7 +383,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
@@ -477,7 +477,7 @@ from collections import deque
 
 import gym
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer
 from brainforge.reinforcement import DQN, agentconfig
 from brainforge.optimization import RMSprop

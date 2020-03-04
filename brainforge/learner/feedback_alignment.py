@@ -1,10 +1,10 @@
 import numpy as np
 
-from .backpropagation import BackpropNetwork
+from .backpropagation import Backpropagation
 from ..util.typing import white
 
 
-class DirectFeedbackAlignment(BackpropNetwork):
+class DirectFeedbackAlignment(Backpropagation):
 
     def __init__(self, layerstack, cost, optimizer, name="", **kw):
         super().__init__(layerstack, cost, optimizer, name, **kw)

@@ -2,10 +2,10 @@ import numpy as np
 
 from .raw_gradients import analytical_gradients, numerical_gradients
 from .analyze_difference import analyze_difference_matrices, get_results
-from ..learner import BackpropNetwork
+from ..learner import Backpropagation
 
 
-def run(network: BackpropNetwork, X=None, Y=None, epsilon=1e-5, throw=False, display=True):
+def run(network: Backpropagation, X=None, Y=None, epsilon=1e-5, throw=False, display=True):
     if X is None:
         X = np.random.normal(scale=0.1, size=network.input_shape)
     if Y is None:

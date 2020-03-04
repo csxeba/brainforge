@@ -50,7 +50,7 @@ class Capsule:
 
 
 def load(capsule):
-    from ..learner import BackpropNetwork
+    from ..learner import Backpropagation
     from ..optimizers import optimizers
     from ..util.shame import translate_architecture as trsl
 
@@ -58,7 +58,7 @@ def load(capsule):
         capsule = Capsule.read(capsule)
     c = capsule
 
-    net = BackpropNetwork(input_shape=c["vlayers"][0][0], name=c["vname"])
+    net = Backpropagation(input_shape=c["vlayers"][0][0], name=c["vname"])
 
     for layer_name, layer_capsule in zip(c["varchitecture"], c["vlayers"]):
         if layer_name[:5] == "Input":
