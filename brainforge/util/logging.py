@@ -31,9 +31,9 @@ class MetricLogs:
     def __getitem__(self, item):
         return self._metrics[item]
 
-    def log(self, prefix="", suffix="", **print_kwargs):
+    def log(self, prefix="", suffix="", add_progress=True, **print_kwargs):
         log_str = []
-        if self._max_steps > 0:
+        if self._max_steps > 0 and add_progress:
             log_str.append("Progress: {:>6.1%} ".format(self._step / self._max_steps))
         means = self.mean()
         log_str += ["{}: {:.4f}".format(metric, metric_values) for metric, metric_values in means.items()]

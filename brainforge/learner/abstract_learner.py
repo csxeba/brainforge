@@ -67,7 +67,7 @@ class Learner:
             epoch_metrics = self.learn_batch(*batch, metrics=metrics, **kw)
             history.record(epoch_metrics)
             if verbose:
-                history.log(prefix="\r", end="")
+                history.log(prefix="\rTraining ", end="", add_progress=True)
 
         self.layers.learning = False
         if verbose and validation:
@@ -77,7 +77,7 @@ class Learner:
                 if validation_steps is None:
                     raise RuntimeError("If validating on a stream, validation_steps must be set to a positive integer.")
                 eval_history = self.evaluate_stream(validation, validation_steps, metrics, verbose=False)
-            eval_history.log(prefix=" ", suffix="")
+            eval_history.log(prefix=" Validation ", suffix="", add_progress=False)
 
         if verbose:
             print(f" took {time.time() - start // 60} minutes")
