@@ -1,3 +1,5 @@
+import time
+
 from ..model.layerstack import LayerStack
 from ..metrics import costs as _costs, metrics as _metrics
 from ..util import batch_stream, logging
@@ -52,6 +54,8 @@ class Learner:
                                   verbose, **kw)
 
     def epoch(self, generator, updates_per_epoch, metrics=(), validation=None, validation_steps=None, verbose=1, **kw):
+        start = time.time()
+
         metrics = [_metrics.get(metric) for metric in metrics]
         history = logging.MetricLogs.from_metric_list(updates_per_epoch, ["cost"], metrics)
 
@@ -74,8 +78,9 @@ class Learner:
                     raise RuntimeError("If validating on a stream, validation_steps must be set to a positive integer.")
                 eval_history = self.evaluate_stream(validation, validation_steps, metrics, verbose=False)
             eval_history.log(prefix=" ", suffix="")
+
         if verbose:
-            print()
+            print(f" took {time.time() - start // 60} minutes")
 
         self.age += updates_per_epoch
         return history
