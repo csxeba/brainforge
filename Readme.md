@@ -4,6 +4,11 @@
 
 Brainforge is an Artificial Neural Networking library implemented in **Python**, which only depends on **NumPy** (and optionally **Numba**, a jit compiler for Python and NumPy)
 
+## Installation
+
+Sadly, the project is not packaged at the moment. This is because I don't know how it is done, but I intend to do so in
+the near future, so it's downloading and unzipping for now :(
+
 ## Models
 
 Brainforge treats neural networks as layer stacks with some learning logic applied to them. These concepts are separated in the API, so the building of an ANN is a multi-stage process.
@@ -272,7 +277,7 @@ implemented:
 ```python
 import numpy as np
 
-from brainforge import LayerStack, BackpropNetwork
+from brainforge import LayerStack, Backpropagation
 from brainforge.layers import DenseLayer
 
 def input_stream(batchsize=20):
@@ -302,7 +307,7 @@ For more complicated tasks, the use of the dataframe library csxdata is suggeste
 ```python
 from csxdata import CData
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import (
     DenseLayer, DropOut, Activation,
     PoolLayer, ConvLayer, Flatten
@@ -315,10 +320,10 @@ inshape, outshape = images.neurons_required
 
 model = BackpropNetwork(input_shape=inshape, layerstack=(
     ConvLayer(nfilters=10, filterx=3, filtery=3, compiled=True),
-    PoolLayer(fdim=2, compiled=True),
+    PoolLayer(filter_size=2, compiled=True),
     Activation("relu"),
     ConvLayer(nfilters=10, filterx=5, filtery=5, compiled=True),
-    PoolLayer(fdim=3, compiled=True),
+    PoolLayer(filter_size=3, compiled=True),
     Activation("relu"),
     Flatten(),
     DenseLayer(120, activation="tanh"),
@@ -335,7 +340,7 @@ model.fit(X, Y, batch_size=20, epochs=30, validation=valid,
 ```python
 from csxdata import Sequence
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer, LSTM
 
 datapath = "path/to/text/file.txt"
@@ -378,7 +383,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer, DropOut
 from brainforge.evolution import Population, to_phenotype
 
@@ -472,7 +477,7 @@ from collections import deque
 
 import gym
 
-from brainforge import BackpropNetwork
+from brainforge import Backpropagation
 from brainforge.layers import DenseLayer
 from brainforge.reinforcement import DQN, agentconfig
 from brainforge.optimization import RMSprop

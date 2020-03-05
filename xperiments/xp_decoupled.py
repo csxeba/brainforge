@@ -1,82 +1,60 @@
-from collections import deque
-
-from csxdata.utilities.loader import pull_mnist_data
-
-from brainforge import BackpropNetwork
-from brainforge.layers.abstract_layer import LayerBase, NoParamMixin
-from brainforge.layers import DenseLayer
+from brainforge.learner import Backpropagation
+from brainforge.layers import Dense
+from brainforge.optimizers import Momentum
+from brainforge.util import etalon
 
 
-class DNI(NoParamMixin, LayerBase):
+class DNI:
 
-    def __init__(self, synth: BackpropNetwork=None, **kw):
-        super().__init__(**kw)
+    def __init__(self, bpropnet, synth):
+        self.bpropnet = bpropnet
         self.synth = synth
-        self.memory = deque()
         self._predictor = None
-        self._previous = None
 
-    def _default_synth(self):
-        synth = BackpropNetwork(input_shape=self.inshape, layerstack=[
-            DenseLayer(self.inshape[0], activation="tanh"),
-            DenseLayer(self.inshape[0], activation="linear"),
-        ], cost="mse", optimizer="sgd")
-        return synth
+    def predictor_coro(self):
+        prediction = None
+        delta_backwards = None
+        while 1:
+            inputs = yield prediction, delta_backwards
+            prediction = self.bpropnet.predict(inputs)
+            synthesized_delta = self.synth.predict(prediction)
+            self.bpropnet.update(len(inputs))
+            delta_backwards = self.bpropnet.backpropagate(synthesized_delta)
 
-    def connect(self, to, inshape):
-        super().connect(to, inshape)
-        self._previous = to.layers[-1]
-        if self.synth is None:
-            self.synth = self._default_synth()
+    def predict(self, X):
+        if self._predictor is None:
+            self._predictor = self.predictor_coro()
+            next(self._predictor)
+        return self._predictor.send(X)
 
-    def feedforward(self, X):
-        delta = self.synth.predict(X)
-        self._previous.backpropagate(delta)
-        if self.brain.learning:
-            self.memory.append(delta)
-        return X
-
-    def backpropagate(self, delta):
-        m = self.memory.popleft()
-        print(f"\rSynth cost: {self.synth.cost(m, delta).sum():.4f}", end="")
-        self.synth.learn_batch(m, delta)
-
-    @property
-    def outshape(self):
-        return self.inshape
-
-    @classmethod
-    def from_capsule(cls, capsule):
-        pass
-
-    def __str__(self):
-        return "DNI"
+    def udpate(self, true_delta):
+        synthesizer_delta = self.synth.cost.derivative(
+            self.synth.output, true_delta
+        )
+        self.synth.backpropagate(synthesizer_delta)
+        self.synth.update(len(true_delta))
 
 
-def build_decoupled_net(inshape, outshape):
-    net = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(60, activation="tanh"), DNI(),
-        DenseLayer(outshape, activation="softmax")
-    ], cost="xent", optimizer="adam")
+def build_net(inshape, outshape):
+    net = Backpropagation(input_shape=inshape, layerstack=[
+        Dense(30, activation="tanh"),
+        Dense(outshape, activation="softmax")
+    ], cost="cxent", optimizer=Momentum(0.01))
     return net
 
 
-def build_normal_net(inshape, outshape):
-    net = BackpropNetwork(input_shape=inshape, layerstack=[
-        DenseLayer(60, activation="tanh"),
-        DenseLayer(outshape, activation="softmax")
-    ], cost="xent", optimizer="adam")
-    return net
+def build_synth(inshape, outshape):
+    synth = Backpropagation(input_shape=inshape, layerstack=[
+        Dense(outshape)
+    ], cost="mse", optimizer=Momentum(0.01))
+    return synth
 
 
-def xperiment():
-    lX, lY, tX, tY = pull_mnist_data()
-    net = build_decoupled_net(lX.shape[1:], lY.shape[1:])
-    for epoch in range(30):
-        net.fit(lX, lY, batch_size=128, epochs=1, verbose=0)
-        cost, acc = net.evaluate(tX, tY)
-        print(f"\nEpoch {epoch} done! Network accuracy: {acc:.2%}")
+X, Y = etalon
 
+predictor = build_net(X.shape[1:], Y.shape[1:])
+pred_os = predictor.layers[-1].outshape
+synthesizer = build_synth(pred_os, pred_os)
+dni = DNI(predictor, synthesizer)
 
-if __name__ == '__main__':
-    xperiment()
+pred, delta = dni.predict(X)
