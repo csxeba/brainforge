@@ -80,7 +80,7 @@ class Learner:
             eval_history.log(prefix=" Validation ", suffix="", add_progress=False)
 
         if verbose:
-            print(f" took {time.time() - start // 60} minutes")
+            print(f" took {(time.time() - start) // 60} minutes")
 
         self.age += updates_per_epoch
         return history
