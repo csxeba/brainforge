@@ -8,7 +8,7 @@ def ctx1(*arrays):
 
 
 def scalX(scalar, dtype=floatX):
-    return np.asscalar(np.array([scalar], dtype=dtype))
+    return np.array([scalar], dtype=dtype).item()
 
 
 def zX(*dims, dtype=floatX):
